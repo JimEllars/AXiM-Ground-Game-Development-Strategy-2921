@@ -1,0 +1,110 @@
+import axios from 'axios';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 30000,
+});
+
+// Request interceptor to add auth token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Auth API
+export const authAPI = {
+  login: (email: string, password: string) =>
+    api.post('/auth/login', { email, password }),
+  
+  register: (data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    organizationId: string;
+    role?: string;
+  }) => api.post('/auth/register', data),
+  
+  getProfile: () => api.get('/auth/profile'),
+};
+
+// Territories API
+export const territoriesAPI = {
+  create: (data: { name: string; description?: string; geoJson: any }) =>
+    api.post('/territories', data),
+  
+  getAll: () => api.get('/territories'),
+  
+  delete: (id: string) => api.delete(`/territories/${id}`),
+  
+  assign: (territoryId: string, userId: string) =>
+    api.post(`/territories/${territoryId}/assign`, { userId }),
+  
+  getAvailableReps: () => api.get('/territories/available-reps'),
+  
+  getMyTerritories: () => api.get('/territories/my-territories'),
+};
+
+// Leads API
+export const leadsAPI = {
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/leads/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+  }) => api.get('/leads', { params }),
+};
+
+// Reps API
+export const repsAPI = {
+  getMyTurf: () => api.get('/reps/me/turf'),
+  
+  getStats: (params?: { startDate?: string; endDate?: string }) =>
+    api.get('/reps/me/stats', { params }),
+};
+
+// Interactions API
+export const interactionsAPI = {
+  create: (interactions: Array<{
+    leadId: string;
+    outcome: string;
+    notes?: string;
+    interactionDate?: Date;
+    location?: { longitude: number; latitude: number };
+  }>) => api.post('/interactions', interactions),
+  
+  getAll: (params?: {
+    leadId?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }) => api.get('/interactions', { params }),
+};
+
+export default api;
