@@ -30,9 +30,8 @@ api.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-  login: (email: string, password: string) =>
+  login: (email: string, password: string) => 
     api.post('/auth/login', { email, password }),
-  
   register: (data: {
     email: string;
     password: string;
@@ -40,26 +39,26 @@ export const authAPI = {
     lastName: string;
     organizationId: string;
     role?: string;
-  }) => api.post('/auth/register', data),
-  
-  getProfile: () => api.get('/auth/profile'),
+  }) => 
+    api.post('/auth/register', data),
+  getProfile: () => 
+    api.get('/auth/profile'),
 };
 
 // Territories API
 export const territoriesAPI = {
-  create: (data: { name: string; description?: string; geoJson: any }) =>
+  create: (data: { name: string; description?: string; geoJson: any }) => 
     api.post('/territories', data),
-  
-  getAll: () => api.get('/territories'),
-  
-  delete: (id: string) => api.delete(`/territories/${id}`),
-  
-  assign: (territoryId: string, userId: string) =>
+  getAll: () => 
+    api.get('/territories'),
+  delete: (id: string) => 
+    api.delete(`/territories/${id}`),
+  assign: (territoryId: string, userId: string) => 
     api.post(`/territories/${territoryId}/assign`, { userId }),
-  
-  getAvailableReps: () => api.get('/territories/available-reps'),
-  
-  getMyTerritories: () => api.get('/territories/my-territories'),
+  getAvailableReps: () => 
+    api.get('/territories/available-reps'),
+  getMyTerritories: () => 
+    api.get('/territories/my-territories'),
 };
 
 // Leads API
@@ -68,23 +67,25 @@ export const leadsAPI = {
     const formData = new FormData();
     formData.append('file', file);
     return api.post('/leads/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
   },
-  
   getAll: (params?: {
     page?: number;
     limit?: number;
     status?: string;
     search?: string;
-  }) => api.get('/leads', { params }),
+  }) => 
+    api.get('/leads', { params }),
 };
 
 // Reps API
 export const repsAPI = {
-  getMyTurf: () => api.get('/reps/me/turf'),
-  
-  getStats: (params?: { startDate?: string; endDate?: string }) =>
+  getMyTurf: () => 
+    api.get('/reps/me/turf'),
+  getStats: (params?: { startDate?: string; endDate?: string }) => 
     api.get('/reps/me/stats', { params }),
 };
 
@@ -96,15 +97,50 @@ export const interactionsAPI = {
     notes?: string;
     interactionDate?: Date;
     location?: { longitude: number; latitude: number };
-  }>) => api.post('/interactions', interactions),
-  
+  }>) => 
+    api.post('/interactions', interactions),
   getAll: (params?: {
     leadId?: string;
     startDate?: string;
     endDate?: string;
     page?: number;
     limit?: number;
-  }) => api.get('/interactions', { params }),
+  }) => 
+    api.get('/interactions', { params }),
+};
+
+// Analytics API
+export const analyticsAPI = {
+  getAnalytics: (params?: { startDate?: string; endDate?: string }) =>
+    api.get('/analytics', { params }),
+  getPerformance: (params?: { startDate?: string; endDate?: string }) =>
+    api.get('/analytics/performance', { params }),
+};
+
+// Users API
+export const usersAPI = {
+  getUsers: (params?: { role?: string; isActive?: boolean }) =>
+    api.get('/users', { params }),
+  createUser: (data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    role?: string;
+  }) =>
+    api.post('/users', data),
+  updateUser: (userId: string, data: {
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    password?: string;
+    isActive?: boolean;
+  }) =>
+    api.put(`/users/${userId}`, data),
+  deleteUser: (userId: string) =>
+    api.delete(`/users/${userId}`),
+  getUserStats: () =>
+    api.get('/users/stats'),
 };
 
 export default api;

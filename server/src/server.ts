@@ -9,6 +9,8 @@ import territoryRoutes from './routes/territories.js';
 import leadRoutes from './routes/leads.js';
 import repRoutes from './routes/reps.js';
 import interactionRoutes from './routes/interactions.js';
+import analyticsRoutes from './routes/analytics.js';
+import userRoutes from './routes/users.js';
 
 // Import database connection
 import { pool } from './config/database.js';
@@ -29,10 +31,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
-    version: '1.0.0'
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
@@ -42,6 +45,8 @@ app.use('/api/territories', territoryRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/reps', repRoutes);
 app.use('/api/interactions', interactionRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/users', userRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -51,7 +56,7 @@ app.use('*', (req, res) => {
 // Global error handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Internal server error',
     ...(process.env.NODE_ENV === 'development' && { details: err.message })
   });
@@ -61,6 +66,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const server = app.listen(PORT, () => {
   console.log(`🚀 AXiM Ground Game API server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // Graceful shutdown

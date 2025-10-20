@@ -10,10 +10,14 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemIcon
+  ListItemIcon,
+  Alert,
+  CircularProgress
 } from '@mui/material';
-import { FiMap, FiUsers, FiTarget, FiTrendingUp, FiMapPin } from 'react-icons/fi';
+import { FiMap, FiUsers, FiTarget, FiTrendingUp, FiMapPin, FiBarChart2 } from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
+import RepDashboard from './RepDashboard';
+import AdminDashboard from './AdminDashboard';
 import { authAPI, repsAPI, territoriesAPI, leadsAPI } from '../services/api';
 
 const Dashboard: React.FC = () => {
@@ -21,6 +25,8 @@ const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<any>({});
   const [territories, setTerritories] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     loadDashboardData();
@@ -31,20 +37,16 @@ const Dashboard: React.FC = () => {
       const [userResponse] = await Promise.all([
         authAPI.getProfile()
       ]);
-
       const userData = userResponse.data;
       setUser(userData);
 
       // Load role-specific data
       if (userData.role === 'REP') {
-        const [turfResponse, statsResponse] = await Promise.all([
-          repsAPI.getMyTurf(),
-          repsAPI.getStats()
-        ]);
-        setTerritories(turfResponse.data.territories);
-        setStats(statsResponse.data);
+        // Rep dashboard is handled by RepDashboard component
+      } else if (userData.role === 'ADMIN') {
+        // Admin will use AdminDashboard component
       } else {
-        // Admin/Manager data
+        // Manager data
         const [territoriesResponse, leadsResponse] = await Promise.all([
           territoriesAPI.getAll(),
           leadsAPI.getAll({ limit: 5 })
@@ -52,29 +54,24 @@ const Dashboard: React.FC = () => {
         setTerritories(territoriesResponse.data);
         setRecentActivity(leadsResponse.data.leads);
       }
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
+    } catch (error: any) {
+      setError(error.response?.data?.error || 'Failed to load dashboard data');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const StatCard: React.FC<{ 
-    title: string; 
-    value: string | number; 
-    icon: any; 
+  const StatCard: React.FC<{
+    title: string;
+    value: string | number;
+    icon: any;
     color: string;
     subtitle?: string;
   }> = ({ title, value, icon, color, subtitle }) => (
     <Card elevation={2}>
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <SafeIcon 
-            icon={icon} 
-            style={{ 
-              fontSize: 24, 
-              color: color,
-              marginRight: 12 
-            }} 
-          />
+          <SafeIcon icon={icon} style={{ fontSize: 24, color: color, marginRight: 12 }} />
           <Typography variant="h6" color="text.secondary">
             {title}
           </Typography>
@@ -89,102 +86,6 @@ const Dashboard: React.FC = () => {
         )}
       </CardContent>
     </Card>
-  );
-
-  const renderRepDashboard = () => (
-    <Grid container spacing={3}>
-      {/* Stats Cards */}
-      <Grid item xs={12} sm={6} md={3}>
-        <StatCard
-          title="Total Interactions"
-          value={stats.totalInteractions || 0}
-          icon={FiTarget}
-          color="#1976d2"
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={3}>
-        <StatCard
-          title="Unique Contacts"
-          value={stats.uniqueLeadsContacted || 0}
-          icon={FiUsers}
-          color="#388e3c"
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={3}>
-        <StatCard
-          title="Active Days"
-          value={stats.activeDays || 0}
-          icon={FiTrendingUp}
-          color="#f57c00"
-        />
-      </Grid>
-      <Grid item xs={12} sm={6} md={3}>
-        <StatCard
-          title="Territories"
-          value={territories.length}
-          icon={FiMap}
-          color="#7b1fa2"
-        />
-      </Grid>
-
-      {/* Territories */}
-      <Grid item xs={12} md={8}>
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            My Territories
-          </Typography>
-          {territories.length > 0 ? (
-            <List>
-              {territories.map((territory) => (
-                <ListItem key={territory.id} divider>
-                  <ListItemIcon>
-                    <SafeIcon icon={FiMapPin} />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={territory.name}
-                    secondary={`${territory.leads.length} leads • ${territory.leads.filter((l: any) => l.lastInteraction).length} completed`}
-                  />
-                  <Chip
-                    label={`${Math.round((territory.leads.filter((l: any) => l.lastInteraction).length / territory.leads.length) * 100) || 0}%`}
-                    color="primary"
-                    size="small"
-                  />
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <Typography color="text.secondary">
-              No territories assigned yet
-            </Typography>
-          )}
-        </Paper>
-      </Grid>
-
-      {/* Outcome Breakdown */}
-      <Grid item xs={12} md={4}>
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Outcome Breakdown
-          </Typography>
-          {stats.outcomeBreakdown?.length > 0 ? (
-            <List dense>
-              {stats.outcomeBreakdown.map((outcome: any) => (
-                <ListItem key={outcome.outcome}>
-                  <ListItemText
-                    primary={outcome.outcome}
-                    secondary={`${outcome.count} interactions`}
-                  />
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <Typography color="text.secondary">
-              No interactions recorded yet
-            </Typography>
-          )}
-        </Paper>
-      </Grid>
-    </Grid>
   );
 
   const renderManagerDashboard = () => (
@@ -250,11 +151,7 @@ const Dashboard: React.FC = () => {
                     primary={`${lead.firstName} ${lead.lastName}`.trim() || 'Unnamed Lead'}
                     secondary={lead.streetAddress}
                   />
-                  <Chip
-                    label={lead.status}
-                    size="small"
-                    color="default"
-                  />
+                  <Chip label={lead.status} size="small" color="default" />
                 </ListItem>
               ))}
             </List>
@@ -268,12 +165,31 @@ const Dashboard: React.FC = () => {
     </Grid>
   );
 
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   if (!user) {
     return <Typography>Loading...</Typography>;
   }
 
+  // Admin gets the full admin dashboard
+  if (user.role === 'ADMIN') {
+    return <AdminDashboard />;
+  }
+
   return (
     <Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+          {error}
+        </Alert>
+      )}
+
       <Typography variant="h4" gutterBottom>
         Welcome back, {user.firstName}!
       </Typography>
@@ -281,7 +197,7 @@ const Dashboard: React.FC = () => {
         Here's your {user.role.toLowerCase()} dashboard overview
       </Typography>
 
-      {user.role === 'REP' ? renderRepDashboard() : renderManagerDashboard()}
+      {user.role === 'REP' ? <RepDashboard /> : renderManagerDashboard()}
     </Box>
   );
 };

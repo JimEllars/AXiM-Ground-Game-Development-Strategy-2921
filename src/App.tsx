@@ -4,11 +4,17 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
 
-// Import components (we'll create these)
+// Import components
+import ErrorBoundary from './components/ErrorBoundary';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import TerritoryManagement from './pages/TerritoryManagement';
 import LeadManagement from './pages/LeadManagement';
+import RepTurf from './pages/RepTurf';
+import AnalyticsPage from './pages/AnalyticsPage';
+import TeamManagementPage from './pages/TeamManagementPage';
+import PerformancePage from './pages/PerformancePage';
+import SettingsPage from './pages/SettingsPage';
 import Navbar from './components/Navbar';
 
 // Create Material-UI theme
@@ -22,7 +28,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: '"Roboto","Helvetica","Arial",sans-serif',
   },
 });
 
@@ -46,45 +52,73 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route
-            path="/"
-            element={
+    <ErrorBoundary>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={
               <ProtectedRoute>
                 <Layout>
                   <Dashboard />
                 </Layout>
               </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/territories"
-            element={
+            } />
+            <Route path="/territories" element={
               <ProtectedRoute>
                 <Layout>
                   <TerritoryManagement />
                 </Layout>
               </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/leads"
-            element={
+            } />
+            <Route path="/leads" element={
               <ProtectedRoute>
                 <Layout>
                   <LeadManagement />
                 </Layout>
               </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
-    </ThemeProvider>
+            } />
+            <Route path="/turf" element={
+              <ProtectedRoute>
+                <Layout>
+                  <RepTurf />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute>
+                <Layout>
+                  <AnalyticsPage />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/team" element={
+              <ProtectedRoute>
+                <Layout>
+                  <TeamManagementPage />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/performance" element={
+              <ProtectedRoute>
+                <Layout>
+                  <PerformancePage />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <Layout>
+                  <SettingsPage />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 
