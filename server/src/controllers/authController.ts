@@ -1,8 +1,9 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { pool } from '../config/database.js';
 import { User } from '../types/index.js';
+import AppError from '../utils/AppError.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -11,21 +12,19 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const DEMO_PASSWORD = 'demo123';
 const DEMO_PASSWORD_HASH = '$2b$10$rQj8k5jQ5jQ5jQ5jQ5jQ5uI9h5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5j';
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password, firstName, lastName, organizationId, role = 'REP' } = req.body;
 
     // Validate required fields
     if (!email || !password || !firstName || !lastName || !organizationId) {
-      return res.status(400).json({ 
-        error: 'Email, password, first name, last name, and organization ID are required' 
-      });
+      return next(new AppError('Email, password, first name, last name, and organization ID are required', 400));
     }
 
     // Check if user already exists
     const existingUser = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
     if (existingUser.rows.length > 0) {
-      return res.status(400).json({ error: 'User with this email already exists' });
+      return next(new AppError('User with this email already exists', 400));
     }
 
     // Hash password
@@ -66,17 +65,16 @@ export const register = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    next(error);
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+      return next(new AppError('Email and password are required', 400));
     }
 
     // Find user by email
@@ -86,7 +84,7 @@ export const login = async (req: Request, res: Response) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return next(new AppError('Invalid email or password', 401));
     }
 
     const user = result.rows[0] as User;
@@ -102,7 +100,7 @@ export const login = async (req: Request, res: Response) => {
     }
 
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return next(new AppError('Invalid email or password', 401));
     }
 
     // Generate JWT token
@@ -129,12 +127,11 @@ export const login = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    next(error);
   }
 };
 
-export const getProfile = async (req: Request, res: Response) => {
+export const getProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = (req as any).user;
     
@@ -147,7 +144,6 @@ export const getProfile = async (req: Request, res: Response) => {
       organizationId: user.organization_id
     });
   } catch (error) {
-    console.error('Get profile error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    next(error);
   }
 };

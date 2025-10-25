@@ -3,7 +3,7 @@ import React, { useState } from 'react';
     import { FiUser, FiLock, FiLogIn } from 'react-icons/fi';
     import { useNavigate } from 'react-router-dom';
     import SafeIcon from '@/common/SafeIcon';
-    import { useAuth } from '@/hooks/useAuth';
+    import { useAuth } from '@/contexts/AuthContext';
 
     const Login: React.FC = () => {
       const navigate = useNavigate();

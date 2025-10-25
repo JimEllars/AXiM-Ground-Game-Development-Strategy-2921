@@ -31,10 +31,17 @@ import React from 'react';
       },
     });
 
+import { useAuth } from '@/contexts/AuthContext';
+
     // Protected Route component
     const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-      const token = localStorage.getItem('token');
-      return token ? <>{children}</> : <Navigate to="/login" replace />;
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <div>Loading...</div>; // Or a spinner component
+  }
+
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
     };
 
     // Main Layout component
