@@ -1,11 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
+import AppError from '../utils/AppError';
 
-interface AppError extends Error {
-  statusCode?: number;
-  isOperational?: boolean;
-}
-
-const errorHandler = (err: AppError, req: Request, res: Response, next: NextFunction) => {
+const errorHandler = (err: Error & Partial<AppError>, req: Request, res: Response, next: NextFunction) => {
   err.statusCode = err.statusCode || 500;
   err.message = err.message || 'Internal Server Error';
 
