@@ -101,6 +101,7 @@ import React, { useState } from 'react';
                   disabled={loading}
                   startIcon={<SafeIcon icon={FiLogIn} />}
                   sx={{ mt: 3, mb: 2 }}
+                  data-testid="login-button"
                 >
                   {loading ? 'Signing In...' : 'Sign In'}
                 </Button>

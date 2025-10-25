@@ -308,9 +308,10 @@ import React, { useState, useEffect } from 'react';
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {analytics.outcomes.map((entry: any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
+                    {analytics.outcomes &&
+                      analytics.outcomes.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
                   </Pie>
                   <Tooltip />
                 </PieChart>

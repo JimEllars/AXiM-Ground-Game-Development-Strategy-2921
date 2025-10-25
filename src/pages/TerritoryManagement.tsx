@@ -100,13 +100,15 @@ import React, { useState, useEffect } from 'react';
               {success}
             </Alert>
           )}
-          <TerritoryMap
-            territories={territories}
-            availableReps={availableReps}
-            onSaveTerritory={handleSaveTerritory}
-            onDeleteTerritory={handleDeleteTerritory}
-            onAssignTerritory={handleAssignTerritory}
-          />
+          {!loading && territories && availableReps && (
+            <TerritoryMap
+              territories={territories}
+              availableReps={availableReps}
+              onSaveTerritory={handleSaveTerritory}
+              onDeleteTerritory={handleDeleteTerritory}
+              onAssignTerritory={handleAssignTerritory}
+            />
+          )}
         </Box>
       );
     };

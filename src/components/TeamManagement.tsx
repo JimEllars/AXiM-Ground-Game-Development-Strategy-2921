@@ -240,10 +240,11 @@ import React, { useState, useEffect } from 'react';
 
           {/* Role Statistics */}
           <Grid container spacing={3} sx={{ mb: 3 }}>
-            {getRoleStats().map((stat) => (
-              <Grid item xs={12} sm={4} key={stat.role}>
-                <Card elevation={2}>
-                  <CardContent>
+            {users.length > 0 &&
+              getRoleStats().map((stat) => (
+                <Grid item xs={12} sm={4} key={stat.role}>
+                  <Card elevation={2}>
+                    <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                       <Avatar sx={{ bgcolor: stat.color }}>
                         <SafeIcon icon={FiUsers} />
