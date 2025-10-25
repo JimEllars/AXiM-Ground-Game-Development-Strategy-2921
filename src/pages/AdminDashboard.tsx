@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-    import { Box, Typography, Tabs, Tab, Alert, Grid, Card, CardContent, Button } from '@mui/material';
+    import { Box, Typography, Tabs, Tab, Alert, Grid, Card, CardContent, Button, CircularProgress } from '@mui/material';
     import { FiBarChart2, FiUsers, FiTarget, FiTrendingUp, FiSettings } from 'react-icons/fi';
     import SafeIcon from '@/common/SafeIcon';
     import AnalyticsDashboard from '@/components/AnalyticsDashboard';
@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
     import PerformanceMetrics from '@/components/PerformanceMetrics';
     import TerritoryManagement from './TerritoryManagement';
     import LeadManagement from './LeadManagement';
+    import { analyticsAPI } from '@/services/api';
 
     interface TabPanelProps {
       children?: React.ReactNode;
@@ -24,12 +25,9 @@ import React, { useState, useEffect } from 'react';
 
     const AdminDashboard: React.FC = () => {
       const [tabValue, setTabValue] = useState(0);
-      const [systemStats, setSystemStats] = useState({
-        totalUsers: 0,
-        totalTerritories: 0,
-        totalLeads: 0,
-        totalInteractions: 0,
-      });
+      const [systemStats, setSystemStats] = useState<any>(null);
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState('');
 
       useEffect(() => {
         loadSystemStats();
@@ -37,15 +35,12 @@ import React, { useState, useEffect } from 'react';
 
       const loadSystemStats = async () => {
         try {
-          // Mock data - in real implementation, this would come from API
-          setSystemStats({
-            totalUsers: 12,
-            totalTerritories: 8,
-            totalLeads: 1247,
-            totalInteractions: 856,
-          });
-        } catch (error) {
-          console.error('Failed to load system stats:', error);
+          const response = await analyticsAPI.getAnalytics();
+          setSystemStats(response.data.summary);
+        } catch (error: any) {
+          setError(error.response?.data?.error || 'Failed to load system stats');
+        } finally {
+          setLoading(false);
         }
       };
 
@@ -80,6 +75,22 @@ import React, { useState, useEffect } from 'react';
         </Card>
       );
 
+      if (loading) {
+        return (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+            <CircularProgress />
+          </Box>
+        );
+      }
+
+      if (error) {
+        return (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+            {error}
+          </Alert>
+        );
+      }
+
       return (
         <Box>
           <Typography variant="h4" gutterBottom>
@@ -94,7 +105,7 @@ import React, { useState, useEffect } from 'react';
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Total Users"
-                value={systemStats.totalUsers}
+                value={systemStats?.totalUsers || 0}
                 icon={FiUsers}
                 color="#1976d2"
                 subtitle="Active accounts"
@@ -103,7 +114,7 @@ import React, { useState, useEffect } from 'react';
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Territories"
-                value={systemStats.totalTerritories}
+                value={systemStats?.totalTerritories || 0}
                 icon={FiTarget}
                 color="#388e3c"
                 subtitle="Defined areas"
@@ -112,7 +123,7 @@ import React, { useState, useEffect } from 'react';
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Total Leads"
-                value={systemStats.totalLeads}
+                value={systemStats?.totalLeads || 0}
                 icon={FiBarChart2}
                 color="#f57c00"
                 subtitle="In database"
@@ -121,7 +132,7 @@ import React, { useState, useEffect } from 'react';
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Interactions"
-                value={systemStats.totalInteractions}
+                value={systemStats?.totalInteractions || 0}
                 icon={FiTrendingUp}
                 color="#7b1fa2"
                 subtitle="Completed activities"
