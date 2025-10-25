@@ -120,14 +120,17 @@ import React, { useState, useEffect } from 'react';
       };
 
       const calculateCompletionRate = (leads: any[]) => {
+        if (!leads || leads.length === 0) return 0;
         const completedLeads = leads.filter(
-          (lead) => lead.status === 'Completed' || lead.status === 'Sold'
+          (lead) => lead && (lead.status === 'Completed' || lead.status === 'Sold')
         ).length;
-        return leads.length > 0 ? Math.round((completedLeads / leads.length) * 100) : 0;
+        return Math.round((completedLeads / leads.length) * 100);
       };
 
       const processTrendsData = (interactions: any[]) => {
+        if (!interactions) return [];
         const dailyData = interactions.reduce((acc: any, interaction) => {
+          if (!interaction || !interaction.interactionDate || !interaction.lead) return acc;
           const date = new Date(interaction.interactionDate).toLocaleDateString();
           if (!acc[date]) {
             acc[date] = { date, interactions: 0, uniqueLeads: new Set() };
@@ -140,7 +143,9 @@ import React, { useState, useEffect } from 'react';
       };
 
       const processOutcomesData = (interactions: any[]) => {
+        if (!interactions) return [];
         const outcomes = interactions.reduce((acc: any, interaction) => {
+          if (!interaction || !interaction.outcome) return acc;
           const outcome = interaction.outcome;
           acc[outcome] = (acc[outcome] || 0) + 1;
           return acc;
@@ -149,12 +154,16 @@ import React, { useState, useEffect } from 'react';
       };
 
       const processTopPerformers = (interactions: any[]) => {
+        if (!interactions) return [];
         const performers = interactions.reduce((acc: any, interaction) => {
+          if (!interaction || !interaction.user || !interaction.lead) return acc;
           const userId = interaction.user.id;
+          if (!userId) return acc;
+
           if (!acc[userId]) {
             acc[userId] = {
               id: userId,
-              name: `${interaction.user.firstName} ${interaction.user.lastName}`,
+              name: `${interaction.user.firstName || 'Unknown'} ${interaction.user.lastName || 'User'}`,
               interactions: 0,
               uniqueLeads: new Set(),
             };
@@ -206,7 +215,7 @@ import React, { useState, useEffect } from 'react';
         </Card>
       );
 
-      if (loading && !analytics.summary) {
+      if (loading) {
         return (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
             <CircularProgress />
@@ -281,79 +290,90 @@ import React, { useState, useEffect } from 'react';
               <Typography variant="h6" gutterBottom>
                 Interaction Trends
               </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={analytics.trends}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="interactions" stroke="#1976d2" strokeWidth={2} />
-                  <Line type="monotone" dataKey="uniqueLeads" stroke="#388e3c" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+              {analytics.trends && analytics.trends.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={analytics.trends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="interactions" stroke="#1976d2" strokeWidth={2} />
+                    <Line type="monotone" dataKey="uniqueLeads" stroke="#388e3c" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <Typography sx={{ textAlign: 'center', py: 4 }}>No trend data available for this period.</Typography>
+              )}
             </TabPanel>
             <TabPanel value={tabValue} index={1}>
               <Typography variant="h6" gutterBottom>
                 Interaction Outcomes
               </Typography>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={analytics.outcomes}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {analytics.outcomes &&
-                      analytics.outcomes.map((entry: any, index: number) => (
+              {analytics.outcomes && analytics.outcomes.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={analytics.outcomes}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {analytics.outcomes.map((entry: any, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <Typography sx={{ textAlign: 'center', py: 4 }}>No outcome data available for this period.</Typography>
+              )}
             </TabPanel>
             <TabPanel value={tabValue} index={2}>
               <Typography variant="h6" gutterBottom>
                 Top Performers
               </Typography>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Name</TableCell>
-                      <TableCell align="right">Total Interactions</TableCell>
-                      <TableCell align="right">Unique Leads</TableCell>
-                      <TableCell align="right">Efficiency</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {analytics.topPerformers?.map((performer: any, index: number) => (
-                      <TableRow key={performer.id}>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="body2" fontWeight="medium">
-                              {index + 1}. {performer.name}
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell align="right">{performer.interactions}</TableCell>
-                        <TableCell align="right">{performer.uniqueLeads}</TableCell>
-                        <TableCell align="right">
-                          {performer.interactions > 0
-                            ? Math.round((performer.uniqueLeads / performer.interactions) * 100)
-                            : 0}
-                          %
-                        </TableCell>
+              {analytics.topPerformers && analytics.topPerformers.length > 0 ? (
+                <TableContainer>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Name</TableCell>
+                        <TableCell align="right">Total Interactions</TableCell>
+                        <TableCell align="right">Unique Leads</TableCell>
+                        <TableCell align="right">Efficiency</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {analytics.topPerformers.map((performer: any, index: number) => (
+                        <TableRow key={performer.id}>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" fontWeight="medium">
+                                {index + 1}. {performer.name}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell align="right">{performer.interactions}</TableCell>
+                          <TableCell align="right">{performer.uniqueLeads}</TableCell>
+                          <TableCell align="right">
+                            {performer.interactions > 0
+                              ? Math.round((performer.uniqueLeads / performer.interactions) * 100)
+                              : 0}
+                            %
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              ) : (
+                <Typography sx={{ textAlign: 'center', py: 4 }}>No performer data available for this period.</Typography>
+              )}
             </TabPanel>
           </Paper>
         </Box>

@@ -68,6 +68,8 @@ export interface Interaction {
   created_at: Date;
 }
 
-export interface AuthRequest extends Express.Request {
+import { Request } from 'express';
+
+export interface AuthRequest extends Request {
   user?: User;
 }
