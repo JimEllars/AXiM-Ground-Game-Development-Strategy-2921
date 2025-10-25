@@ -17,14 +17,20 @@ import { useState, useEffect } from 'react';
 
       useEffect(() => {
         const getUser = async () => {
-          try {
-            setLoading(true);
-            const response = await authAPI.getProfile();
-            setUser(response.data);
-          } catch (err: any) {
-            setError(err.response?.data?.error || 'Failed to load user profile');
-          } finally {
-            setLoading(false);
+          const token = localStorage.getItem('token');
+          if (token) {
+            try {
+              setLoading(true);
+              const response = await authAPI.getProfile();
+              setUser(response.data);
+            } catch (err: any) {
+              setError(err.response?.data?.error || 'Failed to load user profile');
+              localStorage.removeItem('token'); // Clear invalid token
+            } finally {
+              setLoading(false);
+            }
+          } else {
+            setLoading(false); // Not logged in
           }
         };
         getUser();
