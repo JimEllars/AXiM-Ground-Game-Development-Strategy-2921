@@ -8,9 +8,6 @@ import AppError from '../utils/AppError.js';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
-// Hash demo passwords
-const DEMO_PASSWORD = 'demo123';
-const DEMO_PASSWORD_HASH = '$2b$10$rQj8k5jQ5jQ5jQ5jQ5jQ5uI9h5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5j';
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -89,15 +86,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     const user = result.rows[0] as User;
 
-    // For demo accounts, use predefined hash
-    const isDemoAccount = ['admin@axim.com', 'manager@axim.com', 'rep@axim.com'].includes(email);
-    let isValidPassword = false;
-
-    if (isDemoAccount && password === DEMO_PASSWORD) {
-      isValidPassword = true;
-    } else {
-      isValidPassword = await bcrypt.compare(password, user.password_hash);
-    }
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
       return next(new AppError('Invalid email or password', 401));
