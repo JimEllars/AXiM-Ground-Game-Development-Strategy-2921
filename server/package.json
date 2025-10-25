@@ -6,6 +6,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "start:test": "tsx src/server.ts",
     "db:migrate": "node dist/scripts/migrate.js",
     "db:seed": "npm run build && node dist/scripts/seed.js"
   },
@@ -17,7 +18,7 @@
     "express": "^4.19.2",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "1.4.5-lts.1",
+    "multer": "^2.0.2",
     "papaparse": "^5.4.1",
     "pg": "^8.12.0",
     "wellknown": "^0.5.0"
