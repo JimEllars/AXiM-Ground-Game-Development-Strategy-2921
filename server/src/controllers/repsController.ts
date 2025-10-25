@@ -103,7 +103,7 @@ export const getMyTurf = async (req: AuthRequest, res: Response) => {
     // Calculate summary statistics
     const totalLeads = territories.reduce((sum, t) => sum + t.leads.length, 0);
     const completedLeads = territories.reduce((sum, t) => 
-      sum + t.leads.filter(l => l.lastInteraction).length, 0
+      sum + t.leads.filter((l: any) => l.lastInteraction).length, 0
     );
 
     res.json({
