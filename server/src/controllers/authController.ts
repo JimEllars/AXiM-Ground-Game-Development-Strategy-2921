@@ -91,15 +91,7 @@ export const login = async (req: Request, res: Response) => {
 
     const user = result.rows[0] as User;
 
-    // For demo accounts, use predefined hash
-    const isDemoAccount = ['admin@axim.com', 'manager@axim.com', 'rep@axim.com'].includes(email);
-    let isValidPassword = false;
-
-    if (isDemoAccount && password === DEMO_PASSWORD) {
-      isValidPassword = true;
-    } else {
-      isValidPassword = await bcrypt.compare(password, user.password_hash);
-    }
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid email or password' });
