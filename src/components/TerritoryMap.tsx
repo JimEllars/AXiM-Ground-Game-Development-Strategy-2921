@@ -6,10 +6,11 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { Box, CircularProgress } from '@mui/material';
 import TerritoryPanel from './TerritoryPanel';
 import { useTerritoryPanelState } from '../hooks/useTerritoryPanelState';
+import { Territory, User } from '@/types';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
-function DrawControl(props) {
+function DrawControl(props: any) {
   useControl(
     () => new MapboxDraw(props),
     ({ map }) => {
@@ -31,8 +32,8 @@ function DrawControl(props) {
 }
 
 interface TerritoryMapProps {
-  territories: any[];
-  availableReps: any[];
+  territories: Territory[];
+  availableReps: User[];
   onSaveTerritory: (data: { name: string; description: string; geoJson: any }) => void;
   onDeleteTerritory: (id: string) => void;
   onAssignTerritory: (territoryId: string, userId: string) => void;

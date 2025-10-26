@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
     import { Box, Typography, Alert, CircularProgress } from '@mui/material';
     import TerritoryMap from '@/components/TerritoryMap';
     import { territoriesAPI } from '@/services/api';
+import { Territory, User } from '@/types';
 
     const TerritoryManagement: React.FC = () => {
-      const [territories, setTerritories] = useState<any[]>([]);
-      const [availableReps, setAvailableReps] = useState<any[]>([]);
+      const [territories, setTerritories] = useState<Territory[]>([]);
+      const [availableReps, setAvailableReps] = useState<User[]>([]);
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState('');
       const [success, setSuccess] = useState('');
