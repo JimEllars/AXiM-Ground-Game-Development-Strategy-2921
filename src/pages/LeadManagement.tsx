@@ -17,10 +17,15 @@ import React, { useState, useEffect } from 'react';
       Pagination,
       Alert,
       CircularProgress,
+      Button,
+      Dialog,
+      DialogTitle,
+      DialogContent,
     } from '@mui/material';
-    import { FiSearch } from 'react-icons/fi';
+    import { FiSearch, FiEye } from 'react-icons/fi';
     import SafeIcon from '@/common/SafeIcon';
     import LeadUpload from '@/components/LeadUpload';
+    import LeadDetails from '@/components/LeadDetails';
     import { leadsAPI } from '@/services/api';
 
     interface TabPanelProps {
@@ -46,6 +51,8 @@ import React, { useState, useEffect } from 'react';
       const [statusFilter, setStatusFilter] = useState('');
       const [success, setSuccess] = useState('');
       const [error, setError] = useState('');
+      const [isDetailsOpen, setDetailsOpen] = useState(false);
+      const [selectedLead, setSelectedLead] = useState<any | null>(null);
 
       useEffect(() => {
         if (tabValue === 1) {
@@ -90,6 +97,16 @@ import React, { useState, useEffect } from 'react';
 
       const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
         setPagination((prev) => ({ ...prev, page: value }));
+      };
+
+      const handleOpenDetails = (lead: any) => {
+        setSelectedLead(lead);
+        setDetailsOpen(true);
+      };
+
+      const handleCloseDetails = () => {
+        setDetailsOpen(false);
+        setSelectedLead(null);
       };
 
       const getStatusColor = (status: string) => {
@@ -180,6 +197,7 @@ import React, { useState, useEffect } from 'react';
                         <TableCell>Status</TableCell>
                         <TableCell>Location</TableCell>
                         <TableCell>Created</TableCell>
+                        <TableCell>Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -239,6 +257,16 @@ import React, { useState, useEffect } from 'react';
                                 {new Date(lead.createdAt).toLocaleDateString()}
                               </Typography>
                             </TableCell>
+                            <TableCell>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<SafeIcon icon={FiEye} />}
+                                onClick={() => handleOpenDetails(lead)}
+                              >
+                                View
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         ))
                       )}
@@ -260,6 +288,14 @@ import React, { useState, useEffect } from 'react';
               </Box>
             </TabPanel>
           </Paper>
+
+          {/* Lead Details Dialog */}
+          <Dialog open={isDetailsOpen} onClose={handleCloseDetails} fullWidth maxWidth="md">
+            <DialogTitle>Lead Details</DialogTitle>
+            <DialogContent>
+              {selectedLead && <LeadDetails lead={selectedLead} />}
+            </DialogContent>
+          </Dialog>
         </Box>
       );
     };
