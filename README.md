@@ -203,3 +203,16 @@ server/
 ## 📄 License
 
 This project is proprietary software developed for AXiM Ground Game.
+
+## ❗ Known Issues
+
+### User Login
+- **Status:** Unresolved
+- **Description:** The user login functionality is currently not working. The application hangs on the login screen, and the login request times out.
+- **Debugging Steps Taken:**
+  - Verified the backend is running and responsive via `curl`.
+  - Confirmed the database is seeded with correct password hashes.
+  - Inspected the frontend and backend code for any obvious errors.
+  - Temporarily bypassed the password comparison logic in the backend, which did not resolve the issue.
+- **Next Steps:**
+  - Further investigation is needed to identify the root cause of the issue.

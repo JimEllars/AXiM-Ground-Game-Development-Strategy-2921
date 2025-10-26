@@ -59,6 +59,8 @@ export const territoriesAPI = {
     api.get('/territories/available-reps'),
   getMyTerritories: () => 
     api.get('/territories/my-territories'),
+  update: (id: string, data: { name: string; description?: string; geoJson: any }) =>
+    api.put(`/territories/${id}`, data),
 };
 
 // Leads API

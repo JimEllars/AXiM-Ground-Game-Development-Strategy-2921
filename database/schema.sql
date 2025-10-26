@@ -117,6 +117,6 @@ INSERT INTO organizations (id, name) VALUES
     ('550e8400-e29b-41d4-a716-446655440000', 'Demo Organization');
 
 INSERT INTO users (id, organization_id, email, password_hash, first_name, last_name, role) VALUES 
-    ('550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', 'admin@axim.com', '$2b$10$rQj8k5jQ5jQ5jQ5jQ5jQ5uI9h5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5j', 'Admin', 'User', 'ADMIN'),
-    ('550e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440000', 'manager@axim.com', '$2b$10$rQj8k5jQ5jQ5jQ5jQ5jQ5uI9h5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5j', 'Manager', 'User', 'MANAGER'),
-    ('550e8400-e29b-41d4-a716-446655440003', '550e8400-e29b-41d4-a716-446655440000', 'rep@axim.com', '$2b$10$rQj8k5jQ5jQ5jQ5jQ5jQ5uI9h5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5jQ5j', 'Rep', 'User', 'REP');
+    ('550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', 'admin@axim.com', '$2b$10$LGZn.Xo2bKc24WONLEPTEuFYRLvYXF1dDf/SuaZAwI/pBOC5xyk1G', 'Admin', 'User', 'ADMIN'),
+    ('550e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440000', 'manager@axim.com', '$2b$10$LGZn.Xo2bKc24WONLEPTEuFYRLvYXF1dDf/SuaZAwI/pBOC5xyk1G', 'Manager', 'User', 'MANAGER'),
+    ('550e8400-e29b-41d4-a716-446655440003', '550e8400-e29b-41d4-a716-446655440000', 'rep@axim.com', '$2b$10$LGZn.Xo2bKc24WONLEPTEuFYRLvYXF1dDf/SuaZAwI/pBOC5xyk1G', 'Rep', 'User', 'REP');

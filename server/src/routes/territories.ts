@@ -5,7 +5,8 @@ import {
   deleteTerritory,
   assignTerritory,
   getUserTerritories,
-  getAvailableReps
+  getAvailableReps,
+  updateTerritory
 } from '../controllers/territoriesController.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 
@@ -17,5 +18,6 @@ router.delete('/:territoryId', authenticateToken, requireRole(['ADMIN', 'MANAGER
 router.post('/:territoryId/assign', authenticateToken, requireRole(['ADMIN', 'MANAGER']), assignTerritory);
 router.get('/available-reps', authenticateToken, requireRole(['ADMIN', 'MANAGER']), getAvailableReps);
 router.get('/my-territories', authenticateToken, getUserTerritories);
+router.put('/:territoryId', authenticateToken, requireRole(['ADMIN', 'MANAGER']), updateTerritory);
 
 export default router;

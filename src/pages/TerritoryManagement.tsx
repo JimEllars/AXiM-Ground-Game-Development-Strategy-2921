@@ -74,6 +74,19 @@ import { Territory, User } from '@/types';
         }
       };
 
+      const handleEditTerritory = async (id: string, data: { name: string; description: string; geoJson: any }) => {
+        try {
+          await territoriesAPI.update(id, data);
+          setSuccess('Territory updated successfully!');
+          setError('');
+          loadData();
+          setTimeout(() => setSuccess(''), 3000);
+        } catch (err: any) {
+          setError(err.response?.data?.error || 'Failed to update territory');
+          setSuccess('');
+        }
+      };
+
       if (loading) {
         return (
           <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
@@ -108,6 +121,7 @@ import { Territory, User } from '@/types';
               onSaveTerritory={handleSaveTerritory}
               onDeleteTerritory={handleDeleteTerritory}
               onAssignTerritory={handleAssignTerritory}
+              onEditTerritory={handleEditTerritory}
             />
           )}
         </Box>

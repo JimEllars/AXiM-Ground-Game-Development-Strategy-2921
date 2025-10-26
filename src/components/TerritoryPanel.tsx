@@ -14,6 +14,7 @@ interface TerritoryPanelProps {
   onAssignRepIdChange: (repId: string) => void;
   onAssignRep: () => void;
   onDeleteTerritory: (territoryId: string) => void;
+  onEditTerritory: (id: string, data: any) => void;
 }
 
 const TerritoryPanel: React.FC<TerritoryPanelProps> = (props) => {

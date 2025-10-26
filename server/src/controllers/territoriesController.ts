@@ -37,6 +37,52 @@ export const createTerritory = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const updateTerritory = async (req: AuthRequest, res: Response) => {
+  try {
+    const { territoryId } = req.params;
+    const { name, description, geoJson } = req.body;
+    const user = req.user!;
+
+    if (!name || !geoJson) {
+      return res.status(400).json({ error: 'Name and geoJson are required' });
+    }
+
+    // Verify territory belongs to organization
+    const territoryResult = await pool.query(
+      'SELECT id FROM territories WHERE id = $1 AND organization_id = $2',
+      [territoryId, user.organization_id]
+    );
+
+    if (territoryResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Territory not found' });
+    }
+
+    // Convert GeoJSON to WKT for PostGIS
+    const wkt = wellknown.stringify(geoJson);
+
+    const result = await pool.query(
+      `UPDATE territories
+       SET name = $1, description = $2, boundary = ST_GeomFromText($3, 4326)
+       WHERE id = $4
+       RETURNING id, name, description, created_at`,
+      [name, description, wkt, territoryId]
+    );
+
+    const territory = result.rows[0];
+
+    res.json({
+      id: territory.id,
+      name: territory.name,
+      description: territory.description,
+      boundary: geoJson,
+      createdAt: territory.created_at
+    });
+  } catch (error) {
+    console.error('Update territory error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const getTerritories = async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;

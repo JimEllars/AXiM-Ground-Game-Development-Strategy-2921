@@ -37,6 +37,7 @@ interface TerritoryMapProps {
   onSaveTerritory: (data: { name: string; description: string; geoJson: any }) => void;
   onDeleteTerritory: (id: string) => void;
   onAssignTerritory: (territoryId: string, userId: string) => void;
+  onEditTerritory: (id: string, data: { name: string; description: string; geoJson: any }) => void;
 }
 
 const TerritoryMap: React.FC<TerritoryMapProps> = ({
@@ -45,6 +46,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
   onSaveTerritory,
   onDeleteTerritory,
   onAssignTerritory,
+  onEditTerritory,
 }) => {
   const [viewState, setViewState] = useState({
     longitude: -98.5795,
@@ -181,6 +183,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
         onAssignRepIdChange={setAssignRepId}
         onAssignRep={handleAssignRep}
         onDeleteTerritory={onDeleteTerritory}
+        onEditTerritory={onEditTerritory}
       />
     </Box>
   );
