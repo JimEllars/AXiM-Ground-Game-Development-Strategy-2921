@@ -112,6 +112,7 @@ CREATE TRIGGER update_leads_updated_at BEFORE UPDATE ON leads FOR EACH ROW EXECU
 CREATE TRIGGER update_territories_updated_at BEFORE UPDATE ON territories FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Sample data for development with properly hashed passwords
+TRUNCATE TABLE organizations CASCADE;
 INSERT INTO organizations (id, name) VALUES 
     ('550e8400-e29b-41d4-a716-446655440000', 'Demo Organization');
 
