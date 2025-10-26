@@ -26,6 +26,7 @@ import React, { useState, useEffect } from 'react';
       Avatar,
       Grid,
       Paper,
+      TableSortLabel,
     } from '@mui/material';
     import { FiUsers, FiUserPlus, FiEdit2, FiTrash2, FiMail, FiMapPin } from 'react-icons/fi';
     import SafeIcon from '@/common/SafeIcon';
@@ -49,6 +50,7 @@ import React, { useState, useEffect } from 'react';
       const [success, setSuccess] = useState('');
       const [dialogOpen, setDialogOpen] = useState(false);
       const [editingUser, setEditingUser] = useState<User | null>(null);
+      const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>(null);
       const [formData, setFormData] = useState({
         email: '',
         firstName: '',
@@ -56,6 +58,30 @@ import React, { useState, useEffect } from 'react';
         role: 'REP' as 'ADMIN' | 'MANAGER' | 'REP',
         password: '',
       });
+
+      const sortedUsers = React.useMemo(() => {
+        let sortableUsers = [...users];
+        if (sortConfig !== null) {
+          sortableUsers.sort((a, b) => {
+            if (a[sortConfig.key] < b[sortConfig.key]) {
+              return sortConfig.direction === 'ascending' ? -1 : 1;
+            }
+            if (a[sortConfig.key] > b[sortConfig.key]) {
+              return sortConfig.direction === 'ascending' ? 1 : -1;
+            }
+            return 0;
+          });
+        }
+        return sortableUsers;
+      }, [users, sortConfig]);
+
+      const requestSort = (key: string) => {
+        let direction: 'ascending' | 'descending' = 'ascending';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+          direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+      };
 
       useEffect(() => {
         loadUsers();
@@ -270,11 +296,27 @@ import React, { useState, useEffect } from 'react';
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell>User</TableCell>
+                    <TableCell sortDirection={sortConfig?.key === 'lastName' ? sortConfig.direction : false}>
+                      <TableSortLabel
+                        active={sortConfig?.key === 'lastName'}
+                        direction={sortConfig?.direction}
+                        onClick={() => requestSort('lastName')}
+                      >
+                        User
+                      </TableSortLabel>
+                    </TableCell>
                     <TableCell>Role</TableCell>
                     <TableCell>Status</TableCell>
                     <TableCell>Territories</TableCell>
-                    <TableCell>Created</TableCell>
+                    <TableCell sortDirection={sortConfig?.key === 'createdAt' ? sortConfig.direction : false}>
+                      <TableSortLabel
+                        active={sortConfig?.key === 'createdAt'}
+                        direction={sortConfig?.direction}
+                        onClick={() => requestSort('createdAt')}
+                      >
+                        Created
+                      </TableSortLabel>
+                    </TableCell>
                     <TableCell>Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -285,14 +327,14 @@ import React, { useState, useEffect } from 'react';
                         Loading users...
                       </TableCell>
                     </TableRow>
-                  ) : users.length === 0 ? (
+                  ) : sortedUsers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
                         No users found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    users.map((user) => (
+                    sortedUsers.map((user) => (
                       <TableRow key={user.id} hover>
                         <TableCell>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

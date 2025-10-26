@@ -14,6 +14,7 @@ import React from 'react';
     import TeamManagementPage from '@/pages/TeamManagementPage';
     import PerformancePage from '@/pages/PerformancePage';
     import SettingsPage from '@/pages/SettingsPage';
+    import UserProfile from '@/pages/UserProfile';
     import Navbar from '@/components/Navbar';
 
     // Create Material-UI theme
@@ -140,6 +141,16 @@ import { useAuth } from '@/contexts/AuthContext';
                     <ProtectedRoute>
                       <Layout>
                         <SettingsPage />
+                      </Layout>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <Layout>
+                        <UserProfile />
                       </Layout>
                     </ProtectedRoute>
                   }
