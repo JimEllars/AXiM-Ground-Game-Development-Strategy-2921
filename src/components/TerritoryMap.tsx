@@ -5,8 +5,6 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Button,
   TextField,
@@ -15,6 +13,7 @@ import {
   FormControl,
   InputLabel,
   Divider,
+  CircularProgress,
 } from '@mui/material';
 import { FiSave, FiX, FiTrash2, FiUserPlus } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
@@ -65,6 +64,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
   const [selectedTerritoryId, setSelectedTerritoryId] = useState<string | null>(null);
   const [newTerritory, setNewTerritory] = useState<any>(null);
   const [assignRepId, setAssignRepId] = useState('');
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   const handleSaveNewTerritory = () => {
     if (newTerritory && newTerritory.name) {
@@ -104,6 +104,24 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
   return (
     <Box sx={{ display: 'flex', height: '75vh', gap: 2 }}>
       <Box sx={{ flex: 3, position: 'relative', borderRadius: 1, overflow: 'hidden' }}>
+        {!mapLoaded && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+              zIndex: 1,
+            }}
+          >
+            <CircularProgress />
+          </Box>
+        )}
         <Map
           {...viewState}
           onMove={(evt) => setViewState(evt.viewState)}
@@ -112,6 +130,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
           mapboxAccessToken={MAPBOX_TOKEN}
           interactiveLayerIds={['territory-fills']}
           onClick={onMapClick}
+          onLoad={() => setMapLoaded(true)}
         >
           <NavigationControl position="top-right" />
           <DrawControl
@@ -165,11 +184,10 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
       </Box>
 
       <Box sx={{ flex: 1, overflowY: 'auto' }}>
-        <Card elevation={2}>
-          <CardContent>
-            {!newTerritory && !selectedTerritory && (
-              <>
-                <Typography variant="h6">Territory Management</Typography>
+        <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
+          {!newTerritory && !selectedTerritory && (
+            <>
+              <Typography variant="h6">Territory Management</Typography>
                 <Typography variant="body2" color="text.secondary">
                   Use the polygon tool on the map to draw a new territory, or click an existing territory to
                   manage it.
@@ -261,8 +279,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
                 </Button>
               </>
             )}
-          </CardContent>
-        </Card>
+        </Box>
       </Box>
     </Box>
   );
