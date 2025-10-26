@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "dev": "npm run build && npm run start",
+    "build": "rm -rf dist && tsc",
     "start": "node dist/server.js",
     "test": "tsc --noEmit",
     "start:test": "tsx src/server.ts",

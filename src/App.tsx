@@ -34,130 +34,132 @@ import React from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
 
-    // Protected Route component
-    const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// Protected Route component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>; // Or a spinner component
+    return <div>Loading session...</div>;
   }
 
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
-    };
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
-    // Main Layout component
-    const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-      return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-          <Navbar />
-          <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-            {children}
-          </Box>
-        </Box>
-      );
-    };
+  return <>{children}</>;
+};
 
-    function App() {
-      return (
-        <ErrorBoundary>
-          <ThemeProvider theme={theme}>
-            <CssBaseline />
-            <Router>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <Dashboard />
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/territories"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <TerritoryManagement />
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/leads"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <LeadManagement />
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/turf"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <RepTurf />
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/analytics"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <AnalyticsPage />
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/team"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <TeamManagementPage />
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/performance"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <PerformancePage />
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/settings"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <SettingsPage />
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <Layout>
-                        <UserProfile />
-                      </Layout>
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Router>
+// Main Layout component
+const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Navbar />
+      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+        {children}
+      </Box>
+    </Box>
+  );
+};
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Dashboard />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/territories"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <TerritoryManagement />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/leads"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <LeadManagement />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/turf"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <RepTurf />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <AnalyticsPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/team"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <TeamManagementPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/performance"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <PerformancePage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <SettingsPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <UserProfile />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
           </ThemeProvider>
         </ErrorBoundary>
       );
