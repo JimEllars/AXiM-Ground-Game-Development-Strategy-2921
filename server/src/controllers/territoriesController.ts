@@ -88,6 +88,13 @@ export const deleteTerritory = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Territory not found' });
     }
 
+    // Delete leads within the territory to prevent orphaned data
+    await pool.query(
+      `DELETE FROM leads
+       WHERE ST_Within(location, (SELECT boundary FROM territories WHERE id = $1))`,
+      [territoryId]
+    );
+
     // Delete territory assignments first
     await pool.query('DELETE FROM territory_assignments WHERE territory_id = $1', [territoryId]);
     

@@ -31,9 +31,13 @@ export const uploadLeads = async (req: AuthRequest, res: Response) => {
     });
 
     if (parseResult.errors.length > 0) {
+      const formattedErrors = parseResult.errors.map(err => ({
+        ...err,
+        message: `Error on row ${err.row}: ${err.message}`
+      }));
       return res.status(400).json({ 
         error: 'CSV parsing error',
-        details: parseResult.errors
+        details: formattedErrors
       });
     }
 
@@ -89,8 +93,16 @@ export const uploadLeads = async (req: AuthRequest, res: Response) => {
       };
     });
 
+    // Filter out duplicate leads to prevent data duplication
+    const existingLeads = await pool.query(
+      `SELECT street_address FROM leads WHERE organization_id = $1`,
+      [user.organization_id]
+    );
+    const existingAddresses = new Set(existingLeads.rows.map(row => row.street_address));
+    const newLeads = leads.filter(lead => !existingAddresses.has(lead.street_address));
+
     // Bulk insert leads
-    const insertPromises = leads.map(lead => {
+    const insertPromises = newLeads.map(lead => {
       const locationWKT = lead.longitude && lead.latitude 
         ? `POINT(${lead.longitude} ${lead.latitude})`
         : null;
