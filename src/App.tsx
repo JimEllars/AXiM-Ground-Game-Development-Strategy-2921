@@ -158,7 +158,9 @@ function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*">
+                <Navigate to="/" replace />
+              </Route>
             </Routes>
           </ThemeProvider>
         </ErrorBoundary>
