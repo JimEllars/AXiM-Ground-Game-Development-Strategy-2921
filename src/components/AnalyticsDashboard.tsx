@@ -22,7 +22,7 @@ import React, { useState, useEffect } from 'react';
       TableRow,
       Paper,
     } from '@mui/material';
-    import { FiTrendingUp, FiUsers, FiTarget, FiActivity, FiCalendar, FiDownload } from 'react-icons/fi';
+    import { FiTrendingUp, FiUsers, FiTarget, FiActivity, FiDownload } from 'react-icons/fi';
     import {
       LineChart,
       Line,
@@ -31,8 +31,6 @@ import React, { useState, useEffect } from 'react';
       CartesianGrid,
       Tooltip,
       ResponsiveContainer,
-      BarChart,
-      Bar,
       PieChart,
       Pie,
       Cell,
@@ -56,12 +54,27 @@ import React, { useState, useEffect } from 'react';
 
     const COLORS = ['#1976d2', '#388e3c', '#f57c00', '#d32f2f', '#7b1fa2'];
 
+    const initialAnalyticsState = {
+      territories: [],
+      leads: [],
+      interactions: [],
+      summary: {
+        totalTerritories: 0,
+        totalLeads: 0,
+        totalInteractions: 0,
+        completionRate: 0,
+      },
+      trends: [],
+      outcomes: [],
+      topPerformers: [],
+    };
+
     const AnalyticsDashboard: React.FC = () => {
       const [tabValue, setTabValue] = useState(0);
       const [dateRange, setDateRange] = useState('7days');
       const [loading, setLoading] = useState(false);
       const [error, setError] = useState('');
-      const [analytics, setAnalytics] = useState<any>({});
+      const [analytics, setAnalytics] = useState<any>(initialAnalyticsState);
 
       useEffect(() => {
         loadAnalytics();
@@ -97,18 +110,18 @@ import React, { useState, useEffect } from 'react';
 
           // Process analytics data
           const processedData = {
-            territories: territoriesData.data,
-            leads: leadsData.data.leads,
-            interactions: interactionsData.data.interactions,
+            territories: territoriesData.data || [],
+            leads: leadsData.data?.leads || [],
+            interactions: interactionsData.data?.interactions || [],
             summary: {
-              totalTerritories: territoriesData.data.length,
-              totalLeads: leadsData.data.pagination.total,
-              totalInteractions: interactionsData.data.pagination.total,
-              completionRate: calculateCompletionRate(leadsData.data.leads),
+              totalTerritories: territoriesData.data?.length || 0,
+              totalLeads: leadsData.data?.pagination?.total || 0,
+              totalInteractions: interactionsData.data?.pagination?.total || 0,
+              completionRate: calculateCompletionRate(leadsData.data?.leads),
             },
-            trends: processTrendsData(interactionsData.data.interactions),
-            outcomes: processOutcomesData(interactionsData.data.interactions),
-            topPerformers: processTopPerformers(interactionsData.data.interactions),
+            trends: processTrendsData(interactionsData.data?.interactions),
+            outcomes: processOutcomesData(interactionsData.data?.interactions),
+            topPerformers: processTopPerformers(interactionsData.data?.interactions),
           };
 
           setAnalytics(processedData);
@@ -119,7 +132,7 @@ import React, { useState, useEffect } from 'react';
         }
       };
 
-      const calculateCompletionRate = (leads: any[]) => {
+      const calculateCompletionRate = (leads: any[] = []) => {
         if (!leads || leads.length === 0) return 0;
         const completedLeads = leads.filter(
           (lead) => lead && (lead.status === 'Completed' || lead.status === 'Sold')
@@ -127,7 +140,7 @@ import React, { useState, useEffect } from 'react';
         return Math.round((completedLeads / leads.length) * 100);
       };
 
-      const processTrendsData = (interactions: any[]) => {
+      const processTrendsData = (interactions: any[] = []) => {
         if (!interactions) return [];
         const dailyData = interactions.reduce((acc: any, interaction) => {
           if (!interaction || !interaction.interactionDate || !interaction.lead) return acc;
@@ -142,7 +155,7 @@ import React, { useState, useEffect } from 'react';
         return Object.values(dailyData).map((item: any) => ({ ...item, uniqueLeads: item.uniqueLeads.size }));
       };
 
-      const processOutcomesData = (interactions: any[]) => {
+      const processOutcomesData = (interactions: any[] = []) => {
         if (!interactions) return [];
         const outcomes = interactions.reduce((acc: any, interaction) => {
           if (!interaction || !interaction.outcome) return acc;
@@ -153,7 +166,7 @@ import React, { useState, useEffect } from 'react';
         return Object.entries(outcomes).map(([name, value]) => ({ name, value }));
       };
 
-      const processTopPerformers = (interactions: any[]) => {
+      const processTopPerformers = (interactions: any[] = []) => {
         if (!interactions) return [];
         const performers = interactions.reduce((acc: any, interaction) => {
           if (!interaction || !interaction.user || !interaction.lead) return acc;
@@ -253,18 +266,18 @@ import React, { useState, useEffect } from 'react';
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Total Territories"
-                value={analytics.summary?.totalTerritories || 0}
+                value={analytics.summary.totalTerritories}
                 icon={FiTarget}
                 color="#1976d2"
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <StatCard title="Total Leads" value={analytics.summary?.totalLeads || 0} icon={FiUsers} color="#388e3c" />
+              <StatCard title="Total Leads" value={analytics.summary.totalLeads} icon={FiUsers} color="#388e3c" />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Total Interactions"
-                value={analytics.summary?.totalInteractions || 0}
+                value={analytics.summary.totalInteractions}
                 icon={FiActivity}
                 color="#f57c00"
               />
@@ -272,7 +285,7 @@ import React, { useState, useEffect } from 'react';
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Completion Rate"
-                value={`${analytics.summary?.completionRate || 0}%`}
+                value={`${analytics.summary.completionRate}%`}
                 icon={FiTrendingUp}
                 color="#7b1fa2"
               />
@@ -290,7 +303,7 @@ import React, { useState, useEffect } from 'react';
               <Typography variant="h6" gutterBottom>
                 Interaction Trends
               </Typography>
-              {analytics.trends && analytics.trends.length > 0 ? (
+              {analytics.trends.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={analytics.trends}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -309,7 +322,7 @@ import React, { useState, useEffect } from 'react';
               <Typography variant="h6" gutterBottom>
                 Interaction Outcomes
               </Typography>
-              {analytics.outcomes && analytics.outcomes.length > 0 ? (
+              {analytics.outcomes.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
@@ -322,7 +335,7 @@ import React, { useState, useEffect } from 'react';
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {analytics.outcomes.map((entry: any, index: number) => (
+                      {analytics.outcomes.map((_entry: any, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
@@ -337,7 +350,7 @@ import React, { useState, useEffect } from 'react';
               <Typography variant="h6" gutterBottom>
                 Top Performers
               </Typography>
-              {analytics.topPerformers && analytics.topPerformers.length > 0 ? (
+              {analytics.topPerformers.length > 0 ? (
                 <TableContainer>
                   <Table>
                     <TableHead>
