@@ -3,7 +3,7 @@ import { pool } from '../config/database.js';
 import { AuthRequest } from '../types/index.js';
 import wellknown from 'wellknown';
 
-export const createTerritory = async (req: AuthRequest, res: Response) => {
+export const createTerritory = async (req: AuthRequest, res: Response, next: any) => {
   try {
     const { name, description, geoJson } = req.body;
     const user = req.user!;
@@ -33,11 +33,11 @@ export const createTerritory = async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error('Create territory error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    next(new Error('Failed to create territory due to a server error.'));
   }
 };
 
-export const getTerritories = async (req: AuthRequest, res: Response) => {
+export const getTerritories = async (req: AuthRequest, res: Response, next: any) => {
   try {
     const user = req.user!;
 
@@ -69,14 +69,18 @@ export const getTerritories = async (req: AuthRequest, res: Response) => {
     res.json(territories);
   } catch (error) {
     console.error('Get territories error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    next(new Error('Failed to retrieve territories.'));
   }
 };
 
-export const deleteTerritory = async (req: AuthRequest, res: Response) => {
+export const deleteTerritory = async (req: AuthRequest, res: Response, next: any) => {
   try {
     const { territoryId } = req.params;
     const user = req.user!;
+
+    if (user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+      return res.status(403).json({ error: 'You are not authorized to delete territories.' });
+    }
 
     // Verify territory belongs to organization
     const territoryResult = await pool.query(
@@ -85,7 +89,7 @@ export const deleteTerritory = async (req: AuthRequest, res: Response) => {
     );
 
     if (territoryResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Territory not found' });
+      return res.status(404).json({ error: 'Territory not found or you do not have permission to delete it.' });
     }
 
     // Delete leads within the territory to prevent orphaned data
@@ -104,15 +108,19 @@ export const deleteTerritory = async (req: AuthRequest, res: Response) => {
     res.json({ message: 'Territory deleted successfully' });
   } catch (error) {
     console.error('Delete territory error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    next(new Error('Failed to delete territory.'));
   }
 };
 
-export const assignTerritory = async (req: AuthRequest, res: Response) => {
+export const assignTerritory = async (req: AuthRequest, res: Response, next: any) => {
   try {
     const { territoryId } = req.params;
     const { userId } = req.body;
     const assignedBy = req.user!;
+
+    if (assignedBy.role !== 'ADMIN' && assignedBy.role !== 'MANAGER') {
+      return res.status(403).json({ error: 'You are not authorized to assign territories.' });
+    }
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
@@ -125,7 +133,7 @@ export const assignTerritory = async (req: AuthRequest, res: Response) => {
     );
 
     if (territoryResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Territory not found' });
+      return res.status(404).json({ error: 'Territory not found or you do not have permission to assign it.' });
     }
 
     // Verify user belongs to organization
@@ -135,7 +143,7 @@ export const assignTerritory = async (req: AuthRequest, res: Response) => {
     );
 
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'User not found in your organization.' });
     }
 
     // Create assignment (ON CONFLICT DO NOTHING to handle duplicates)
@@ -149,11 +157,11 @@ export const assignTerritory = async (req: AuthRequest, res: Response) => {
     res.json({ message: 'Territory assigned successfully' });
   } catch (error) {
     console.error('Assign territory error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    next(new Error('Failed to assign territory.'));
   }
 };
 
-export const getUserTerritories = async (req: AuthRequest, res: Response) => {
+export const getUserTerritories = async (req: AuthRequest, res: Response, next: any) => {
   try {
     const user = req.user!;
 
@@ -182,11 +190,11 @@ export const getUserTerritories = async (req: AuthRequest, res: Response) => {
     res.json(territories);
   } catch (error) {
     console.error('Get user territories error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    next(new Error('Failed to retrieve user territories.'));
   }
 };
 
-export const getAvailableReps = async (req: AuthRequest, res: Response) => {
+export const getAvailableReps = async (req: AuthRequest, res: Response, next: any) => {
   try {
     const user = req.user!;
 
@@ -218,6 +226,6 @@ export const getAvailableReps = async (req: AuthRequest, res: Response) => {
     res.json(reps);
   } catch (error) {
     console.error('Get available reps error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    next(new Error('Failed to retrieve available reps.'));
   }
 };
