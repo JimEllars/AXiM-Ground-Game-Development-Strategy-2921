@@ -35,14 +35,14 @@ export const uploadLeads = async (req: AuthRequest, res: Response) => {
         ...err,
         message: `Error on row ${err.row}: ${err.message}`
       }));
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: 'CSV parsing error',
         details: formattedErrors
       });
     }
 
     const rows = parseResult.data as any[];
-    
+
     if (rows.length === 0) {
       return res.status(400).json({ error: 'CSV file is empty' });
     }
@@ -51,10 +51,10 @@ export const uploadLeads = async (req: AuthRequest, res: Response) => {
     const requiredColumns = ['street_address'];
     const headers = Object.keys(rows[0]);
     const missingColumns = requiredColumns.filter(col => !headers.includes(col));
-    
+
     if (missingColumns.length > 0) {
-      return res.status(400).json({ 
-        error: `Missing required columns: ${missingColumns.join(', ')}` 
+      return res.status(400).json({
+        error: `Missing required columns: ${missingColumns.join(', ')}`
       });
     }
 
@@ -75,7 +75,7 @@ export const uploadLeads = async (req: AuthRequest, res: Response) => {
     // Prepare leads for insertion
     const leads = rows.map((row, index) => {
       const geocode = geocodeResults[index];
-      
+
       return {
         organization_id: user.organization_id,
         first_name: row.first_name || null,
@@ -93,43 +93,79 @@ export const uploadLeads = async (req: AuthRequest, res: Response) => {
       };
     });
 
-    // Filter out duplicate leads to prevent data duplication
-    const existingLeads = await pool.query(
-      `SELECT street_address FROM leads WHERE organization_id = $1`,
-      [user.organization_id]
+    // More efficient duplicate check
+    const uploadedAddresses = leads.map(lead => lead.street_address);
+    const existingLeadsResult = await pool.query(
+      `SELECT street_address FROM leads WHERE organization_id = $1 AND street_address = ANY($2::text[])`,
+      [user.organization_id, uploadedAddresses]
     );
-    const existingAddresses = new Set(existingLeads.rows.map(row => row.street_address));
+    const existingAddresses = new Set(existingLeadsResult.rows.map(row => row.street_address));
     const newLeads = leads.filter(lead => !existingAddresses.has(lead.street_address));
 
-    // Bulk insert leads
-    const insertPromises = newLeads.map(lead => {
-      const locationWKT = lead.longitude && lead.latitude 
-        ? `POINT(${lead.longitude} ${lead.latitude})`
-        : null;
+    if (newLeads.length === 0) {
+      return res.json({
+        message: 'All leads in the file already exist in the database.',
+        totalLeads: 0,
+        geocodedLeads: 0,
+        geocodingRate: 'N/A'
+      });
+    }
 
-      return pool.query(
-        `INSERT INTO leads 
-         (organization_id, first_name, last_name, street_address, city, state, zip, phone, email, status, notes, location)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, ${locationWKT ? 'ST_GeomFromText($12, 4326)' : 'NULL'})
-         RETURNING id`,
-        locationWKT 
-          ? [lead.organization_id, lead.first_name, lead.last_name, lead.street_address, 
-             lead.city, lead.state, lead.zip, lead.phone, lead.email, lead.status, lead.notes, locationWKT]
-          : [lead.organization_id, lead.first_name, lead.last_name, lead.street_address,
-             lead.city, lead.state, lead.zip, lead.phone, lead.email, lead.status, lead.notes]
-      );
-    });
+    // Efficient bulk insert using a single query
+    const values: any[] = [];
+    const valueStrings: string[] = [];
+    let paramIndex = 1;
 
-    const results = await Promise.all(insertPromises);
-    const successCount = results.length;
-    const geocodedCount = geocodeResults.filter(r => r !== null).length;
+    const columns = [
+      'organization_id', 'first_name', 'last_name', 'street_address',
+      'city', 'state', 'zip', 'phone', 'email', 'status', 'notes', 'location'
+    ];
+
+    for (const lead of newLeads) {
+      const leadValues = [
+        lead.organization_id,
+        lead.first_name,
+        lead.last_name,
+        lead.street_address,
+        lead.city,
+        lead.state,
+        lead.zip,
+        lead.phone,
+        lead.email,
+        lead.status,
+        lead.notes
+      ];
+
+      const placeholders = leadValues.map(() => `$${paramIndex++}`);
+      values.push(...leadValues);
+
+      if (lead.longitude && lead.latitude) {
+        placeholders.push(`ST_SetSRID(ST_MakePoint($${paramIndex++}, $${paramIndex++}), 4326)`);
+        values.push(lead.longitude, lead.latitude);
+      } else {
+        placeholders.push('NULL');
+      }
+
+      valueStrings.push(`(${placeholders.join(', ')})`);
+    }
+
+    const queryText = `
+      INSERT INTO leads (${columns.join(', ')})
+      VALUES ${valueStrings.join(', ')}
+      RETURNING id
+    `;
+
+    const results = await pool.query(queryText, values);
+    const successCount = results.rowCount || 0;
+    const geocodedCount = newLeads.filter(l => l.longitude && l.latitude).length;
 
     res.json({
       message: 'Leads uploaded successfully',
       totalLeads: successCount,
       geocodedLeads: geocodedCount,
-      geocodingRate: `${Math.round((geocodedCount / successCount) * 100)}%`
+      geocodingRate: successCount > 0 ? `${Math.round((geocodedCount / successCount) * 100)}%` : 'N/A'
     });
+
   } catch (error) {
     console.error('Upload leads error:', error);
     res.status(500).json({ error: 'Internal server error' });

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Map, { Source, Layer, NavigationControl, useControl } from 'react-map-gl';
+import { LngLatBounds } from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
@@ -46,11 +47,25 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
   onDeleteTerritory,
   onAssignTerritory,
 }) => {
+  const mapRef = useRef<any>();
   const [viewState, setViewState] = useState({
     longitude: -98.5795,
     latitude: 39.8283,
     zoom: 3.5,
   });
+
+  useEffect(() => {
+    if (territories.length > 0 && mapRef.current) {
+      const bounds = new LngLatBounds();
+      territories.forEach(territory => {
+        territory.boundary.coordinates[0].forEach((coord: any) => {
+          bounds.extend(coord);
+        });
+      });
+      mapRef.current.fitBounds(bounds, { padding: 40, duration: 1000 });
+    }
+  }, [territories]);
+
   const [mapLoaded, setMapLoaded] = useState(false);
   const {
     selectedTerritoryId,
@@ -86,10 +101,15 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
   }));
 
   const onMapClick = (event: any) => {
-    const features = event.features?.filter((f: any) => f.layer.id === 'territory-fills');
-    if (features && features.length > 0) {
-      const territoryId = features[0].properties.id;
-      handleSelectTerritory(territoryId);
+    if (!event.features || event.features.length === 0) {
+      handleSelectTerritory(null);
+      return;
+    }
+    const territoryFeature = event.features.find((f: any) => f.layer.id === 'territory-fills');
+    if (territoryFeature) {
+      handleSelectTerritory(territoryFeature.properties.id);
+    } else {
+      handleSelectTerritory(null);
     }
   };
 
@@ -115,6 +135,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
           </Box>
         )}
         <Map
+          ref={mapRef}
           {...viewState}
           onMove={(evt) => setViewState(evt.viewState)}
           style={{ width: '100%', height: '100%' }}

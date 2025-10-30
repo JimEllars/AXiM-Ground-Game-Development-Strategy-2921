@@ -30,7 +30,7 @@
     "axios": "^1.7.2",
     "bcrypt": "^6.0.0",
     "framer-motion": "^11.18.2",
-    "mapbox-gl": "^3.5.1",
+    "mapbox-gl": "^3.16.0",
     "papaparse": "^5.4.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

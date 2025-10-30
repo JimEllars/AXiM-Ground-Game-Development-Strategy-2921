@@ -23,7 +23,7 @@ export default defineConfig({
       }
     },
     watch: {
-      ignored: ['**/server/**']
+      ignored: ['**/server/**', /\.env/]
     }
   }
 });
