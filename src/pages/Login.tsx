@@ -22,10 +22,9 @@ import React, { useState } from 'react';
         e.preventDefault();
         try {
           await login(formData.email, formData.password);
-          navigate('/');
+          navigate('/dashboard');
         } catch (err) {
           // Error is handled by useAuth hook
-          console.error('Login error:', err);
         }
       };
 
