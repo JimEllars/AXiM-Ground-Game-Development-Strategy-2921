@@ -67,6 +67,7 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
 
     // Prepare addresses for geocoding
     const addresses = validatedRows.map(row => {
+      if (!row) return '';
       const parts = [
         row.street_address,
         row.city,
@@ -74,7 +75,7 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
         row.zip
       ].filter(Boolean);
       return parts.join(', ');
-    });
+    }).filter(Boolean);
 
     console.log(`Geocoding ${addresses.length} addresses...`);
     const geocodeResults = await batchGeocode(addresses);

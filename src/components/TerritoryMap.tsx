@@ -4,7 +4,7 @@ import { LngLatBounds } from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
-import { Box, CircularProgress } from '@mui/material';
+import { Box, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
 import TerritoryPanel from './TerritoryPanel';
 import { useTerritoryPanelState } from '../hooks/useTerritoryPanelState';
 import { Territory, User } from '@/types';
@@ -53,6 +53,12 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
     latitude: 39.8283,
     zoom: 3.5,
   });
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [panelVisible, setPanelVisible] = useState(!isMobile);
+
+  const togglePanel = () => setPanelVisible(!panelVisible);
 
   useEffect(() => {
     if (territories.length > 0 && mapRef.current) {
@@ -114,8 +120,8 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '75vh', gap: 2 }}>
-      <Box sx={{ flex: 3, position: 'relative', borderRadius: 1, overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '75vh', gap: 2 }}>
+      <Box sx={{ flex: 3, position: 'relative', borderRadius: 1, overflow: 'hidden', height: isMobile ? '50%' : '100%' }}>
         {!mapLoaded && (
           <Box
             sx={{
@@ -202,6 +208,8 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
         onAssignRepIdChange={setAssignRepId}
         onAssignRep={handleAssignRep}
         onDeleteTerritory={onDeleteTerritory}
+        panelVisible={panelVisible}
+        onTogglePanel={togglePanel}
       />
     </Box>
   );
