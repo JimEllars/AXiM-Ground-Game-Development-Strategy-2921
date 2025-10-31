@@ -51,7 +51,7 @@ import React, { useState } from 'react';
           formData.append('file', file);
           const token = localStorage.getItem('token');
 
-          const response = await fetch('/api/leads/upload', {
+          const response = await fetch('/api/leads/bulk-import', {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${token}`,

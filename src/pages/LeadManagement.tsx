@@ -14,7 +14,7 @@ import React, { useState, useEffect } from 'react';
       Chip,
       TextField,
       InputAdornment,
-      Pagination,
+      TablePagination,
       Alert,
       CircularProgress,
       Button,
@@ -46,7 +46,7 @@ import React, { useState, useEffect } from 'react';
       const [tabValue, setTabValue] = useState(0);
       const [leads, setLeads] = useState<any[]>([]);
       const [loading, setLoading] = useState(false);
-      const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, pages: 0 });
+      const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, pages: 0, rowsPerPage: 25 });
       const [searchTerm, setSearchTerm] = useState('');
       const [statusFilter, setStatusFilter] = useState('');
       const [success, setSuccess] = useState('');
@@ -65,7 +65,7 @@ import React, { useState, useEffect } from 'react';
           setLoading(true);
           const params = {
             page: pagination.page,
-            limit: pagination.limit,
+            limit: pagination.rowsPerPage,
             ...(searchTerm && { search: searchTerm }),
             ...(statusFilter && { status: statusFilter }),
           };
@@ -95,8 +95,12 @@ import React, { useState, useEffect } from 'react';
         setTabValue(newValue);
       };
 
-      const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
-        setPagination((prev) => ({ ...prev, page: value }));
+      const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
+        setPagination(prev => ({ ...prev, page: newPage + 1 }));
+      };
+
+      const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setPagination(prev => ({ ...prev, rowsPerPage: parseInt(event.target.value, 10), page: 1 }));
       };
 
       const handleOpenDetails = (lead: any) => {
@@ -275,16 +279,14 @@ import React, { useState, useEffect } from 'react';
                 </TableContainer>
 
                 {/* Pagination */}
-                {pagination.pages > 1 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-                    <Pagination
-                      count={pagination.pages}
-                      page={pagination.page}
-                      onChange={handlePageChange}
-                      color="primary"
-                    />
-                  </Box>
-                )}
+                  <TablePagination
+                  component="div"
+                  count={pagination.total}
+                  page={pagination.page - 1}
+                  onPageChange={handlePageChange}
+                  rowsPerPage={pagination.rowsPerPage}
+                  onRowsPerPageChange={handleRowsPerPageChange}
+                />
               </Box>
             </TabPanel>
           </Paper>
