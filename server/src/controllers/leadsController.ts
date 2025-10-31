@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database.js';
 import { AuthRequest } from '../types/index.js';
+import { leadSchema } from '../utils/validationSchemas.js';
 import { geocodeAddress, batchGeocode } from '../services/geocoding.js';
 import Papa from 'papaparse';
 import multer from 'multer';
@@ -13,7 +14,7 @@ const upload = multer({
 
 export const uploadMiddleware = upload.single('file');
 
-export const uploadLeads = async (req: AuthRequest, res: Response) => {
+export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
     const file = req.file;
@@ -47,19 +48,25 @@ export const uploadLeads = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'CSV file is empty' });
     }
 
-    // Validate required columns
-    const requiredColumns = ['street_address'];
-    const headers = Object.keys(rows[0]);
-    const missingColumns = requiredColumns.filter(col => !headers.includes(col));
+    // Validate rows
+    const validationErrors: any[] = [];
+    const validatedRows = rows.map((row, index) => {
+      const result = leadSchema.safeParse(row);
+      if (!result.success) {
+        validationErrors.push({ row: index + 2, errors: result.error.flatten() });
+      }
+      return result.success ? result.data : null;
+    }).filter(Boolean);
 
-    if (missingColumns.length > 0) {
+    if (validationErrors.length > 0) {
       return res.status(400).json({
-        error: `Missing required columns: ${missingColumns.join(', ')}`
+        error: 'CSV validation failed',
+        details: validationErrors
       });
     }
 
     // Prepare addresses for geocoding
-    const addresses = rows.map(row => {
+    const addresses = validatedRows.map(row => {
       const parts = [
         row.street_address,
         row.city,
