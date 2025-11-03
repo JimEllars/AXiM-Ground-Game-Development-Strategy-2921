@@ -122,15 +122,27 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
 export const getProfile = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = (req as any).user;
-    
+    const decodedUser = (req as any).user;
+
+    // Re-fetch user from the database to ensure data is fresh
+    const result = await pool.query(
+      'SELECT id, email, first_name, last_name, role, organization_id FROM users WHERE id = $1 AND is_active = true',
+      [decodedUser.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return next(new AppError('User not found or is inactive', 404));
+    }
+
+    const freshUser = result.rows[0];
+
     res.json({
-      id: user.id,
-      email: user.email,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      role: user.role,
-      organizationId: user.organization_id
+      id: freshUser.id,
+      email: freshUser.email,
+      firstName: freshUser.first_name,
+      lastName: freshUser.last_name,
+      role: freshUser.role,
+      organizationId: freshUser.organization_id,
     });
   } catch (error) {
     next(error);
