@@ -86,8 +86,12 @@ export const leadsAPI = {
     limit?: number;
     status?: string;
     search?: string;
+    sort?: string;
+    order?: 'asc' | 'desc';
   }) => 
     api.get('/leads', { params }),
+  deleteMany: (ids: string[]) =>
+    api.post('/leads/delete-many', { ids }),
 };
 
 // Reps API
