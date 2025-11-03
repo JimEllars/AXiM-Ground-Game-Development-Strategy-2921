@@ -183,7 +183,21 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
 export const getLeads = async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
-    const { page = 1, limit = 100, status, search } = req.query;
+    const {
+      page = 1,
+      limit = 100,
+      status,
+      search,
+      sort = 'created_at',
+      order = 'desc'
+    } = req.query;
+
+    const allowedSortColumns = ['created_at', 'last_name', 'status'];
+    if (!allowedSortColumns.includes(sort as string)) {
+      return res.status(400).json({ error: 'Invalid sort column' });
+    }
+
+    const orderDirection = (order as string).toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
     let whereClause = 'WHERE l.organization_id = $1';
     const params: any[] = [user.organization_id];
@@ -226,7 +240,7 @@ export const getLeads = async (req: AuthRequest, res: Response) => {
          l.updated_at
        FROM leads l
        ${whereClause}
-       ORDER BY l.created_at DESC
+       ORDER BY l.${sort} ${orderDirection}
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...params, Number(limit), offset]
     );
@@ -256,7 +270,7 @@ export const getLeads = async (req: AuthRequest, res: Response) => {
       updatedAt: row.updated_at
     }));
 
-    res.json({
+    res.status(200).json({
       leads,
       pagination: {
         page: Number(page),
