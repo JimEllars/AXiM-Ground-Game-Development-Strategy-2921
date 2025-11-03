@@ -1,4 +1,14 @@
 -- AXiM Ground Game Database Schema
+
+-- Drop existing tables and types to ensure a clean slate
+DROP TABLE IF EXISTS interactions CASCADE;
+DROP TABLE IF EXISTS territory_assignments CASCADE;
+DROP TABLE IF EXISTS territories CASCADE;
+DROP TABLE IF EXISTS leads CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS organizations CASCADE;
+DROP TYPE IF EXISTS user_role CASCADE;
+
 -- Enable PostGIS extension for geospatial operations
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

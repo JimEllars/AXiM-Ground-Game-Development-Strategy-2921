@@ -180,6 +180,31 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const deleteLeads = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user!;
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Lead IDs must be a non-empty array' });
+    }
+
+    const result = await pool.query(
+      'DELETE FROM leads WHERE id = ANY($1::uuid[]) AND organization_id = $2',
+      [ids, user.organization_id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'No matching leads found to delete' });
+    }
+
+    res.status(200).json({ message: `${result.rowCount} leads deleted successfully` });
+  } catch (error) {
+    console.error('Delete leads error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 export const getLeads = async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
