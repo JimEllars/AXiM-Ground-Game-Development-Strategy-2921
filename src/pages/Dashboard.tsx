@@ -27,12 +27,14 @@ import React, { useState, useEffect } from 'react';
       const [recentActivity, setRecentActivity] = useState<any[]>([]);
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState('');
+      const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
       useEffect(() => {
         loadDashboardData();
       }, []);
 
       const loadDashboardData = async () => {
+        setLoading(true);
         try {
           const [userResponse] = await Promise.all([authAPI.getProfile()]);
           const userData = userResponse.data;
@@ -52,6 +54,7 @@ import React, { useState, useEffect } from 'react';
             setTerritories(territoriesResponse.data);
             setRecentActivity(leadsResponse.data.leads);
           }
+          setLastUpdated(new Date());
         } catch (error: any) {
           setError(error.response?.data?.error || 'Failed to load dashboard data');
         } finally {
@@ -186,6 +189,11 @@ import React, { useState, useEffect } from 'react';
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             Here's your {user.role.toLowerCase()} dashboard overview
           </Typography>
+          {lastUpdated && (
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 3, display: 'block' }}>
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </Typography>
+          )}
           {user.role === 'REP' ? <RepDashboard /> : renderManagerDashboard()}
         </Box>
       );
