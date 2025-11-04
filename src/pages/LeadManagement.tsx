@@ -95,15 +95,23 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
       };
 
       const handleUploadComplete = (result: any) => {
-        setSuccess(
-          `Successfully uploaded ${result.totalLeads} leads with ${result.geocodingRate} geocoding success rate`
-        );
-        setError('');
-        // Switch to leads tab and reload
-        setTabValue(1);
-        loadLeads();
-        // Clear success message after 5 seconds
-        setTimeout(() => setSuccess(''), 5000);
+        if (result.error) {
+          setError(result.error);
+          setSuccess('');
+        } else {
+          const { totalLeads, geocodedLeads, geocodingRate, duplicates } = result;
+          let successMessage = `Successfully uploaded ${totalLeads} leads.`;
+          if (geocodedLeads > 0) {
+            successMessage += ` Geocoding success rate: ${geocodingRate}.`;
+          }
+          if (duplicates > 0) {
+            successMessage += ` ${duplicates} duplicate leads were ignored.`;
+          }
+          setSuccess(successMessage);
+          setError('');
+          setTabValue(1);
+          loadLeads();
+        }
       };
 
       const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
