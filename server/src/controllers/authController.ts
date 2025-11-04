@@ -5,9 +5,11 @@ import { pool } from '../config/database.js';
 import { User } from '../types/index.js';
 import AppError from '../utils/AppError.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
+// Optional debug flag for auth troubleshooting (set DEBUG_AUTH=true in .env.test only)
+const DEBUG_AUTH = process.env.DEBUG_AUTH === 'true';
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -38,6 +40,10 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
     const user = result.rows[0];
 
+    if (!JWT_SECRET) {
+      return next(new AppError('JWT secret not configured', 500));
+    }
+
     // Generate JWT token
     const token = jwt.sign(
       {
@@ -58,7 +64,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         firstName: user.first_name,
         lastName: user.last_name,
         role: user.role,
-        organizationId: user.organization_id
+        organizationId: user.organization_id,
       }
     });
   } catch (error) {
@@ -74,22 +80,35 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       return next(new AppError('Email and password are required', 400));
     }
 
-    // Find user by email
+    // Find user by email (must be active)
     const result = await pool.query(
       'SELECT * FROM users WHERE email = $1 AND is_active = true',
       [email]
     );
 
     if (result.rows.length === 0) {
+      if (DEBUG_AUTH) console.debug('[auth] login: user not found or inactive', { email });
       return next(new AppError('Invalid email or password', 401));
     }
 
     const user = result.rows[0] as User;
 
+    // Ensure there is a password hash stored
+    if (!user.password_hash) {
+      if (DEBUG_AUTH) console.debug('[auth] login: missing password_hash for user', { userId: user.id });
+      return next(new AppError('Invalid email or password', 401));
+    }
+
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
+
+    if (DEBUG_AUTH) console.debug('[auth] login: bcrypt.compare result', { email, isValidPassword });
 
     if (!isValidPassword) {
       return next(new AppError('Invalid email or password', 401));
+    }
+
+    if (!JWT_SECRET) {
+      return next(new AppError('JWT secret not configured', 500));
     }
 
     // Generate JWT token
@@ -112,7 +131,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         firstName: user.first_name,
         lastName: user.last_name,
         role: user.role,
-        organizationId: user.organization_id
+        organizationId: user.organization_id,
       }
     });
   } catch (error) {

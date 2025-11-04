@@ -15,107 +15,102 @@ const upload = multer({
 export const uploadMiddleware = upload.single('file');
 
 export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
+  const user = req.user!;
+  const file = req.file;
+
+  if (!file) {
+    return res.status(400).json({ error: 'CSV file is required' });
+  }
+
+  // 1. Parse CSV
+  const csvText = file.buffer.toString('utf-8');
+  const parseResult = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (header) => header.toLowerCase().trim()
+  });
+
+  if (parseResult.errors.length > 0) {
+    return res.status(400).json({
+      error: 'CSV parsing error',
+      details: parseResult.errors.map(err => `Error on row ${err.row}: ${err.message}`)
+    });
+  }
+
+  const rows = parseResult.data as any[];
+  if (rows.length === 0) {
+    return res.status(400).json({ error: 'CSV file is empty' });
+  }
+
+  // 2. Validate Rows
+  const validationErrors: any[] = [];
+  const validatedRows = rows.map((row, index) => {
+    const result = leadSchema.safeParse(row);
+    if (!result.success) {
+      validationErrors.push({ row: index + 2, errors: result.error.flatten() });
+      return null;
+    }
+    return result.data;
+  }).filter(Boolean);
+
+  if (validationErrors.length > 0) {
+    return res.status(400).json({
+      error: 'CSV validation failed',
+      details: validationErrors
+    });
+  }
+
+  // 3. Geocode Addresses
+  const addresses = validatedRows.map(row => {
+    if (!row) return '';
+    const parts = [row.street_address, row.city, row.state, row.zip].filter(Boolean);
+    return parts.join(', ');
+  });
+
+  const geocodeResults = await batchGeocode(addresses);
+
+  // 4. Prepare Leads for DB
+  const leadsToProcess = validatedRows.map((row, index) => {
+    const geocode = geocodeResults[index];
+    return {
+      organization_id: user.organization_id,
+      first_name: row!.first_name || null,
+      last_name: row!.last_name || null,
+      street_address: row!.street_address,
+      city: row!.city || null,
+      state: row!.state || null,
+      zip: row!.zip || null,
+      phone: row!.phone || null,
+      email: row!.email || null,
+      status: row!.status || 'New',
+      notes: row!.notes || null,
+      longitude: geocode?.longitude || null,
+      latitude: geocode?.latitude || null
+    };
+  });
+
+  // 5. Database Transaction
+  const client = await pool.connect();
   try {
-    const user = req.user!;
-    const file = req.file;
-
-    if (!file) {
-      return res.status(400).json({ error: 'CSV file is required' });
-    }
-
-    // Parse CSV
-    const csvText = file.buffer.toString('utf-8');
-    const parseResult = Papa.parse(csvText, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (header) => header.toLowerCase().trim()
-    });
-
-    if (parseResult.errors.length > 0) {
-      const formattedErrors = parseResult.errors.map(err => ({
-        ...err,
-        message: `Error on row ${err.row}: ${err.message}`
-      }));
-      return res.status(400).json({
-        error: 'CSV parsing error',
-        details: formattedErrors
-      });
-    }
-
-    const rows = parseResult.data as any[];
-
-    if (rows.length === 0) {
-      return res.status(400).json({ error: 'CSV file is empty' });
-    }
-
-    // Validate rows
-    const validationErrors: any[] = [];
-    const validatedRows = rows.map((row, index) => {
-      const result = leadSchema.safeParse(row);
-      if (!result.success) {
-        validationErrors.push({ row: index + 2, errors: result.error.flatten() });
-      }
-      return result.success ? result.data : null;
-    }).filter(Boolean);
-
-    if (validationErrors.length > 0) {
-      return res.status(400).json({
-        error: 'CSV validation failed',
-        details: validationErrors
-      });
-    }
-
-    // Prepare addresses for geocoding
-    const addresses = validatedRows.map(row => {
-      if (!row) return '';
-      const parts = [
-        row.street_address,
-        row.city,
-        row.state,
-        row.zip
-      ].filter(Boolean);
-      return parts.join(', ');
-    }).filter(Boolean);
-
-    console.log(`Geocoding ${addresses.length} addresses...`);
-    const geocodeResults = await batchGeocode(addresses);
-
-    // Prepare leads for insertion
-    const leads = rows.map((row, index) => {
-      const geocode = geocodeResults[index];
-
-      return {
-        organization_id: user.organization_id,
-        first_name: row.first_name || null,
-        last_name: row.last_name || null,
-        street_address: row.street_address,
-        city: row.city || null,
-        state: row.state || null,
-        zip: row.zip || null,
-        phone: row.phone || null,
-        email: row.email || null,
-        status: row.status || 'New',
-        notes: row.notes || null,
-        longitude: geocode?.longitude || null,
-        latitude: geocode?.latitude || null
-      };
-    });
+    await client.query('BEGIN');
 
     // More efficient duplicate check
-    const uploadedAddresses = leads.map(lead => lead.street_address);
-    const existingLeadsResult = await pool.query(
+    const uploadedAddresses = leadsToProcess.map(lead => lead.street_address);
+    const existingLeadsResult = await client.query(
       `SELECT street_address FROM leads WHERE organization_id = $1 AND street_address = ANY($2::text[])`,
       [user.organization_id, uploadedAddresses]
     );
     const existingAddresses = new Set(existingLeadsResult.rows.map(row => row.street_address));
-    const newLeads = leads.filter(lead => !existingAddresses.has(lead.street_address));
+
+    const newLeads = leadsToProcess.filter(lead => !existingAddresses.has(lead.street_address));
 
     if (newLeads.length === 0) {
+      await client.query('ROLLBACK'); // No need to keep transaction open
       return res.json({
         message: 'All leads in the file already exist in the database.',
         totalLeads: 0,
         geocodedLeads: 0,
-        geocodingRate: 'N/A'
+        duplicates: leadsToProcess.length,
       });
     }
 
@@ -131,19 +126,9 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
 
     for (const lead of newLeads) {
       const leadValues = [
-        lead.organization_id,
-        lead.first_name,
-        lead.last_name,
-        lead.street_address,
-        lead.city,
-        lead.state,
-        lead.zip,
-        lead.phone,
-        lead.email,
-        lead.status,
-        lead.notes
+        lead.organization_id, lead.first_name, lead.last_name, lead.street_address,
+        lead.city, lead.state, lead.zip, lead.phone, lead.email, lead.status, lead.notes
       ];
-
       const placeholders = leadValues.map(() => `$${paramIndex++}`);
       values.push(...leadValues);
 
@@ -163,7 +148,10 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
       RETURNING id
     `;
 
-    const results = await pool.query(queryText, values);
+    const results = await client.query(queryText, values);
+
+    await client.query('COMMIT');
+
     const successCount = results.rowCount || 0;
     const geocodedCount = newLeads.filter(l => l.longitude && l.latitude).length;
 
@@ -171,12 +159,16 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
       message: 'Leads uploaded successfully',
       totalLeads: successCount,
       geocodedLeads: geocodedCount,
-      geocodingRate: successCount > 0 ? `${Math.round((geocodedCount / successCount) * 100)}%` : 'N/A'
+      geocodingRate: successCount > 0 ? `${Math.round((geocodedCount / successCount) * 100)}%` : 'N/A',
+      duplicates: leadsToProcess.length - successCount,
     });
 
   } catch (error) {
-    console.error('Upload leads error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    await client.query('ROLLBACK');
+    console.error('Upload leads transaction error:', error);
+    res.status(500).json({ error: 'Failed to import leads due to a database error.' });
+  } finally {
+    client.release();
   }
 };
 
