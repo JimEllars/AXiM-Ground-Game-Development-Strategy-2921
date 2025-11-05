@@ -4,6 +4,7 @@
 DROP TABLE IF EXISTS interactions CASCADE;
 DROP TABLE IF EXISTS territory_assignments CASCADE;
 DROP TABLE IF EXISTS territories CASCADE;
+DROP TABLE IF EXISTS lead_pii CASCADE;
 DROP TABLE IF EXISTS leads CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS organizations CASCADE;
@@ -38,10 +39,21 @@ CREATE TABLE users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Leads table with geospatial support
+-- Anonymized leads table
 CREATE TABLE leads (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    status VARCHAR(50) DEFAULT 'New',
+    notes TEXT,
+    location GEOMETRY(Point, 4326),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table for Personally Identifiable Information (PII)
+CREATE TABLE lead_pii (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
     street_address TEXT NOT NULL,
@@ -50,17 +62,16 @@ CREATE TABLE leads (
     zip VARCHAR(20),
     phone VARCHAR(20),
     email VARCHAR(255),
-    status VARCHAR(50) DEFAULT 'New',
-    notes TEXT,
-    location GEOMETRY(Point, 4326),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(lead_id)
 );
 
 -- Spatial index for fast geospatial queries
 CREATE INDEX leads_location_idx ON leads USING GIST (location);
 CREATE INDEX leads_organization_idx ON leads (organization_id);
 CREATE INDEX leads_status_idx ON leads (status);
+CREATE INDEX lead_pii_lead_id_idx ON lead_pii (lead_id);
 
 -- Territories table for turf management
 CREATE TABLE territories (
@@ -119,6 +130,7 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_leads_updated_at BEFORE UPDATE ON leads FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_lead_pii_updated_at BEFORE UPDATE ON lead_pii FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_territories_updated_at BEFORE UPDATE ON territories FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Sample data for development with properly hashed passwords
