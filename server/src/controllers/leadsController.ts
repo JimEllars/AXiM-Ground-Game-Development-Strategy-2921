@@ -27,13 +27,13 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
   const parseResult = Papa.parse(csvText, {
     header: true,
     skipEmptyLines: true,
-    transformHeader: (header) => header.toLowerCase().trim()
+    transformHeader: (header) => header.toLowerCase().trim(),
   });
 
   if (parseResult.errors.length > 0) {
     return res.status(400).json({
       error: 'CSV parsing error',
-      details: parseResult.errors.map(err => `Error on row ${err.row}: ${err.message}`)
+      details: parseResult.errors.map(err => `Error on row ${err.row}: ${err.message}`),
     });
   }
 
@@ -56,7 +56,7 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
   if (validationErrors.length > 0) {
     return res.status(400).json({
       error: 'CSV validation failed',
-      details: validationErrors
+      details: validationErrors,
     });
   }
 
@@ -73,7 +73,6 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
   const leadsToProcess = validatedRows.map((row, index) => {
     const geocode = geocodeResults[index];
     return {
-      organization_id: user.organization_id,
       first_name: row!.first_name || null,
       last_name: row!.last_name || null,
       street_address: row!.street_address,
@@ -85,82 +84,87 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
       status: row!.status || 'New',
       notes: row!.notes || null,
       longitude: geocode?.longitude || null,
-      latitude: geocode?.latitude || null
+      latitude: geocode?.latitude || null,
     };
   });
 
-  // 5. Database Transaction
+  // 5. Database Transaction with Temp Table
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // More efficient duplicate check
-    const uploadedAddresses = leadsToProcess.map(lead => lead.street_address);
-    const existingLeadsResult = await client.query(
-      `SELECT street_address FROM leads WHERE organization_id = $1 AND street_address = ANY($2::text[])`,
-      [user.organization_id, uploadedAddresses]
-    );
-    const existingAddresses = new Set(existingLeadsResult.rows.map(row => row.street_address));
+    // Create a temporary table for staging
+    await client.query(`
+      CREATE TEMP TABLE temp_leads_staging (
+        first_name VARCHAR(100),
+        last_name VARCHAR(100),
+        street_address TEXT,
+        city VARCHAR(100),
+        state VARCHAR(50),
+        zip VARCHAR(20),
+        phone VARCHAR(20),
+        email VARCHAR(255),
+        status VARCHAR(50),
+        notes TEXT,
+        longitude DOUBLE PRECISION,
+        latitude DOUBLE PRECISION
+      ) ON COMMIT DROP;
+    `);
 
-    const newLeads = leadsToProcess.filter(lead => !existingAddresses.has(lead.street_address));
-
-    if (newLeads.length === 0) {
-      await client.query('ROLLBACK'); // No need to keep transaction open
-      return res.json({
-        message: 'All leads in the file already exist in the database.',
-        totalLeads: 0,
-        geocodedLeads: 0,
-        duplicates: leadsToProcess.length,
-      });
-    }
-
-    // Efficient bulk insert using a single query
-    const values: any[] = [];
-    const valueStrings: string[] = [];
-    let paramIndex = 1;
-
-    const columns = [
-      'organization_id', 'first_name', 'last_name', 'street_address',
-      'city', 'state', 'zip', 'phone', 'email', 'status', 'notes', 'location'
-    ];
-
-    for (const lead of newLeads) {
-      const leadValues = [
-        lead.organization_id, lead.first_name, lead.last_name, lead.street_address,
-        lead.city, lead.state, lead.zip, lead.phone, lead.email, lead.status, lead.notes
+    // Efficiently insert all leads into the temporary table
+    if (leadsToProcess.length > 0) {
+      const values: any[] = [];
+      const valueStrings: string[] = [];
+      let paramIndex = 1;
+      const columns = [
+        'first_name', 'last_name', 'street_address', 'city', 'state', 'zip',
+        'phone', 'email', 'status', 'notes', 'longitude', 'latitude'
       ];
-      const placeholders = leadValues.map(() => `$${paramIndex++}`);
-      values.push(...leadValues);
 
-      if (lead.longitude && lead.latitude) {
-        placeholders.push(`ST_SetSRID(ST_MakePoint($${paramIndex++}, $${paramIndex++}), 4326)`);
-        values.push(lead.longitude, lead.latitude);
-      } else {
-        placeholders.push('NULL');
+      for (const lead of leadsToProcess) {
+        const leadValues = columns.map(col => lead[col as keyof typeof lead]);
+        const placeholders = leadValues.map(() => `$${paramIndex++}`);
+        valueStrings.push(`(${placeholders.join(', ')})`);
+        values.push(...leadValues);
       }
 
-      valueStrings.push(`(${placeholders.join(', ')})`);
+      const tempInsertQuery = `INSERT INTO temp_leads_staging (${columns.join(', ')}) VALUES ${valueStrings.join(', ')}`;
+      await client.query(tempInsertQuery, values);
     }
 
-    const queryText = `
-      INSERT INTO leads (${columns.join(', ')})
-      VALUES ${valueStrings.join(', ')}
-      RETURNING id
+    // Insert from temp table into leads, skipping duplicates based on street_address and organization_id
+    const insertQuery = `
+      INSERT INTO leads (
+        organization_id, first_name, last_name, street_address, city, state, zip, phone, email, status, notes, location
+      )
+      SELECT
+        $1, -- organization_id
+        t.first_name, t.last_name, t.street_address, t.city, t.state, t.zip,
+        t.phone, t.email, t.status, t.notes,
+        CASE
+          WHEN t.longitude IS NOT NULL AND t.latitude IS NOT NULL
+          THEN ST_SetSRID(ST_MakePoint(t.longitude, t.latitude), 4326)
+          ELSE NULL
+        END
+      FROM temp_leads_staging t
+      LEFT JOIN leads l ON l.street_address = t.street_address AND l.organization_id = $1
+      WHERE l.id IS NULL
+      RETURNING location;
     `;
 
-    const results = await client.query(queryText, values);
-
+    const results = await client.query(insertQuery, [user.organization_id]);
     await client.query('COMMIT');
 
     const successCount = results.rowCount || 0;
-    const geocodedCount = newLeads.filter(l => l.longitude && l.latitude).length;
+    const geocodedCount = results.rows.filter(row => row.location !== null).length;
+    const duplicates = leadsToProcess.length - successCount;
 
     res.json({
       message: 'Leads uploaded successfully',
       totalLeads: successCount,
       geocodedLeads: geocodedCount,
       geocodingRate: successCount > 0 ? `${Math.round((geocodedCount / successCount) * 100)}%` : 'N/A',
-      duplicates: leadsToProcess.length - successCount,
+      duplicates: duplicates,
     });
 
   } catch (error) {
