@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { pool } from '../config/database.js';
-import { User } from '../types/index.js';
+import { User, AuthRequest } from '../types/index.js';
 import AppError from '../utils/AppError.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -139,9 +139,13 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
   }
 };
 
-export const getProfile = async (req: Request, res: Response, next: NextFunction) => {
+export const getProfile = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const decodedUser = (req as any).user;
+    const decodedUser = req.user;
+
+    if (!decodedUser) {
+      return next(new AppError('Authentication error', 401));
+    }
 
     // Re-fetch user from the database to ensure data is fresh
     const result = await pool.query(
