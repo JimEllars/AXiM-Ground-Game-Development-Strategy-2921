@@ -146,7 +146,7 @@ export const getProfile = async (req: Request, res: Response, next: NextFunction
     // Re-fetch user from the database to ensure data is fresh
     const result = await pool.query(
       'SELECT id, email, first_name, last_name, role, organization_id FROM users WHERE id = $1 AND is_active = true',
-      [decodedUser.userId]
+      [decodedUser.id]
     );
 
     if (result.rows.length === 0) {

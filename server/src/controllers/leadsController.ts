@@ -133,30 +133,59 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
     }
 
     // Insert from temp table into leads, skipping duplicates based on street_address and organization_id
-    const insertQuery = `
-      INSERT INTO leads (
-        organization_id, first_name, last_name, street_address, city, state, zip, phone, email, status, notes, location
+    const insertLeadsQuery = `
+      WITH new_leads AS (
+        INSERT INTO leads (
+          organization_id, status, notes, location
+        )
+        SELECT
+          $1, -- organization_id
+          t.status, t.notes,
+          CASE
+            WHEN t.longitude IS NOT NULL AND t.latitude IS NOT NULL
+            THEN ST_SetSRID(ST_MakePoint(t.longitude, t.latitude), 4326)
+            ELSE NULL
+          END
+        FROM temp_leads_staging t
+        LEFT JOIN lead_pii pii ON pii.street_address = t.street_address
+        LEFT JOIN leads l ON l.id = pii.lead_id AND l.organization_id = $1
+        WHERE pii.id IS NULL
+        RETURNING id, location
       )
-      SELECT
-        $1, -- organization_id
-        t.first_name, t.last_name, t.street_address, t.city, t.state, t.zip,
-        t.phone, t.email, t.status, t.notes,
-        CASE
-          WHEN t.longitude IS NOT NULL AND t.latitude IS NOT NULL
-          THEN ST_SetSRID(ST_MakePoint(t.longitude, t.latitude), 4326)
-          ELSE NULL
-        END
-      FROM temp_leads_staging t
-      LEFT JOIN leads l ON l.street_address = t.street_address AND l.organization_id = $1
-      WHERE l.id IS NULL
-      RETURNING location;
+      SELECT id, location FROM new_leads;
     `;
 
-    const results = await client.query(insertQuery, [user.organization_id]);
+    const leadResults = await client.query(insertLeadsQuery, [user.organization_id]);
+
+    if (leadResults.rows.length > 0) {
+      const piiValues: any[] = [];
+      const piiValueStrings: string[] = [];
+      let piiParamIndex = 1;
+      const piiColumns = [
+        'lead_id', 'first_name', 'last_name', 'street_address', 'city', 'state', 'zip',
+        'phone', 'email'
+      ];
+
+      for (let i = 0; i < leadResults.rows.length; i++) {
+        const leadId = leadResults.rows[i].id;
+        const row = leadsToProcess[i];
+        const piiRowValues = [
+          leadId, row.first_name, row.last_name, row.street_address, row.city, row.state,
+          row.zip, row.phone, row.email
+        ];
+        const placeholders = piiRowValues.map(() => `$${piiParamIndex++}`);
+        piiValueStrings.push(`(${placeholders.join(', ')})`);
+        piiValues.push(...piiRowValues);
+      }
+
+      const piiInsertQuery = `INSERT INTO lead_pii (${piiColumns.join(', ')}) VALUES ${piiValueStrings.join(', ')}`;
+      await client.query(piiInsertQuery, piiValues);
+    }
+
     await client.query('COMMIT');
 
-    const successCount = results.rowCount || 0;
-    const geocodedCount = results.rows.filter(row => row.location !== null).length;
+    const successCount = leadResults.rowCount || 0;
+    const geocodedCount = leadResults.rows.filter(row => row.location !== null).length;
     const duplicates = leadsToProcess.length - successCount;
 
     res.json({
@@ -232,9 +261,9 @@ export const getLeads = async (req: AuthRequest, res: Response) => {
 
     if (search) {
       whereClause += ` AND (
-        l.first_name ILIKE $${paramIndex} OR 
-        l.last_name ILIKE $${paramIndex} OR 
-        l.street_address ILIKE $${paramIndex}
+        pii.first_name ILIKE $${paramIndex} OR
+        pii.last_name ILIKE $${paramIndex} OR
+        pii.street_address ILIKE $${paramIndex}
       )`;
       params.push(`%${search}%`);
       paramIndex++;
@@ -245,14 +274,14 @@ export const getLeads = async (req: AuthRequest, res: Response) => {
     const result = await pool.query(
       `SELECT 
          l.id,
-         l.first_name,
-         l.last_name,
-         l.street_address,
-         l.city,
-         l.state,
-         l.zip,
-         l.phone,
-         l.email,
+         pii.first_name,
+         pii.last_name,
+         pii.street_address,
+         pii.city,
+         pii.state,
+         pii.zip,
+         pii.phone,
+         pii.email,
          l.status,
          l.notes,
          ST_X(l.location) as longitude,
@@ -260,14 +289,18 @@ export const getLeads = async (req: AuthRequest, res: Response) => {
          l.created_at,
          l.updated_at
        FROM leads l
+       JOIN lead_pii pii ON l.id = pii.lead_id
        ${whereClause}
-       ORDER BY l.${sort} ${orderDirection}
+       ORDER BY ${sort === 'last_name' ? 'pii.last_name' : `l.${sort}`} ${orderDirection}
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...params, Number(limit), offset]
     );
 
     const countResult = await pool.query(
-      `SELECT COUNT(*) FROM leads l ${whereClause}`,
+      `SELECT COUNT(*)
+       FROM leads l
+       JOIN lead_pii pii ON l.id = pii.lead_id
+       ${whereClause}`,
       params
     );
 

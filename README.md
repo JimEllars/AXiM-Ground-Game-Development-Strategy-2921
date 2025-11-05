@@ -86,9 +86,9 @@ AXiM Ground Game is designed to be the most stable and reliable canvassing platf
 3. **Access Application**
    - Open http://localhost:5173
    - Use demo accounts:
-     - Admin: admin@axim.com / demo123
-     - Manager: manager@axim.com / demo123
-     - Rep: rep@axim.com / demo123
+     - Admin: admin@axim.com / password
+     - Manager: manager@axim.com / password
+     - Rep: rep@axim.com / password
 
 ## 📱 Core Features
 
