@@ -142,3 +142,20 @@ INSERT INTO users (id, organization_id, email, password_hash, first_name, last_n
     ('550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', 'admin@axim.com', '$2b$10$/3wbZwtwXLMqPZ0qH1mcCepgU5IjqH5lZOXoDUXdBA70A6/PX9V82', 'Admin', 'User', 'ADMIN'),
     ('550e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440000', 'manager@axim.com', '$2b$10$/3wbZwtwXLMqPZ0qH1mcCepgU5IjqH5lZOXoDUXdBA70A6/PX9V82', 'Manager', 'User', 'MANAGER'),
     ('550e8400-e29b-41d4-a716-446655440003', '550e8400-e29b-41d4-a716-446655440000', 'rep@axim.com', '$2b$10$/3wbZwtwXLMqPZ0qH1mcCepgU5IjqH5lZOXoDUXdBA70A6/PX9V82', 'Rep', 'User', 'REP');
+
+-- Sample Leads
+WITH lead_insert AS (
+  INSERT INTO leads (id, organization_id, location) VALUES
+  ('550e8400-e29b-41d4-a716-446655440004', '550e8400-e29b-41d4-a716-446655440000', ST_SetSRID(ST_MakePoint(-74.0060, 40.7128), 4326)),
+  ('550e8400-e29b-41d4-a716-446655440005', '550e8400-e29b-41d4-a716-446655440000', ST_SetSRID(ST_MakePoint(-118.2437, 34.0522), 4326))
+  RETURNING id
+)
+INSERT INTO lead_pii (lead_id, first_name, last_name, street_address, city, state, zip)
+SELECT id,
+       CASE WHEN id = '550e8400-e29b-41d4-a716-446655440004' THEN 'John' ELSE 'Jane' END,
+       CASE WHEN id = '550e8400-e29b-41d4-a716-446655440004' THEN 'Doe' ELSE 'Smith' END,
+       CASE WHEN id = '550e8400-e29b-41d4-a716-446655440004' THEN '123 Main St' ELSE '456 Oak Ave' END,
+       CASE WHEN id = '550e8400-e29b-41d4-a716-446655440004' THEN 'New York' ELSE 'Los Angeles' END,
+       CASE WHEN id = '550e8400-e29b-41d4-a716-446655440004' THEN 'NY' ELSE 'CA' END,
+       CASE WHEN id = '550e8400-e29b-41d4-a716-446655440004' THEN '10001' ELSE '90001' END
+FROM lead_insert;
