@@ -106,6 +106,7 @@ import React, { useState, useEffect } from 'react';
                 value={stats.totalInteractions || 0}
                 icon={FiTarget}
                 color="#1976d2"
+                subtitle="All-time"
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>

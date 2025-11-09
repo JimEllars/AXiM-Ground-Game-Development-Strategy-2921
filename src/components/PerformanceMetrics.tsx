@@ -184,7 +184,7 @@ import React, { useState, useEffect } from 'react';
                 value={performance.averagePerDay}
                 icon={FiTrendingUp}
                 color="#388e3c"
-                subtitle="Interactions per day"
+                subtitle="Per rep"
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>

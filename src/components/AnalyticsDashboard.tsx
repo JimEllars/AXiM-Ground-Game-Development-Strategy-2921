@@ -269,6 +269,7 @@ import React, { useState, useEffect } from 'react';
                 value={analytics.summary.totalTerritories}
                 icon={FiTarget}
                 color="#1976d2"
+                subtitle="Active"
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
