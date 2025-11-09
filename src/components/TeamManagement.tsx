@@ -292,6 +292,9 @@ import React, { useState, useEffect } from 'react';
 
           {/* Users Table */}
           <Paper sx={{ width: '100%' }}>
+            <Typography variant="h6" sx={{ p: 2 }}>
+              Team Members
+            </Typography>
             <TableContainer>
               <Table>
                 <TableHead>

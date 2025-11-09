@@ -16,7 +16,8 @@ const AppRouter: React.FC = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
     <Route path="/" element={<ProtectedRoute />}>
-      <Route path="/" element={<Dashboard />} />
+      <Route index element={<Navigate to="/dashboard" replace />} />
+      <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/territories" element={<TerritoryManagement />} />
       <Route path="/leads" element={<LeadManagement />} />
       <Route path="/turf" element={<RepTurf />} />

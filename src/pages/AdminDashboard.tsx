@@ -127,7 +127,7 @@ const AdminDashboard: React.FC = () => {
               value={systemStats.totalLeads || 0}
               icon={FiBarChart2}
               color="#f57c00"
-              subtitle="In database"
+              subtitle="All territories"
             />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
