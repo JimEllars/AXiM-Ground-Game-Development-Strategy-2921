@@ -22,21 +22,10 @@ import React, { useState } from 'react';
         e.preventDefault();
         try {
           await login(formData.email, formData.password);
-          navigate('/');
+          navigate('/dashboard');
         } catch (err) {
           // Error is handled by useAuth hook
-          console.error('Login error:', err);
         }
-      };
-
-      // Demo account quick login
-      const handleDemoLogin = (role: 'ADMIN' | 'MANAGER' | 'REP') => {
-        const demoAccounts = {
-          ADMIN: { email: 'admin@axim.com', password: 'demo123' },
-          MANAGER: { email: 'manager@axim.com', password: 'demo123' },
-          REP: { email: 'rep@axim.com', password: 'demo123' },
-        };
-        setFormData(demoAccounts[role]);
       };
 
       return (
@@ -105,23 +94,6 @@ import React, { useState } from 'react';
                 >
                   {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
-              </Box>
-              {/* Demo Accounts */}
-              <Box sx={{ mt: 3 }}>
-                <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                  Demo Accounts:
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  <Button size="small" variant="outlined" onClick={() => handleDemoLogin('ADMIN')}>
-                    Admin Demo
-                  </Button>
-                  <Button size="small" variant="outlined" onClick={() => handleDemoLogin('MANAGER')}>
-                    Manager Demo
-                  </Button>
-                  <Button size="small" variant="outlined" onClick={() => handleDemoLogin('REP')}>
-                    Rep Demo
-                  </Button>
-                </Box>
               </Box>
             </Paper>
           </Container>

@@ -8,4 +8,5 @@ export default {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }],
   },
+  testPathIgnorePatterns: ['/node_modules/', '/server/'],
 };

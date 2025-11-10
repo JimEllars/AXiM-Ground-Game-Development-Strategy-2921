@@ -1,30 +1,35 @@
-import bcrypt from 'bcrypt';
 import { pool } from '../config/database.js';
 
-const DEMO_PASSWORD = 'demo123';
-
-async function seedDatabase() {
+async function verifySeedData() {
   try {
-    console.log('🌱 Starting database seeding...');
+    console.log('🌱 Verifying database seed data...');
 
-    // Hash demo password
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(DEMO_PASSWORD, saltRounds);
+    const usersResult = await pool.query(
+      `SELECT COUNT(*) FROM users WHERE email IN ('admin@axim.com', 'manager@axim.com', 'rep@axim.com')`
+    );
 
-    // Update existing users with proper password hash
-    const updateUsersQuery = `
-      UPDATE users 
-      SET password_hash = $1 
-      WHERE email IN ('admin@axim.com', 'manager@axim.com', 'rep@axim.com')
-    `;
-    
-    await pool.query(updateUsersQuery, [passwordHash]);
+    const userCount = parseInt(usersResult.rows[0].count, 10);
 
-    console.log('✅ Database seeding completed successfully!');
-    console.log(`📝 Demo accounts updated with password: "${DEMO_PASSWORD}"`);
+    if (userCount < 3) {
+      console.warn('⚠️  Warning: Demo users are missing. The schema might not have been applied correctly.');
+    } else {
+      console.log('✅ Demo user accounts are present.');
+    }
+
+    const leadsResult = await pool.query(
+      `SELECT COUNT(*) FROM leads WHERE organization_id = '550e8400-e29b-41d4-a716-446655440000'`
+    );
+
+    const leadCount = parseInt(leadsResult.rows[0].count, 10);
+
+    if (leadCount > 0) {
+      console.log(`✅ Found ${leadCount} sample leads for the demo organization.`);
+    }
+
+    console.log('✅ Database verification completed successfully!');
     
   } catch (error) {
-    console.error('❌ Database seeding failed:', error);
+    console.error('❌ Database verification failed:', error);
   } finally {
     await pool.end();
   }
@@ -32,7 +37,7 @@ async function seedDatabase() {
 
 // Run if called directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  seedDatabase();
+  verifySeedData();
 }
 
-export default seedDatabase;
+export default verifySeedData;

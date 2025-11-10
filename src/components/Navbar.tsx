@@ -106,8 +106,25 @@ const Navbar: React.FC = () => {
             >
               {user.firstName} {user.lastName}
             </Button>
-            <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleProfileClose}>
-              <MenuItem onClick={handleProfileClose}>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleProfileClose}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+            >
+              <MenuItem
+                onClick={() => {
+                  navigate('/profile');
+                  handleProfileClose();
+                }}
+              >
                 <SafeIcon icon={FiUser} style={{ marginRight: 8 }} /> Profile
               </MenuItem>
               <MenuItem onClick={handleLogout}>

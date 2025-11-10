@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import Map, { Marker, Popup, Source, Layer } from 'react-map-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
     import {
       Grid,
       Paper,
@@ -14,44 +16,45 @@ import React, { useState, useEffect } from 'react';
       Alert,
       CircularProgress,
     } from '@mui/material';
-    import { FiMap, FiUsers, FiTarget, FiTrendingUp, FiMapPin, FiBarChart2 } from 'react-icons/fi';
+import { FiMap, FiUsers, FiMapPin } from 'react-icons/fi';
     import SafeIcon from '@/common/SafeIcon';
     import RepDashboard from './RepDashboard';
     import AdminDashboard from './AdminDashboard';
-    import { authAPI, repsAPI, territoriesAPI, leadsAPI } from '@/services/api';
+import { authAPI, territoriesAPI, leadsAPI } from '@/services/api';
+
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
     const Dashboard: React.FC = () => {
       const [user, setUser] = useState<any>(null);
-      const [stats, setStats] = useState<any>({});
       const [territories, setTerritories] = useState<any[]>([]);
       const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [allLeads, setAllLeads] = useState<any[]>([]);
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState('');
+      const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [selectedLead, setSelectedLead] = useState<any | null>(null);
 
       useEffect(() => {
         loadDashboardData();
       }, []);
 
       const loadDashboardData = async () => {
+        setLoading(true);
         try {
-          const [userResponse] = await Promise.all([authAPI.getProfile()]);
+      const userResponse = await authAPI.getProfile();
           const userData = userResponse.data;
           setUser(userData);
 
-          // Load role-specific data
-          if (userData.role === 'REP') {
-            // Rep dashboard is handled by RepDashboard component
-          } else if (userData.role === 'ADMIN') {
-            // Admin will use AdminDashboard component
-          } else {
-            // Manager data
+      if (userData.role === 'MANAGER' || userData.role === 'ADMIN') {
             const [territoriesResponse, leadsResponse] = await Promise.all([
               territoriesAPI.getAll(),
-              leadsAPI.getAll({ limit: 5 }),
+          leadsAPI.getAll(),
             ]);
             setTerritories(territoriesResponse.data);
-            setRecentActivity(leadsResponse.data.leads);
+        setAllLeads(leadsResponse.data.leads);
+        setRecentActivity(leadsResponse.data.leads.slice(0, 5));
           }
+          setLastUpdated(new Date());
         } catch (error: any) {
           setError(error.response?.data?.error || 'Failed to load dashboard data');
         } finally {
@@ -88,17 +91,85 @@ import React, { useState, useEffect } from 'react';
 
       const renderManagerDashboard = () => (
         <Grid container spacing={3}>
+      {/* Map */}
+      <Grid item xs={12}>
+        <Paper sx={{ height: '500px', p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Live Operations Map
+          </Typography>
+          <Map
+            initialViewState={{
+              longitude: -98.5795,
+              latitude: 39.8283,
+              zoom: 3.5,
+            }}
+            style={{ width: '100%', height: '100%' }}
+            mapStyle="mapbox://styles/mapbox/streets-v11"
+            mapboxAccessToken={MAPBOX_TOKEN}
+          >
+            {territories.map((territory) => (
+              <Source key={territory.id} id={`territory-${territory.id}`} type="geojson" data={territory.boundary}>
+                <Layer
+                  id={`territory-layer-${territory.id}`}
+                  type="fill"
+                  paint={{
+                    'fill-color': '#088',
+                    'fill-opacity': 0.2,
+                  }}
+                />
+                <Layer
+                  id={`territory-outline-${territory.id}`}
+                  type="line"
+                  paint={{
+                    'line-color': '#088',
+                    'line-width': 2,
+                  }}
+                />
+              </Source>
+            ))}
+            {allLeads.map((lead) => (
+              lead.location && (
+                <Marker
+                  key={lead.id}
+                  longitude={lead.location.coordinates[0]}
+                  latitude={lead.location.coordinates[1]}
+                  onClick={(e) => {
+                    e.originalEvent.stopPropagation();
+                    setSelectedLead(lead);
+                  }}
+                />
+              )
+            ))}
+            {selectedLead && (
+              <Popup
+                longitude={selectedLead.location.coordinates[0]}
+                latitude={selectedLead.location.coordinates[1]}
+                onClose={() => setSelectedLead(null)}
+                anchor="top"
+              >
+                <div>
+                  <Typography variant="subtitle2">
+                    {selectedLead.firstName} {selectedLead.lastName}
+                  </Typography>
+                  <Typography variant="body2">{selectedLead.streetAddress}</Typography>
+                  <Chip label={selectedLead.status} size="small" />
+                </div>
+              </Popup>
+            )}
+          </Map>
+        </Paper>
+      </Grid>
+
           {/* Stats Cards */}
           <Grid item xs={12} sm={6} md={3}>
             <StatCard title="Territories" value={territories.length} icon={FiMap} color="#1976d2" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
-              title="Recent Leads"
-              value={recentActivity.length}
+          title="Total Leads"
+          value={allLeads.length}
               icon={FiUsers}
               color="#388e3c"
-              subtitle="Last 5 uploaded"
             />
           </Grid>
 
@@ -186,6 +257,11 @@ import React, { useState, useEffect } from 'react';
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             Here's your {user.role.toLowerCase()} dashboard overview
           </Typography>
+          {lastUpdated && (
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 3, display: 'block' }}>
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </Typography>
+          )}
           {user.role === 'REP' ? <RepDashboard /> : renderManagerDashboard()}
         </Box>
       );

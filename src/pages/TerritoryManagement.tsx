@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
     import { Box, Typography, Alert, CircularProgress } from '@mui/material';
     import TerritoryMap from '@/components/TerritoryMap';
     import { territoriesAPI } from '@/services/api';
+import { Territory, User } from '@/types';
 
     const TerritoryManagement: React.FC = () => {
-      const [territories, setTerritories] = useState<any[]>([]);
-      const [availableReps, setAvailableReps] = useState<any[]>([]);
+      const [territories, setTerritories] = useState<Territory[]>([]);
+      const [availableReps, setAvailableReps] = useState<User[]>([]);
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState('');
       const [success, setSuccess] = useState('');
@@ -32,8 +33,8 @@ import React, { useState, useEffect } from 'react';
 
       const handleSaveTerritory = async (data: { name: string; description: string; geoJson: any }) => {
         try {
-          await territoriesAPI.create(data);
-          setSuccess('Territory created successfully!');
+          const response = await territoriesAPI.create(data);
+          setSuccess(`Territory "${response.data.name}" created successfully!`);
           setError('');
           loadData(); // Reload territories
           // Clear success message after 3 seconds
@@ -45,12 +46,15 @@ import React, { useState, useEffect } from 'react';
       };
 
       const handleDeleteTerritory = async (id: string) => {
-        if (!window.confirm('Are you sure you want to delete this territory?')) {
+        const territoryToDelete = territories.find(t => t.id === id);
+        if (!territoryToDelete) return;
+
+        if (!window.confirm(`Are you sure you want to delete the territory "${territoryToDelete.name}"?`)) {
           return;
         }
         try {
           await territoriesAPI.delete(id);
-          setSuccess('Territory deleted successfully!');
+          setSuccess(`Territory "${territoryToDelete.name}" deleted successfully!`);
           setError('');
           loadData();
           setTimeout(() => setSuccess(''), 3000);
@@ -62,13 +66,17 @@ import React, { useState, useEffect } from 'react';
 
       const handleAssignTerritory = async (territoryId: string, userId: string) => {
         try {
+          const territory = territories.find(t => t.id === territoryId);
+          const rep = availableReps.find(r => r.id === userId);
+          if (!territory || !rep) return;
+
           await territoriesAPI.assign(territoryId, userId);
-          setSuccess('Territory assigned successfully!');
+          setSuccess(`Territory "${territory.name}" assigned to ${rep.firstName} ${rep.lastName} successfully!`);
           setError('');
           loadData();
           setTimeout(() => setSuccess(''), 3000);
         } catch (err: any) {
-          setError(err.response?.data?.error || 'Failed to assign territory');
+          setError(err.response?.data?.error || `Failed to assign territory "${territoryId}" to user "${userId}"`);
           setSuccess('');
         }
       };

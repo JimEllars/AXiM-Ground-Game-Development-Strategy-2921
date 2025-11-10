@@ -17,14 +17,14 @@ export const getMyTurf = async (req: AuthRequest, res: Response) => {
          
          -- Lead data (if within territory)
          l.id as lead_id,
-         l.first_name,
-         l.last_name,
-         l.street_address,
-         l.city,
-         l.state,
-         l.zip,
-         l.phone,
-         l.email,
+         lp.first_name,
+         lp.last_name,
+         lp.street_address,
+         lp.city,
+         lp.state,
+         lp.zip,
+         lp.phone,
+         lp.email,
          l.status,
          l.notes,
          ST_X(l.location) as longitude,
@@ -40,6 +40,7 @@ export const getMyTurf = async (req: AuthRequest, res: Response) => {
        JOIN territory_assignments ta ON t.id = ta.territory_id
        LEFT JOIN leads l ON l.organization_id = t.organization_id 
                         AND ST_Contains(t.boundary, l.location)
+       LEFT JOIN lead_pii lp ON l.id = lp.lead_id
        LEFT JOIN LATERAL (
          SELECT outcome, notes, interaction_date
          FROM interactions 
@@ -103,7 +104,7 @@ export const getMyTurf = async (req: AuthRequest, res: Response) => {
     // Calculate summary statistics
     const totalLeads = territories.reduce((sum, t) => sum + t.leads.length, 0);
     const completedLeads = territories.reduce((sum, t) => 
-      sum + t.leads.filter(l => l.lastInteraction).length, 0
+      sum + t.leads.filter((l: any) => l.lastInteraction).length, 0
     );
 
     res.json({

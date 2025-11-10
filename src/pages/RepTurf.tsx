@@ -17,6 +17,7 @@ import React, { useState, useEffect } from 'react';
     import SafeIcon from '@/common/SafeIcon';
     import LeadInteractionForm from '@/components/LeadInteractionForm';
     import TerritoryStats from '@/components/TerritoryStats';
+    import RepTerritoryMap from '@/components/RepTerritoryMap';
     import { repsAPI } from '@/services/api';
 
     const RepTurf: React.FC = () => {
@@ -101,6 +102,9 @@ import React, { useState, useEffect } from 'react';
               {territories.map((territory) => (
                 <Box key={territory.id} sx={{ mb: 3 }}>
                   <TerritoryStats territory={territory} />
+                  <Paper sx={{ p: 3, mb: 2 }}>
+                    <RepTerritoryMap boundary={territory.boundary} leads={territory.leads} />
+                  </Paper>
                   <Paper sx={{ p: 3 }}>
                     <Typography variant="h6" gutterBottom>
                       Leads in {territory.name}

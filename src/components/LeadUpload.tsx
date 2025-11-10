@@ -24,19 +24,20 @@ import React, { useState } from 'react';
     const LeadUpload: React.FC<LeadUploadProps> = ({ onUploadComplete }) => {
       const [file, setFile] = useState<File | null>(null);
       const [uploading, setUploading] = useState(false);
-      const [uploadResult, setUploadResult] = useState<any>(null);
       const [error, setError] = useState<string>('');
+      const [validationErrors, setValidationErrors] = useState<any[]>([]);
 
       const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = event.target.files?.[0];
         if (selectedFile) {
           if (selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
-            setError('Please select a CSV file');
+            setError('Please select a valid CSV file.');
+            setFile(null);
             return;
           }
           setFile(selectedFile);
           setError('');
-          setUploadResult(null);
+          setValidationErrors([]);
         }
       };
 
@@ -45,45 +46,54 @@ import React, { useState } from 'react';
 
         setUploading(true);
         setError('');
+        setValidationErrors([]);
 
         try {
           const formData = new FormData();
           formData.append('file', file);
-          const token = localStorage.getItem('token');
 
-          const response = await fetch('/api/leads/upload', {
+          const response = await fetch('/api/leads/bulk-import', {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${localStorage.getItem('token')}`,
             },
             body: formData,
           });
 
           const result = await response.json();
-          if (!response.ok) {
-            throw new Error(result.error || 'Upload failed');
-          }
 
-          setUploadResult(result);
-          onUploadComplete(result);
+          if (!response.ok) {
+            if (response.status === 400 && result.details) {
+              setValidationErrors(result.details);
+              setError(result.error || 'CSV validation failed');
+            } else {
+              setError(result.error || 'An unexpected error occurred during upload.');
+            }
+            onUploadComplete({ error: result.error });
+          } else {
+            onUploadComplete(result);
+            setFile(null); // Clear file on success
+          }
         } catch (err) {
-          setError(err instanceof Error ? err.message : 'Upload failed');
+          const errorMessage = err instanceof Error ? err.message : 'Upload failed due to a network or server error.';
+          setError(errorMessage);
+          onUploadComplete({ error: errorMessage });
         } finally {
           setUploading(false);
         }
       };
 
       const sampleData = [
-        { column: 'street_address', description: 'Street address (required)', example: '123 Main St' },
-        { column: 'first_name', description: 'First name (optional)', example: 'John' },
-        { column: 'last_name', description: 'Last name (optional)', example: 'Smith' },
-        { column: 'city', description: 'City (optional)', example: 'San Francisco' },
-        { column: 'state', description: 'State (optional)', example: 'CA' },
-        { column: 'zip', description: 'ZIP code (optional)', example: '94105' },
-        { column: 'phone', description: 'Phone number (optional)', example: '(555) 123-4567' },
-        { column: 'email', description: 'Email address (optional)', example: 'john@example.com' },
-        { column: 'status', description: 'Lead status (optional)', example: 'New' },
-        { column: 'notes', description: 'Additional notes (optional)', example: 'Potential customer' },
+        { column: 'first_name', description: 'First name', example: 'John', required: true },
+        { column: 'last_name', description: 'Last name', example: 'Smith', required: true },
+        { column: 'street_address', description: 'Street address', example: '123 Main St', required: true },
+        { column: 'city', description: 'City', example: 'San Francisco', required: true },
+        { column: 'state', description: 'State', example: 'CA', required: true },
+        { column: 'zip', description: 'ZIP code (5-digit)', example: '94105', required: true },
+        { column: 'phone', description: 'Phone number', example: '555-123-4567', required: false },
+        { column: 'email', description: 'Email address', example: 'john@example.com', required: false },
+        { column: 'status', description: 'Lead status (optional, defaults to "New")', example: 'New', required: false },
+        { column: 'notes', description: 'Additional notes', example: 'Potential customer', required: false },
       ];
 
       return (
@@ -158,22 +168,27 @@ import React, { useState } from 'react';
               </Box>
             )}
 
-            {/* Error */}
+            {/* Error Display */}
             {error && (
-              <Alert severity="error" sx={{ mb: 3 }} icon={<SafeIcon icon={FiAlertTriangle} />}>
-                {error}
-              </Alert>
-            )}
-
-            {/* Success Result */}
-            {uploadResult && (
-              <Alert severity="success" sx={{ mb: 3 }} icon={<SafeIcon icon={FiCheck} />}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Upload Successful!
-                </Typography>
-                <Typography variant="body2">• Total leads uploaded: {uploadResult.totalLeads}</Typography>
-                <Typography variant="body2">• Successfully geocoded: {uploadResult.geocodedLeads}</Typography>
-                <Typography variant="body2">• Geocoding success rate: {uploadResult.geocodingRate}</Typography>
+              <Alert severity="error" sx={{ mb: 3 }}>
+                <Typography fontWeight="bold">{error}</Typography>
+                {validationErrors.length > 0 && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2"><strong>Validation Details:</strong></Typography>
+                    <ul>
+                      {validationErrors.slice(0, 5).map((err, index) => (
+                        <li key={index}>
+                          <Typography variant="caption">
+                            Row {err.row}: {Object.values(err.errors.fieldErrors).flat().join(', ')}
+                          </Typography>
+                        </li>
+                      ))}
+                    </ul>
+                    {validationErrors.length > 5 && (
+                      <Typography variant="caption">...and {validationErrors.length - 5} more errors.</Typography>
+                    )}
+                  </Box>
+                )}
               </Alert>
             )}
           </Paper>
@@ -184,21 +199,15 @@ import React, { useState } from 'react';
               CSV Format Guide
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Your CSV file should include the following columns. Only <strong>street_address</strong> is required.
+              Your CSV file must include the following columns. Column names should be in the first row.
             </Typography>
             <TableContainer>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>
-                      <strong>Column Name</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Description</strong>
-                    </TableCell>
-                    <TableCell>
-                      <strong>Example</strong>
-                    </TableCell>
+                    <TableCell><strong>Column Name</strong></TableCell>
+                    <TableCell><strong>Description</strong></TableCell>
+                    <TableCell><strong>Example</strong></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -207,15 +216,13 @@ import React, { useState } from 'react';
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <code>{row.column}</code>
-                          {row.column === 'street_address' && (
-                            <Chip label="Required" size="small" color="primary" />
+                          {row.required && (
+                            <Chip label="Required" size="small" color="primary" variant="outlined" />
                           )}
                         </Box>
                       </TableCell>
                       <TableCell>{row.description}</TableCell>
-                      <TableCell>
-                        <code>{row.example}</code>
-                      </TableCell>
+                      <TableCell><code>{row.example}</code></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

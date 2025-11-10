@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/database.js';
 import { AuthRequest } from '../types/index.js';
+import { leadSchema } from '../utils/validationSchemas.js';
 import { geocodeAddress, batchGeocode } from '../services/geocoding.js';
 import Papa from 'papaparse';
 import multer from 'multer';
@@ -13,113 +14,230 @@ const upload = multer({
 
 export const uploadMiddleware = upload.single('file');
 
-export const uploadLeads = async (req: AuthRequest, res: Response) => {
+export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
+  const user = req.user!;
+  const file = req.file;
+
+  if (!file) {
+    return res.status(400).json({ error: 'CSV file is required' });
+  }
+
+  // 1. Parse CSV
+  const csvText = file.buffer.toString('utf-8');
+  const parseResult = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (header) => header.toLowerCase().trim(),
+  });
+
+  if (parseResult.errors.length > 0) {
+    return res.status(400).json({
+      error: 'CSV parsing error',
+      details: parseResult.errors.map(err => `Error on row ${err.row}: ${err.message}`),
+    });
+  }
+
+  const rows = parseResult.data as any[];
+  if (rows.length === 0) {
+    return res.status(400).json({ error: 'CSV file is empty' });
+  }
+
+  // 2. Validate Rows
+  const validationErrors: any[] = [];
+  const validatedRows = rows.map((row, index) => {
+    const result = leadSchema.safeParse(row);
+    if (!result.success) {
+      validationErrors.push({
+        row: index + 2,
+        errors: result.error.flatten().fieldErrors
+      });
+      return null;
+    }
+    return result.data;
+  }).filter(Boolean);
+
+  if (validationErrors.length > 0) {
+    // Sanitize and format the error messages for a user-friendly response
+    const formattedErrors = validationErrors.map(error => ({
+      row: error.row,
+      messages: Object.entries(error.errors).map(([field, messages]) =>
+        `${field.replace(/_/g, ' ')}: ${(messages as string[]).join(', ')}`
+      ),
+    }));
+
+    return res.status(400).json({
+      error: 'CSV validation failed',
+      message: `${validationErrors.length} out of ${rows.length} rows failed validation.`,
+      details: formattedErrors,
+    });
+  }
+
+  // 3. Geocode Addresses
+  const addresses = validatedRows.map(row => {
+    if (!row) return '';
+    const parts = [row.street_address, row.city, row.state, row.zip].filter(Boolean);
+    return parts.join(', ');
+  });
+
+  const geocodeResults = await batchGeocode(addresses);
+
+  // 4. Prepare Leads for DB
+  const leadsToProcess = validatedRows.map((row, index) => {
+    const geocode = geocodeResults[index];
+    return {
+      first_name: row!.first_name || null,
+      last_name: row!.last_name || null,
+      street_address: row!.street_address,
+      city: row!.city || null,
+      state: row!.state || null,
+      zip: row!.zip || null,
+      phone: row!.phone || null,
+      email: row!.email || null,
+      status: row!.status || 'New',
+      notes: row!.notes || null,
+      longitude: geocode?.longitude || null,
+      latitude: geocode?.latitude || null,
+    };
+  });
+
+  // 5. Database Transaction with Temp Table
+  const client = await pool.connect();
   try {
-    const user = req.user!;
-    const file = req.file;
+    await client.query('BEGIN');
 
-    if (!file) {
-      return res.status(400).json({ error: 'CSV file is required' });
+    // Create a temporary table for staging
+    await client.query(`
+      CREATE TEMP TABLE temp_leads_staging (
+        first_name VARCHAR(100),
+        last_name VARCHAR(100),
+        street_address TEXT,
+        city VARCHAR(100),
+        state VARCHAR(50),
+        zip VARCHAR(20),
+        phone VARCHAR(20),
+        email VARCHAR(255),
+        status VARCHAR(50),
+        notes TEXT,
+        longitude DOUBLE PRECISION,
+        latitude DOUBLE PRECISION
+      ) ON COMMIT DROP;
+    `);
+
+    // Efficiently insert all leads into the temporary table
+    if (leadsToProcess.length > 0) {
+      const values: any[] = [];
+      const valueStrings: string[] = [];
+      let paramIndex = 1;
+      const columns = [
+        'first_name', 'last_name', 'street_address', 'city', 'state', 'zip',
+        'phone', 'email', 'status', 'notes', 'longitude', 'latitude'
+      ];
+
+      for (const lead of leadsToProcess) {
+        const leadValues = columns.map(col => lead[col as keyof typeof lead]);
+        const placeholders = leadValues.map(() => `$${paramIndex++}`);
+        valueStrings.push(`(${placeholders.join(', ')})`);
+        values.push(...leadValues);
+      }
+
+      const tempInsertQuery = `INSERT INTO temp_leads_staging (${columns.join(', ')}) VALUES ${valueStrings.join(', ')}`;
+      await client.query(tempInsertQuery, values);
     }
 
-    // Parse CSV
-    const csvText = file.buffer.toString('utf-8');
-    const parseResult = Papa.parse(csvText, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (header) => header.toLowerCase().trim()
-    });
+    // Insert from temp table into leads, skipping duplicates based on street_address and organization_id
+    const insertLeadsQuery = `
+      WITH new_leads AS (
+        INSERT INTO leads (
+          organization_id, status, notes, location
+        )
+        SELECT
+          $1, -- organization_id
+          t.status, t.notes,
+          CASE
+            WHEN t.longitude IS NOT NULL AND t.latitude IS NOT NULL
+            THEN ST_SetSRID(ST_MakePoint(t.longitude, t.latitude), 4326)
+            ELSE NULL
+          END
+        FROM temp_leads_staging t
+        LEFT JOIN lead_pii pii ON pii.street_address = t.street_address
+        LEFT JOIN leads l ON l.id = pii.lead_id AND l.organization_id = $1
+        WHERE pii.id IS NULL
+        RETURNING id, location
+      )
+      SELECT id, location FROM new_leads;
+    `;
 
-    if (parseResult.errors.length > 0) {
-      return res.status(400).json({ 
-        error: 'CSV parsing error',
-        details: parseResult.errors
-      });
+    const leadResults = await client.query(insertLeadsQuery, [user.organization_id]);
+
+    if (leadResults.rows.length > 0) {
+      const piiValues: any[] = [];
+      const piiValueStrings: string[] = [];
+      let piiParamIndex = 1;
+      const piiColumns = [
+        'lead_id', 'first_name', 'last_name', 'street_address', 'city', 'state', 'zip',
+        'phone', 'email'
+      ];
+
+      for (let i = 0; i < leadResults.rows.length; i++) {
+        const leadId = leadResults.rows[i].id;
+        const row = leadsToProcess[i];
+        const piiRowValues = [
+          leadId, row.first_name, row.last_name, row.street_address, row.city, row.state,
+          row.zip, row.phone, row.email
+        ];
+        const placeholders = piiRowValues.map(() => `$${piiParamIndex++}`);
+        piiValueStrings.push(`(${placeholders.join(', ')})`);
+        piiValues.push(...piiRowValues);
+      }
+
+      const piiInsertQuery = `INSERT INTO lead_pii (${piiColumns.join(', ')}) VALUES ${piiValueStrings.join(', ')}`;
+      await client.query(piiInsertQuery, piiValues);
     }
 
-    const rows = parseResult.data as any[];
-    
-    if (rows.length === 0) {
-      return res.status(400).json({ error: 'CSV file is empty' });
-    }
+    await client.query('COMMIT');
 
-    // Validate required columns
-    const requiredColumns = ['street_address'];
-    const headers = Object.keys(rows[0]);
-    const missingColumns = requiredColumns.filter(col => !headers.includes(col));
-    
-    if (missingColumns.length > 0) {
-      return res.status(400).json({ 
-        error: `Missing required columns: ${missingColumns.join(', ')}` 
-      });
-    }
-
-    // Prepare addresses for geocoding
-    const addresses = rows.map(row => {
-      const parts = [
-        row.street_address,
-        row.city,
-        row.state,
-        row.zip
-      ].filter(Boolean);
-      return parts.join(', ');
-    });
-
-    console.log(`Geocoding ${addresses.length} addresses...`);
-    const geocodeResults = await batchGeocode(addresses);
-
-    // Prepare leads for insertion
-    const leads = rows.map((row, index) => {
-      const geocode = geocodeResults[index];
-      
-      return {
-        organization_id: user.organization_id,
-        first_name: row.first_name || null,
-        last_name: row.last_name || null,
-        street_address: row.street_address,
-        city: row.city || null,
-        state: row.state || null,
-        zip: row.zip || null,
-        phone: row.phone || null,
-        email: row.email || null,
-        status: row.status || 'New',
-        notes: row.notes || null,
-        longitude: geocode?.longitude || null,
-        latitude: geocode?.latitude || null
-      };
-    });
-
-    // Bulk insert leads
-    const insertPromises = leads.map(lead => {
-      const locationWKT = lead.longitude && lead.latitude 
-        ? `POINT(${lead.longitude} ${lead.latitude})`
-        : null;
-
-      return pool.query(
-        `INSERT INTO leads 
-         (organization_id, first_name, last_name, street_address, city, state, zip, phone, email, status, notes, location)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, ${locationWKT ? 'ST_GeomFromText($12, 4326)' : 'NULL'})
-         RETURNING id`,
-        locationWKT 
-          ? [lead.organization_id, lead.first_name, lead.last_name, lead.street_address, 
-             lead.city, lead.state, lead.zip, lead.phone, lead.email, lead.status, lead.notes, locationWKT]
-          : [lead.organization_id, lead.first_name, lead.last_name, lead.street_address,
-             lead.city, lead.state, lead.zip, lead.phone, lead.email, lead.status, lead.notes]
-      );
-    });
-
-    const results = await Promise.all(insertPromises);
-    const successCount = results.length;
-    const geocodedCount = geocodeResults.filter(r => r !== null).length;
+    const successCount = leadResults.rowCount || 0;
+    const geocodedCount = leadResults.rows.filter(row => row.location !== null).length;
+    const duplicates = leadsToProcess.length - successCount;
 
     res.json({
       message: 'Leads uploaded successfully',
       totalLeads: successCount,
       geocodedLeads: geocodedCount,
-      geocodingRate: `${Math.round((geocodedCount / successCount) * 100)}%`
+      geocodingRate: successCount > 0 ? `${Math.round((geocodedCount / successCount) * 100)}%` : 'N/A',
+      duplicates: duplicates,
     });
+
   } catch (error) {
-    console.error('Upload leads error:', error);
+    await client.query('ROLLBACK');
+    console.error('Upload leads transaction error:', error);
+    res.status(500).json({ error: 'Failed to import leads due to a database error.' });
+  } finally {
+    client.release();
+  }
+};
+
+export const deleteLeads = async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user!;
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Lead IDs must be a non-empty array' });
+    }
+
+    const result = await pool.query(
+      'DELETE FROM leads WHERE id = ANY($1::uuid[]) AND organization_id = $2',
+      [ids, user.organization_id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'No matching leads found to delete' });
+    }
+
+    res.status(200).json({ message: `${result.rowCount} leads deleted successfully` });
+  } catch (error) {
+    console.error('Delete leads error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -127,7 +245,21 @@ export const uploadLeads = async (req: AuthRequest, res: Response) => {
 export const getLeads = async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
-    const { page = 1, limit = 100, status, search } = req.query;
+    const {
+      page = 1,
+      limit = 100,
+      status,
+      search,
+      sort = 'created_at',
+      order = 'desc'
+    } = req.query;
+
+    const allowedSortColumns = ['created_at', 'last_name', 'status', 'createdAt'];
+    if (!allowedSortColumns.includes(sort as string)) {
+      return res.status(400).json({ error: 'Invalid sort column' });
+    }
+
+    const orderDirection = (order as string).toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
     let whereClause = 'WHERE l.organization_id = $1';
     const params: any[] = [user.organization_id];
@@ -141,9 +273,9 @@ export const getLeads = async (req: AuthRequest, res: Response) => {
 
     if (search) {
       whereClause += ` AND (
-        l.first_name ILIKE $${paramIndex} OR 
-        l.last_name ILIKE $${paramIndex} OR 
-        l.street_address ILIKE $${paramIndex}
+        pii.first_name ILIKE $${paramIndex} OR
+        pii.last_name ILIKE $${paramIndex} OR
+        pii.street_address ILIKE $${paramIndex}
       )`;
       params.push(`%${search}%`);
       paramIndex++;
@@ -154,14 +286,14 @@ export const getLeads = async (req: AuthRequest, res: Response) => {
     const result = await pool.query(
       `SELECT 
          l.id,
-         l.first_name,
-         l.last_name,
-         l.street_address,
-         l.city,
-         l.state,
-         l.zip,
-         l.phone,
-         l.email,
+         pii.first_name,
+         pii.last_name,
+         pii.street_address,
+         pii.city,
+         pii.state,
+         pii.zip,
+         pii.phone,
+         pii.email,
          l.status,
          l.notes,
          ST_X(l.location) as longitude,
@@ -169,14 +301,18 @@ export const getLeads = async (req: AuthRequest, res: Response) => {
          l.created_at,
          l.updated_at
        FROM leads l
+       JOIN lead_pii pii ON l.id = pii.lead_id
        ${whereClause}
-       ORDER BY l.created_at DESC
+       ORDER BY ${sort === 'last_name' ? 'pii.last_name' : `l.${sort === 'createdAt' ? 'created_at' : sort}`} ${orderDirection}
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...params, Number(limit), offset]
     );
 
     const countResult = await pool.query(
-      `SELECT COUNT(*) FROM leads l ${whereClause}`,
+      `SELECT COUNT(*)
+       FROM leads l
+       JOIN lead_pii pii ON l.id = pii.lead_id
+       ${whereClause}`,
       params
     );
 
@@ -200,7 +336,7 @@ export const getLeads = async (req: AuthRequest, res: Response) => {
       updatedAt: row.updated_at
     }));
 
-    res.json({
+    res.status(200).json({
       leads,
       pagination: {
         page: Number(page),

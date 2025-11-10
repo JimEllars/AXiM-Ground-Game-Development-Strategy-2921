@@ -14,13 +14,27 @@ import React, { useState, useEffect } from 'react';
       Chip,
       TextField,
       InputAdornment,
-      Pagination,
+      TablePagination,
       Alert,
       CircularProgress,
+      Button,
+      Dialog,
+      DialogActions,
+      DialogTitle,
+      DialogContent,
+  Checkbox,
+  Toolbar,
+  Tooltip,
+  IconButton,
+  TableSortLabel,
+  Card,
+  CardContent,
+  CardHeader,
     } from '@mui/material';
-    import { FiSearch } from 'react-icons/fi';
+import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
     import SafeIcon from '@/common/SafeIcon';
     import LeadUpload from '@/components/LeadUpload';
+    import LeadDetails from '@/components/LeadDetails';
     import { leadsAPI } from '@/services/api';
 
     interface TabPanelProps {
@@ -40,56 +54,95 @@ import React, { useState, useEffect } from 'react';
     const LeadManagement: React.FC = () => {
       const [tabValue, setTabValue] = useState(0);
       const [leads, setLeads] = useState<any[]>([]);
-      const [loading, setLoading] = useState(false);
-      const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, pages: 0 });
+      const [loading, setLoading] = useState(true);
+      const [initialLoad, setInitialLoad] = useState(true);
+      const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, pages: 0, rowsPerPage: 25 });
       const [searchTerm, setSearchTerm] = useState('');
       const [statusFilter, setStatusFilter] = useState('');
       const [success, setSuccess] = useState('');
       const [error, setError] = useState('');
+      const [isDetailsOpen, setDetailsOpen] = useState(false);
+      const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [order, setOrder] = useState<'asc' | 'desc'>('asc');
+  const [orderBy, setOrderBy] = useState('createdAt');
+  const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+      useEffect(() => {
+        loadLeads();
+      }, [pagination.page, pagination.rowsPerPage, searchTerm, statusFilter, order, orderBy]);
 
       useEffect(() => {
         if (tabValue === 1) {
           loadLeads();
         }
-      }, [tabValue, pagination.page, searchTerm, statusFilter]);
+      }, [tabValue]);
 
       const loadLeads = async () => {
         try {
           setLoading(true);
           const params = {
             page: pagination.page,
-            limit: pagination.limit,
+            limit: pagination.rowsPerPage,
             ...(searchTerm && { search: searchTerm }),
             ...(statusFilter && { status: statusFilter }),
+            sort: orderBy,
+            order,
           };
           const response = await leadsAPI.getAll(params);
           setLeads(response.data.leads);
           setPagination(response.data.pagination);
+          setSelected([]);
         } catch (err: any) {
           setError(err.response?.data?.error || 'Failed to load leads');
         } finally {
           setLoading(false);
+          if (initialLoad) {
+            setInitialLoad(false);
+          }
         }
       };
 
       const handleUploadComplete = (result: any) => {
-        setSuccess(
-          `Successfully uploaded ${result.totalLeads} leads with ${result.geocodingRate} geocoding success rate`
-        );
-        setError('');
-        // Switch to leads tab and reload
-        setTabValue(1);
-        loadLeads();
-        // Clear success message after 5 seconds
-        setTimeout(() => setSuccess(''), 5000);
+        if (result.error) {
+          setError(result.error);
+          setSuccess('');
+        } else {
+          const { totalLeads, geocodedLeads, geocodingRate, duplicates } = result;
+          let successMessage = `Successfully uploaded ${totalLeads} leads.`;
+          if (geocodedLeads > 0) {
+            successMessage += ` Geocoding success rate: ${geocodingRate}.`;
+          }
+          if (duplicates > 0) {
+            successMessage += ` ${duplicates} duplicate leads were ignored.`;
+          }
+          setSuccess(successMessage);
+          setError('');
+          setTabValue(1);
+          loadLeads();
+        }
       };
 
       const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
       };
 
-      const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
-        setPagination((prev) => ({ ...prev, page: value }));
+      const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
+        setPagination(prev => ({ ...prev, page: newPage + 1 }));
+      };
+
+      const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setPagination(prev => ({ ...prev, rowsPerPage: parseInt(event.target.value, 10), page: 1 }));
+      };
+
+      const handleOpenDetails = (lead: any) => {
+        setSelectedLead(lead);
+        setDetailsOpen(true);
+      };
+
+      const handleCloseDetails = () => {
+        setDetailsOpen(false);
+        setSelectedLead(null);
       };
 
       const getStatusColor = (status: string) => {
@@ -108,6 +161,61 @@ import React, { useState, useEffect } from 'react';
             return 'default';
         }
       };
+
+      const handleRequestSort = (property: string) => {
+        const isAsc = orderBy === property && order === 'asc';
+        setOrder(isAsc ? 'desc' : 'asc');
+        setOrderBy(property);
+      };
+
+      const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.checked) {
+          const newSelecteds = leads.map((n) => n.id);
+          setSelected(newSelecteds);
+          return;
+        }
+        setSelected([]);
+      };
+
+      const handleSelect = (id: string) => {
+        const selectedIndex = selected.indexOf(id);
+        let newSelected: string[] = [];
+
+        if (selectedIndex === -1) {
+          newSelected = newSelected.concat(selected, id);
+        } else if (selectedIndex === 0) {
+          newSelected = newSelected.concat(selected.slice(1));
+        } else if (selectedIndex === selected.length - 1) {
+          newSelected = newSelected.concat(selected.slice(0, -1));
+        } else if (selectedIndex > 0) {
+          newSelected = newSelected.concat(
+            selected.slice(0, selectedIndex),
+            selected.slice(selectedIndex + 1)
+          );
+        }
+        setSelected(newSelected);
+      };
+
+      const handleDelete = async () => {
+        try {
+          await leadsAPI.deleteMany(selected);
+          setSuccess(`${selected.length} leads deleted successfully`);
+          setSelected([]);
+          loadLeads();
+        } catch (err: any) {
+          setError(err.response?.data?.error || 'Failed to delete leads');
+        } finally {
+          setDeleteDialogOpen(false);
+        }
+      };
+
+      if (initialLoad) {
+        return (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+            <CircularProgress />
+          </Box>
+        );
+      }
 
       return (
         <Box>
@@ -133,133 +241,230 @@ import React, { useState, useEffect } from 'react';
               <Tab label={`View Leads (${pagination.total})`} />
             </Tabs>
             <TabPanel value={tabValue} index={0}>
-              <LeadUpload onUploadComplete={handleUploadComplete} />
+              <Card>
+                <CardContent>
+                  <LeadUpload onUploadComplete={handleUploadComplete} />
+                </CardContent>
+              </Card>
             </TabPanel>
             <TabPanel value={tabValue} index={1}>
-              <Box sx={{ p: 3 }}>
-                {/* Filters */}
-                <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                  <TextField
-                    placeholder="Search leads..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SafeIcon icon={FiSearch} />
-                        </InputAdornment>
-                      ),
-                    }}
-                    sx={{ minWidth: 300 }}
-                  />
-                  <TextField
-                    select
-                    label="Status Filter"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    SelectProps={{ native: true }}
-                    sx={{ minWidth: 150 }}
-                  >
-                    <option value="">All Status</option>
-                    <option value="New">New</option>
-                    <option value="Contacted">Contacted</option>
-                    <option value="Hot Lead">Hot Lead</option>
-                    <option value="Not Interested">Not Interested</option>
-                    <option value="Completed">Completed</option>
-                  </TextField>
-                </Box>
-
-                {/* Leads Table */}
+              <Card>
+                <CardHeader
+                  title="Your Leads"
+                  subheader="Browse and manage your organization's leads"
+                  action={
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <TextField
+                        placeholder="Search leads..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <SafeIcon icon={FiSearch} />
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{ minWidth: 300 }}
+                      />
+                      <TextField
+                        select
+                        label="Status Filter"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        SelectProps={{ native: true }}
+                        sx={{ minWidth: 150 }}
+                      >
+                        <option value="">All Status</option>
+                        <option value="New">New</option>
+                        <option value="Contacted">Contacted</option>
+                        <option value="Hot Lead">Hot Lead</option>
+                        <option value="Not Interested">Not Interested</option>
+                        <option value="Completed">Completed</option>
+                      </TextField>
+                    </Box>
+                  }
+                />
                 <TableContainer>
-                  <Table>
-                    <TableHead>
+                  {selected.length > 0 && (
+                    <Toolbar
+                      sx={{
+                        bgcolor: 'action.selected',
+                        borderRadius: '4px 4px 0 0',
+                        borderBottom: 1,
+                        borderColor: 'divider',
+                      }}
+                    >
+                      <Typography sx={{ flex: '1 1 100%' }} color="inherit" variant="subtitle1">
+                        {selected.length} selected
+                      </Typography>
+                      <Tooltip title="Delete">
+                        <IconButton onClick={() => setDeleteDialogOpen(true)}>
+                          <SafeIcon icon={FiTrash} />
+                        </IconButton>
+                      </Tooltip>
+                    </Toolbar>
+                  )}
+                  <Table sx={{ minWidth: 750 }}>
+                    <TableHead sx={{ bgcolor: 'grey.100' }}>
                       <TableRow>
-                        <TableCell>Name</TableCell>
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            indeterminate={selected.length > 0 && selected.length < leads.length}
+                            checked={leads.length > 0 && selected.length === leads.length}
+                            onChange={handleSelectAllClick}
+                          />
+                        </TableCell>
+                        <TableCell sortDirection={orderBy === 'lastName' ? order : false}>
+                          <TableSortLabel
+                            active={orderBy === 'lastName'}
+                            direction={orderBy === 'lastName' ? order : 'asc'}
+                            onClick={() => handleRequestSort('lastName')}
+                          >
+                            Name
+                          </TableSortLabel>
+                        </TableCell>
                         <TableCell>Address</TableCell>
                         <TableCell>Contact</TableCell>
-                        <TableCell>Status</TableCell>
+                        <TableCell sortDirection={orderBy === 'status' ? order : false}>
+                          <TableSortLabel
+                            active={orderBy === 'status'}
+                            direction={orderBy === 'status' ? order : 'asc'}
+                            onClick={() => handleRequestSort('status')}
+                          >
+                            Status
+                          </TableSortLabel>
+                        </TableCell>
                         <TableCell>Location</TableCell>
-                        <TableCell>Created</TableCell>
+                        <TableCell sortDirection={orderBy === 'createdAt' ? order : false}>
+                          <TableSortLabel
+                            active={orderBy === 'createdAt'}
+                            direction={orderBy === 'createdAt' ? order : 'asc'}
+                            onClick={() => handleRequestSort('createdAt')}
+                          >
+                            Created
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell>Actions</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
+                          <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
                             <CircularProgress />
                           </TableCell>
                         </TableRow>
                       ) : leads.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
+                          <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
                             No leads found
                           </TableCell>
                         </TableRow>
                       ) : (
-                        leads.map((lead) => (
-                          <TableRow key={lead.id} hover>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight="medium">
-                                {`${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed'}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">{lead.streetAddress}</Typography>
-                              {(lead.city || lead.state || lead.zip) && (
-                                <Typography variant="caption" color="text.secondary">
-                                  {[lead.city, lead.state, lead.zip].filter(Boolean).join(', ')}
+                        leads.map((lead) => {
+                          const isSelected = selected.indexOf(lead.id) !== -1;
+                          return (
+                            <TableRow key={lead.id} hover selected={isSelected}>
+                              <TableCell padding="checkbox">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onClick={() => handleSelect(lead.id)}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" fontWeight="medium">
+                                  {`${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed'}
                                 </Typography>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {lead.phone && <Typography variant="body2">{lead.phone}</Typography>}
-                              {lead.email && (
-                                <Typography variant="caption" color="text.secondary">
-                                  {lead.email}
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">{lead.streetAddress}</Typography>
+                                {(lead.city || lead.state || lead.zip) && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    {[lead.city, lead.state, lead.zip].filter(Boolean).join(', ')}
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {lead.phone && <Typography variant="body2">{lead.phone}</Typography>}
+                                {lead.email && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    {lead.email}
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={lead.status}
+                                  size="small"
+                                  color={getStatusColor(lead.status) as any}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={lead.location ? 'Geocoded' : 'No Location'}
+                                  size="small"
+                                  variant="outlined"
+                                  color={lead.location ? 'success' : 'default'}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="caption">
+                                  {new Date(lead.createdAt).toLocaleDateString()}
                                 </Typography>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Chip
-                                label={lead.status}
-                                size="small"
-                                color={getStatusColor(lead.status) as any}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Chip
-                                label={lead.location ? 'Geocoded' : 'No Location'}
-                                size="small"
-                                variant="outlined"
-                                color={lead.location ? 'success' : 'default'}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="caption">
-                                {new Date(lead.createdAt).toLocaleDateString()}
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                              </TableCell>
+                              <TableCell>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={<SafeIcon icon={FiEye} />}
+                                  onClick={() => handleOpenDetails(lead)}
+                                >
+                                  View
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
                 </TableContainer>
 
                 {/* Pagination */}
-                {pagination.pages > 1 && (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-                    <Pagination
-                      count={pagination.pages}
-                      page={pagination.page}
-                      onChange={handlePageChange}
-                      color="primary"
-                    />
-                  </Box>
-                )}
-              </Box>
+                  <TablePagination
+                  component="div"
+                  count={pagination.total}
+                  page={pagination.page - 1}
+                  onPageChange={handlePageChange}
+                  rowsPerPage={pagination.rowsPerPage}
+                  onRowsPerPageChange={handleRowsPerPageChange}
+                />
+              </Card>
             </TabPanel>
           </Paper>
+
+          {/* Lead Details Dialog */}
+          <Dialog open={isDetailsOpen} onClose={handleCloseDetails} fullWidth maxWidth="md">
+            <DialogTitle>Lead Details</DialogTitle>
+            <DialogContent>
+              {selectedLead && <LeadDetails lead={selectedLead} />}
+            </DialogContent>
+          </Dialog>
+
+          {/* Delete Confirmation Dialog */}
+          <Dialog open={isDeleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogContent>
+              <Typography>Are you sure you want to delete the {selected.length} selected leads?</Typography>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleDelete} color="error">
+                Delete
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       );
     };

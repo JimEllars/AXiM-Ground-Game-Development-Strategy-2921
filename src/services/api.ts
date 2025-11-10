@@ -18,12 +18,21 @@ api.interceptors.request.use((config) => {
 
 // Response interceptor for error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Pass through successful responses
+    return response;
+  },
   (error) => {
-    if (error.response?.status === 401) {
+    // Check if it's a genuine 401 error
+    if (error.response && error.response.status === 401) {
+      console.error('Authentication Error: Redirecting to login.');
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Use location.assign for a cleaner redirect
+      if (window.location.pathname !== '/login') {
+        window.location.assign('/login');
+      }
     }
+    // For all other errors, just reject the promise
     return Promise.reject(error);
   }
 );
@@ -77,8 +86,12 @@ export const leadsAPI = {
     limit?: number;
     status?: string;
     search?: string;
+    sort?: string;
+    order?: 'asc' | 'desc';
   }) => 
     api.get('/leads', { params }),
+  deleteMany: (ids: string[]) =>
+    api.post('/leads/delete-many', { ids }),
 };
 
 // Reps API

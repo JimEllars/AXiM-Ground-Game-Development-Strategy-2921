@@ -1,23 +1,32 @@
 import { Request, Response, NextFunction } from 'express';
+import AppError from '../utils/AppError.js';
 
-interface AppError extends Error {
-  statusCode?: number;
-  isOperational?: boolean;
-}
-
-const errorHandler = (err: AppError, req: Request, res: Response, next: NextFunction) => {
-  err.statusCode = err.statusCode || 500;
-  err.message = err.message || 'Internal Server Error';
+const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
 
   // Log the error for debugging purposes
-  console.error(`${err.statusCode} - ${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+  console.error(`${statusCode} - ${message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
   console.error(err.stack);
 
+  // Handle specific error types for better client feedback
+  let error = { ...err, statusCode, message };
+
+  // PostgreSQL unique violation
+  if (err.code === '23505') {
+    error = new AppError('Duplicate field value entered.', 400);
+  }
+
+  // Generic database error (e.g., invalid data format)
+  if (err.code && typeof err.code === 'string' && err.code.startsWith('22')) {
+    error = new AppError('Invalid data provided.', 400);
+  }
+
   // Send a user-friendly error response
-  res.status(err.statusCode).json({
+  res.status(error.statusCode || 500).json({
     status: 'error',
-    statusCode: err.statusCode,
-    message: err.isOperational ? err.message : 'An unexpected error occurred.',
+    statusCode: error.statusCode || 500,
+    message: error.isOperational ? error.message : 'An unexpected error occurred.',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };
