@@ -5,9 +5,11 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
 
-  // Log the error for debugging purposes
-  console.error(`${statusCode} - ${message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
-  console.error(err.stack);
+  // Log the error for debugging purposes, but not in test environment
+  if (process.env.NODE_ENV !== 'test') {
+    console.error(`${statusCode} - ${message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+    console.error(err.stack);
+  }
 
   // Handle specific error types for better client feedback
   let error = { ...err, statusCode, message };
