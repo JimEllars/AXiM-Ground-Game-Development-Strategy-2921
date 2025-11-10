@@ -90,7 +90,10 @@ AXiM Ground Game is designed to be the most stable and reliable canvassing platf
 
 3. **Access Application**
    - Open http://localhost:5173
-   - Use the demo accounts seeded in `database/schema.sql`. The default password for all users is `password`. It is strongly recommended to change these default passwords in a production environment.
+   - Use demo accounts:
+     - Admin: admin@axim.com / password
+     - Manager: manager@axim.com / password
+     - Rep: rep@axim.com / password
 
 ## 📱 Core Features
 

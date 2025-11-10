@@ -6,13 +6,12 @@
     "dev": "npm run build && npm run start",
     "build": "rm -rf dist && tsc",
     "start": "node dist/server.js",
-    "test": "JWT_SECRET=test-secret DB_HOST=localhost DB_PORT=5432 DB_NAME=axim_ground_game_test DB_USER=postgres DB_PASSWORD=postgres NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "start:test": "tsx src/server.ts",
     "db:migrate": "node dist/scripts/migrate.js",
     "db:seed": "npm run build && node dist/services/seedDatabase.js"
   },
   "dependencies": {
-    "@types/uuid": "^10.0.0",
     "axios": "^1.7.2",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
@@ -22,7 +21,6 @@
     "multer": "^2.0.2",
     "papaparse": "^5.4.1",
     "pg": "^8.12.0",
-    "uuid": "^13.0.0",
     "wellknown": "^0.5.0",
     "zod": "^4.1.12"
   },
