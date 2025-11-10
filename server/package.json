@@ -6,7 +6,7 @@
     "dev": "npm run build && npm run start",
     "build": "rm -rf dist && tsc",
     "start": "node dist/server.js",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "JWT_SECRET=test-secret DB_HOST=localhost DB_PORT=5432 DB_NAME=axim_ground_game_test DB_USER=postgres DB_PASSWORD=postgres NODE_OPTIONS=--experimental-vm-modules jest",
     "start:test": "tsx src/server.ts",
     "db:migrate": "node dist/scripts/migrate.js",
     "db:seed": "npm run build && node dist/services/seedDatabase.js"

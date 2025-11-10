@@ -62,8 +62,13 @@ AXiM Ground Game is designed to be the most stable and reliable canvassing platf
 
 3. **Environment Configuration**
    ```bash
+   # For development
    cp .env.example .env
    # Edit .env with your database credentials
+
+   # For testing
+   cp server/.env.test.example server/.env.test
+   # Edit server/.env.test with your test database credentials
    ```
 
 4. **Start Server**
