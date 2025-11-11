@@ -7,7 +7,7 @@ import Papa from 'papaparse';
 import multer from 'multer';
 
 // Configure multer for file uploads
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
@@ -93,12 +93,11 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
   try {
     await client.query('BEGIN');
 
-    // Create a temporary table for staging
     await client.query(`
       CREATE TEMP TABLE temp_leads_staging (
         first_name VARCHAR(100),
         last_name VARCHAR(100),
-        street_address TEXT,
+        street_address TEXT NOT NULL,
         city VARCHAR(100),
         state VARCHAR(50),
         zip VARCHAR(20),
@@ -111,81 +110,75 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
       ) ON COMMIT DROP;
     `);
 
-    // Efficiently insert all leads into the temporary table
+    // Use unnest for efficient bulk insertion into the temporary table
     if (leadsToProcess.length > 0) {
-      const values: any[] = [];
-      const valueStrings: string[] = [];
-      let paramIndex = 1;
-      const columns = [
-        'first_name', 'last_name', 'street_address', 'city', 'state', 'zip',
-        'phone', 'email', 'status', 'notes', 'longitude', 'latitude'
-      ];
+      const columns = [ 'first_name', 'last_name', 'street_address', 'city', 'state', 'zip', 'phone', 'email', 'status', 'notes', 'longitude', 'latitude' ];
+      const params = columns.map(col => leadsToProcess.map(lead => (lead as any)[col]));
+      const types = [ 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'float8[]', 'float8[]' ];
 
-      for (const lead of leadsToProcess) {
-        const leadValues = columns.map(col => lead[col as keyof typeof lead]);
-        const placeholders = leadValues.map(() => `$${paramIndex++}`);
-        valueStrings.push(`(${placeholders.join(', ')})`);
-        values.push(...leadValues);
-      }
-
-      const tempInsertQuery = `INSERT INTO temp_leads_staging (${columns.join(', ')}) VALUES ${valueStrings.join(', ')}`;
-      await client.query(tempInsertQuery, values);
+      const tempInsertQuery = `
+        INSERT INTO temp_leads_staging (${columns.join(', ')})
+        SELECT * FROM unnest(${types.map((type, i) => `$${i + 1}::${type}`).join(', ')})
+      `;
+      await client.query(tempInsertQuery, params);
     }
 
-    // Insert from temp table into leads, skipping duplicates based on street_address and organization_id
-    const insertLeadsQuery = `
-      WITH new_leads AS (
-        INSERT INTO leads (
-          organization_id, status, notes, location
-        )
-        SELECT
-          $1, -- organization_id
-          t.status, t.notes,
-          CASE
-            WHEN t.longitude IS NOT NULL AND t.latitude IS NOT NULL
-            THEN ST_SetSRID(ST_MakePoint(t.longitude, t.latitude), 4326)
-            ELSE NULL
-          END
-        FROM temp_leads_staging t
-        LEFT JOIN lead_pii pii ON pii.street_address = t.street_address
-        LEFT JOIN leads l ON l.id = pii.lead_id AND l.organization_id = $1
-        WHERE pii.id IS NULL
-        RETURNING id, location
-      )
-      SELECT id, location FROM new_leads;
+    // Identify leads that are not duplicates for the current organization
+    const nonDuplicateLeadsQuery = `
+      SELECT t.* FROM temp_leads_staging t
+      WHERE NOT EXISTS (
+        SELECT 1 FROM leads l
+        JOIN lead_pii pii ON l.id = pii.lead_id
+        WHERE l.organization_id = $1 AND pii.street_address = t.street_address
+      );
     `;
+    const newLeadsResult = await client.query(nonDuplicateLeadsQuery, [user.organization_id]);
+    const newLeadsData = newLeadsResult.rows;
 
-    const leadResults = await client.query(insertLeadsQuery, [user.organization_id]);
+    let leadInsertResult = { rows: [], rowCount: 0 };
 
-    if (leadResults.rows.length > 0) {
-      const piiValues: any[] = [];
-      const piiValueStrings: string[] = [];
-      let piiParamIndex = 1;
-      const piiColumns = [
-        'lead_id', 'first_name', 'last_name', 'street_address', 'city', 'state', 'zip',
-        'phone', 'email'
+    if (newLeadsData.length > 0) {
+      // Insert into the main 'leads' table
+      const leadValues = newLeadsData.flatMap(lead => [
+        user.organization_id,
+        lead.status,
+        lead.notes,
+        lead.longitude,
+        lead.latitude,
+      ]);
+
+      const leadPlaceholders = newLeadsData.map((_, i) => {
+        const base = i * 5;
+        const location = `CASE WHEN $${base + 4}::float8 IS NOT NULL AND $${base + 5}::float8 IS NOT NULL THEN ST_SetSRID(ST_MakePoint($${base + 4}::float8, $${base + 5}::float8), 4326) ELSE NULL END`;
+        return `($${base + 1}::uuid, $${base + 2}::text, $${base + 3}::text, ${location})`;
+      }).join(', ');
+
+      const insertLeadsQuery = `
+        INSERT INTO leads (organization_id, status, notes, location)
+        VALUES ${leadPlaceholders}
+        RETURNING id, location;
+      `;
+      leadInsertResult = await client.query(insertLeadsQuery, leadValues);
+
+      // Prepare data for the PII table insertion using unnest
+      const piiColumns = ['lead_id', 'first_name', 'last_name', 'street_address', 'city', 'state', 'zip', 'phone', 'email'];
+      const piiParams = [
+        leadInsertResult.rows.map(row => row.id),
+        ...piiColumns.slice(1).map(col => newLeadsData.map(lead => (lead as any)[col]))
       ];
+      const piiTypes = ['uuid[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]'];
 
-      for (let i = 0; i < leadResults.rows.length; i++) {
-        const leadId = leadResults.rows[i].id;
-        const row = leadsToProcess[i];
-        const piiRowValues = [
-          leadId, row.first_name, row.last_name, row.street_address, row.city, row.state,
-          row.zip, row.phone, row.email
-        ];
-        const placeholders = piiRowValues.map(() => `$${piiParamIndex++}`);
-        piiValueStrings.push(`(${placeholders.join(', ')})`);
-        piiValues.push(...piiRowValues);
-      }
-
-      const piiInsertQuery = `INSERT INTO lead_pii (${piiColumns.join(', ')}) VALUES ${piiValueStrings.join(', ')}`;
-      await client.query(piiInsertQuery, piiValues);
+      const piiInsertQuery = `
+        INSERT INTO lead_pii (${piiColumns.join(', ')})
+        SELECT * FROM unnest(${piiTypes.map((type, i) => `$${i + 1}::${type}`).join(', ')})
+      `;
+      await client.query(piiInsertQuery, piiParams);
     }
 
     await client.query('COMMIT');
 
-    const successCount = leadResults.rowCount || 0;
-    const geocodedCount = leadResults.rows.filter(row => row.location !== null).length;
+    const successCount = leadInsertResult.rowCount || 0;
+    const geocodedCount = leadInsertResult.rows.filter(row => row.location).length;
     const duplicates = leadsToProcess.length - successCount;
 
     res.json({
@@ -272,7 +265,7 @@ export const getLeads = async (req: AuthRequest, res: Response) => {
     const offset = (Number(page) - 1) * Number(limit);
 
     const result = await pool.query(
-      `SELECT 
+      `SELECT
          l.id,
          pii.first_name,
          pii.last_name,
