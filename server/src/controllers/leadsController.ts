@@ -135,7 +135,7 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
     const newLeadsResult = await client.query(nonDuplicateLeadsQuery, [user.organization_id]);
     const newLeadsData = newLeadsResult.rows;
 
-    let leadInsertResult = { rows: [], rowCount: 0 };
+    let leadInsertResult: { rows: any[]; rowCount: number | null } = { rows: [], rowCount: 0 };
 
     if (newLeadsData.length > 0) {
       // Insert into the main 'leads' table

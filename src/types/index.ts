@@ -1,20 +1,38 @@
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: 'Admin' | 'Manager' | 'Rep';
+  organizationId: string;
+}
+
 export interface Territory {
   id: string;
   name: string;
-  description: string;
-  boundary: any;
-  user_id: string | null;
-  organization_id: string;
-  created_at: string;
-  updated_at: string;
+  description?: string;
+  organizationId: string;
+  geoJson: any;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface User {
+export interface Lead {
   id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'manager' | 'rep';
-  organization_id: string;
-  created_at: string;
-  updated_at: string;
+  firstName?: string;
+  lastName?: string;
+  streetAddress: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  phone?: string;
+  email?: string;
+  status: 'New' | 'Contacted' | 'Hot Lead' | 'Not Interested' | 'Completed';
+  notes?: string;
+  location?: {
+    type: 'Point';
+    coordinates: [number, number];
+  } | null;
+  createdAt: string;
+  updatedAt: string;
 }
