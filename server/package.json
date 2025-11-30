@@ -12,6 +12,7 @@
     "db:seed": "npm run build && node dist/services/seedDatabase.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.86.0",
     "axios": "^1.7.2",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
@@ -25,7 +26,6 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
-    "@supabase/supabase-js": "^2.86.0",
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.19",
     "@types/dotenv": "^6.1.1",

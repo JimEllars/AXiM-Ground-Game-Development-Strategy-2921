@@ -7,7 +7,7 @@ export default [
   { ignores: ['dist'] },
   js.configs.recommended,
   {
-    files: ['**/*.{js,jsx}'],
+    files: ['**/*.{js,jsx,cjs}'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: {
@@ -36,5 +36,15 @@ export default [
       'no-case-declarations': 'off',
       'no-useless-catch': 'off'
     },
+  },
+  {
+    files: ['server/jest.setup.cjs'],
+    languageOptions: {
+        globals: {
+            ...globals.node,
+            __dirname: true,
+        },
+        sourceType: 'commonjs'
+    }
   }
 ];
