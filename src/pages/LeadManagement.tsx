@@ -21,6 +21,7 @@ import React, { useState, useEffect } from 'react';
       Dialog,
       DialogTitle,
       DialogContent,
+      DialogActions,
   Checkbox,
   Toolbar,
   Tooltip,
@@ -35,6 +36,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
     import LeadUpload from '@/components/LeadUpload';
     import LeadDetails from '@/components/LeadDetails';
     import { leadsAPI } from '@/services/api';
+    import { Lead } from '@/types';
 
     interface TabPanelProps {
       children?: React.ReactNode;
@@ -52,7 +54,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
 
     const LeadManagement: React.FC = () => {
       const [tabValue, setTabValue] = useState(0);
-      const [leads, setLeads] = useState<any[]>([]);
+      const [leads, setLeads] = useState<Lead[]>([]);
       const [loading, setLoading] = useState(false);
       const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, pages: 0, rowsPerPage: 25 });
       const [searchTerm, setSearchTerm] = useState('');
@@ -60,7 +62,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
       const [success, setSuccess] = useState('');
       const [error, setError] = useState('');
       const [isDetailsOpen, setDetailsOpen] = useState(false);
-      const [selectedLead, setSelectedLead] = useState<any | null>(null);
+      const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [orderBy, setOrderBy] = useState('createdAt');
@@ -126,7 +128,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
         setPagination(prev => ({ ...prev, rowsPerPage: parseInt(event.target.value, 10), page: 1 }));
       };
 
-      const handleOpenDetails = (lead: any) => {
+      const handleOpenDetails = (lead: Lead) => {
         setSelectedLead(lead);
         setDetailsOpen(true);
       };
