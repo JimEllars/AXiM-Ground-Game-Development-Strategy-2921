@@ -138,6 +138,17 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
         setSelectedLead(null);
       };
 
+      const handleLeadUpdate = () => {
+        loadLeads();
+        // Keep the dialog open, but maybe we should re-fetch the specific lead details?
+        // Since loadLeads updates the list, if selectedLead is just a reference, it won't update automatically.
+        // We'll close and reload for simplicity or update the selectedLead object if we returned it.
+        // For now, let's close the dialog to force a refresh of the view when reopened, or just reload the list.
+        setDetailsOpen(false);
+        setSelectedLead(null);
+        setSuccess('Lead updated successfully');
+      };
+
       const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
           case 'new':
@@ -433,7 +444,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
           <Dialog open={isDetailsOpen} onClose={handleCloseDetails} fullWidth maxWidth="md">
             <DialogTitle>Lead Details</DialogTitle>
             <DialogContent>
-              {selectedLead && <LeadDetails lead={selectedLead} />}
+              {selectedLead && <LeadDetails lead={selectedLead} onUpdate={handleLeadUpdate} />}
             </DialogContent>
           </Dialog>
 
