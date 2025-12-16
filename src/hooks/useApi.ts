@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-    import { apiClient } from '@/services/apiClient';
 
     interface UseApiOptions<T> {
       immediate?: boolean;

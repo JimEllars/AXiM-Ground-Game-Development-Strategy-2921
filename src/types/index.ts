@@ -12,7 +12,7 @@ export interface Territory {
   name: string;
   description?: string;
   organizationId: string;
-  geoJson: any;
+  boundary: any; // GeoJSON Polygon or MultiPolygon
   createdAt: string;
   updatedAt: string;
 }

@@ -2,14 +2,13 @@
 import React from 'react';
 import Map, { Source, Layer } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Territory } from '@/types';
+import { Territory, Lead } from '@/types';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
-// TODO: Improve the Territory type to be more specific than 'any' for boundary.
 interface RepTerritoryMapProps {
   boundary: Territory['boundary'];
-  leads: any[]; // TODO: Define a Lead type
+  leads: Lead[];
 }
 
 const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) => {
@@ -46,14 +45,20 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
 
   const leadsData = {
     type: 'FeatureCollection' as const,
-    features: leads.map(lead => ({
+    features: leads.map(lead => {
+      // Ensure lead.location is valid and has coordinates
+      if (!lead.location || !lead.location.coordinates) {
+          return null;
+      }
+      return {
         type: 'Feature' as const,
         geometry: lead.location,
         properties: {
             id: lead.id,
             status: lead.status,
         }
-    }))
+      };
+    }).filter(feature => feature !== null) // Filter out invalid features
   };
 
   return (
