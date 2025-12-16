@@ -13,6 +13,7 @@ export const getMyTurf = async (req: AuthRequest, res: Response) => {
          t.id as territory_id,
          t.name as territory_name,
          t.description as territory_description,
+         t.created_at as territory_created_at,
          ST_AsGeoJSON(t.boundary) as territory_boundary,
          
          -- Lead data (if within territory)
@@ -50,7 +51,7 @@ export const getMyTurf = async (req: AuthRequest, res: Response) => {
        ) i ON true
        
        WHERE ta.user_id = $1
-       ORDER BY t.name, l.street_address`,
+       ORDER BY t.name, lp.street_address`,
       [user.id]
     );
 
@@ -65,6 +66,7 @@ export const getMyTurf = async (req: AuthRequest, res: Response) => {
           id: territoryId,
           name: row.territory_name,
           description: row.territory_description,
+          createdAt: row.territory_created_at,
           boundary: JSON.parse(row.territory_boundary),
           leads: []
         });
