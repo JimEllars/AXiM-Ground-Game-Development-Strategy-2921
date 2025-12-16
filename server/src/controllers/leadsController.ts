@@ -3,6 +3,7 @@ import { pool } from '../config/database.js';
 import { AuthRequest } from '../types/index.js';
 import { leadSchema } from '../utils/validationSchemas.js';
 import { geocodeAddress, batchGeocode } from '../services/geocoding.js';
+import { syncLeadToCore } from '../services/aximService.js';
 import Papa from 'papaparse';
 import multer from 'multer';
 
@@ -220,6 +221,150 @@ export const deleteLeads = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Delete leads error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const updateLead = async (req: AuthRequest, res: Response) => {
+  const client = await pool.connect();
+  try {
+    const user = req.user!;
+    const { id } = req.params;
+    const { status, notes, firstName, lastName, phone, email, streetAddress, city, state, zip } = req.body;
+
+    await client.query('BEGIN');
+
+    // 1. Check if lead exists and belongs to the user's organization
+    const leadCheck = await client.query(
+      'SELECT l.id FROM leads l WHERE l.id = $1 AND l.organization_id = $2',
+      [id, user.organization_id]
+    );
+
+    if (leadCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Lead not found' });
+    }
+
+    // 2. Update 'leads' table (status, notes)
+    if (status || notes !== undefined) {
+      const updateFields: string[] = [];
+      const updateValues: any[] = [];
+      let paramIndex = 1;
+
+      if (status) {
+        updateFields.push(`status = $${paramIndex}`);
+        updateValues.push(status);
+        paramIndex++;
+      }
+      if (notes !== undefined) {
+        updateFields.push(`notes = $${paramIndex}`);
+        updateValues.push(notes);
+        paramIndex++;
+      }
+
+      if (updateFields.length > 0) {
+        updateValues.push(id);
+        await client.query(
+          `UPDATE leads SET ${updateFields.join(', ')} WHERE id = $${paramIndex}`,
+          updateValues
+        );
+      }
+    }
+
+    // 3. Update 'lead_pii' table (personal info)
+    const piiFields: string[] = [];
+    const piiValues: any[] = [];
+    let piiParamIndex = 1;
+
+    const piiMap: Record<string, any> = {
+      first_name: firstName,
+      last_name: lastName,
+      phone,
+      email,
+      street_address: streetAddress,
+      city,
+      state,
+      zip
+    };
+
+    for (const [column, value] of Object.entries(piiMap)) {
+      if (value !== undefined) {
+        piiFields.push(`${column} = $${piiParamIndex}`);
+        piiValues.push(value);
+        piiParamIndex++;
+      }
+    }
+
+    if (piiFields.length > 0) {
+      piiValues.push(id);
+      await client.query(
+        `UPDATE lead_pii SET ${piiFields.join(', ')} WHERE lead_id = $${piiParamIndex}`,
+        piiValues
+      );
+    }
+
+    await client.query('COMMIT');
+
+    // 4. Fetch updated lead to return
+    const updatedLeadResult = await pool.query(
+      `SELECT
+         l.id,
+         pii.first_name,
+         pii.last_name,
+         pii.street_address,
+         pii.city,
+         pii.state,
+         pii.zip,
+         pii.phone,
+         pii.email,
+         l.status,
+         l.notes,
+         ST_X(l.location) as longitude,
+         ST_Y(l.location) as latitude,
+         l.created_at,
+         l.updated_at
+       FROM leads l
+       JOIN lead_pii pii ON l.id = pii.lead_id
+       WHERE l.id = $1`,
+      [id]
+    );
+
+    const row = updatedLeadResult.rows[0];
+    const updatedLead = {
+      id: row.id,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      streetAddress: row.street_address,
+      city: row.city,
+      state: row.state,
+      zip: row.zip,
+      phone: row.phone,
+      email: row.email,
+      status: row.status,
+      notes: row.notes,
+      location: row.longitude && row.latitude ? {
+        type: 'Point' as const,
+        coordinates: [row.longitude, row.latitude]
+      } : null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+
+    // 5. Sync with AXiM Core
+    try {
+      await syncLeadToCore(updatedLead);
+    } catch (syncError) {
+      console.warn('Failed to sync updated lead to AXiM Core:', syncError);
+      // We don't fail the request if sync fails, but we should log it
+    }
+
+    res.status(200).json({ message: 'Lead updated successfully', lead: updatedLead });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Update lead error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    client.release();
   }
 };
 

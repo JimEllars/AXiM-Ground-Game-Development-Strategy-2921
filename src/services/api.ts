@@ -90,6 +90,19 @@ export const leadsAPI = {
     order?: 'asc' | 'desc';
   }) => 
     api.get('/leads', { params }),
+  update: (id: string, data: Partial<{
+    status: string;
+    notes: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string;
+    streetAddress: string;
+    city: string;
+    state: string;
+    zip: string;
+  }>) =>
+    api.put(`/leads/${id}`, data),
   deleteMany: (ids: string[]) =>
     api.post('/leads/delete-many', { ids }),
 };
