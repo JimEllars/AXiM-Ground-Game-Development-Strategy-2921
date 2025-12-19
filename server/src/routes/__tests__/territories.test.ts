@@ -1,10 +1,12 @@
-import request from 'supertest';
-import app from '../../app';
-import { pool } from '../../config/database';
-import jwt from 'jsonwebtoken';
 import { jest } from '@jest/globals';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+// Import modules dynamically
+const { default: app } = await import('../../app.js');
+const { pool } = await import('../../config/database.js');
 
 describe('Territories Route', () => {
   let token: string;
