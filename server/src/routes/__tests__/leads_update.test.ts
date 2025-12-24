@@ -80,7 +80,7 @@ describe('Lead Update Route', () => {
     await pool.end();
   });
 
-  it('should update lead status and notes', async () => {
+  it('should update lead status and notes and sync to core', async () => {
     const res = await request(app)
       .put(`/api/leads/${leadId}`)
       .set('Authorization', `Bearer ${token}`)
@@ -92,9 +92,17 @@ describe('Lead Update Route', () => {
     expect(res.statusCode).toEqual(200);
     expect(res.body.lead.status).toBe('Contacted');
     expect(res.body.lead.notes).toBe('Updated Note');
+
+    // Verify sync was called
+    expect(syncLeadToCore).toHaveBeenCalledTimes(1);
+    expect(syncLeadToCore).toHaveBeenCalledWith(expect.objectContaining({
+      id: leadId,
+      status: 'Contacted',
+      notes: 'Updated Note'
+    }));
   });
 
-  it('should update lead PII', async () => {
+  it('should update lead PII and sync to core', async () => {
     const res = await request(app)
         .put(`/api/leads/${leadId}`)
         .set('Authorization', `Bearer ${token}`)
@@ -106,6 +114,14 @@ describe('Lead Update Route', () => {
     expect(res.statusCode).toEqual(200);
     expect(res.body.lead.firstName).toBe('Jane');
     expect(res.body.lead.email).toBe('jane@example.com');
+
+    // Verify sync was called
+    expect(syncLeadToCore).toHaveBeenCalledTimes(1);
+    expect(syncLeadToCore).toHaveBeenCalledWith(expect.objectContaining({
+      id: leadId,
+      firstName: 'Jane',
+      email: 'jane@example.com'
+    }));
   });
 
   it('should return 404 for non-existent lead', async () => {
@@ -116,5 +132,6 @@ describe('Lead Update Route', () => {
         .send({ status: 'Contacted' });
 
       expect(res.statusCode).toEqual(404);
+      expect(syncLeadToCore).not.toHaveBeenCalled();
   });
 });
