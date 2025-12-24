@@ -1,23 +1,23 @@
-import request from 'supertest';
-import app from '../../app';
-import { pool } from '../../config/database';
-import jwt from 'jsonwebtoken';
 import { jest } from '@jest/globals';
-import path from 'path';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
+import { Pool } from 'pg';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-// Mock dependencies
+// Define the mock type
+type BatchGeocodeMock = jest.Mock<() => Promise<{ longitude: number; latitude: number; formatted_address: string; }[]>>;
+
+// 1. Mock dependencies BEFORE importing modules that use them
 jest.unstable_mockModule('../../services/geocoding.js', () => ({
-  batchGeocode: jest.fn().mockResolvedValue([
-    { longitude: -122.4194, latitude: 37.7749, formatted_address: '123 Main St, San Francisco, CA' },
-    { longitude: -118.2437, latitude: 34.0522, formatted_address: '456 Oak Ave, Los Angeles, CA' }
-  ]),
+  batchGeocode: jest.fn(),
   geocodeAddress: jest.fn()
 }));
 
-// Import after mocking
+// 2. Import modules dynamically AFTER mocking
 const { batchGeocode } = await import('../../services/geocoding.js');
+const { default: app } = await import('../../app.js');
+const { pool } = await import('../../config/database.js');
 
 describe('Leads Import Route', () => {
   let token: string;
@@ -65,6 +65,11 @@ describe('Leads Import Route', () => {
   });
 
   it('should successfully import leads from CSV', async () => {
+    (batchGeocode as unknown as BatchGeocodeMock).mockResolvedValue([
+      { longitude: -122.4194, latitude: 37.7749, formatted_address: '123 Main St, San Francisco, CA' },
+      { longitude: -118.2437, latitude: 34.0522, formatted_address: '456 Oak Ave, Los Angeles, CA' }
+    ]);
+
     const csvContent =
 `first_name,last_name,street_address,city,state,zip,status
 John,Doe,123 Main St,San Francisco,CA,94105,New
@@ -79,7 +84,7 @@ Jane,Smith,456 Oak Ave,Los Angeles,CA,90001,Contacted`;
 
     expect(res.statusCode).toEqual(200);
     expect(res.body).toHaveProperty('totalLeads', 2);
-    expect(res.body).toHaveProperty('geocodedLeads', 2); // Assuming mock returns coords for both
+    expect(res.body).toHaveProperty('geocodedLeads', 2);
     expect(res.body).toHaveProperty('duplicates', 0);
 
     // Verify DB
@@ -91,14 +96,18 @@ Jane,Smith,456 Oak Ave,Los Angeles,CA,90001,Contacted`;
       [organizationId]
     );
     expect(leadsResult.rows).toHaveLength(2);
-    expect(leadsResult.rows.find(r => r.first_name === 'John')).toBeTruthy();
-    expect(leadsResult.rows.find(r => r.first_name === 'Jane')).toBeTruthy();
+    expect(leadsResult.rows.find((r: any) => r.first_name === 'John')).toBeTruthy();
+    expect(leadsResult.rows.find((r: any) => r.first_name === 'Jane')).toBeTruthy();
   });
 
   it('should handle duplicates correctly', async () => {
      // Seed one lead first
      const seedCsv = `first_name,last_name,street_address,city,state,zip,status
 John,Doe,123 Main St,San Francisco,CA,94105,New`;
+
+     (batchGeocode as unknown as BatchGeocodeMock).mockResolvedValueOnce([
+       { longitude: -122.4194, latitude: 37.7749, formatted_address: '123 Main St, San Francisco, CA' }
+     ]);
 
      await request(app)
       .post('/api/leads/bulk-import')
@@ -110,16 +119,10 @@ John,Doe,123 Main St,San Francisco,CA,94105,New`;
 John,Doe,123 Main St,San Francisco,CA,94105,New
 Bob,Builder,789 Pine Ln,Seattle,WA,98101,New`;
 
-    // Update mock for the 3rd address call (2 from first import, then 2 from this import)
-    // Actually batchGeocode is called with the full batch.
-    // First call: ['...']
-    // Second call: ['...', '...']
-    (batchGeocode as jest.Mock).mockResolvedValueOnce([
-        { longitude: -122.4194, latitude: 37.7749, formatted_address: '...' }
-    ])
+    (batchGeocode as unknown as BatchGeocodeMock)
     .mockResolvedValueOnce([
-        { longitude: -122.4194, latitude: 37.7749, formatted_address: '...' },
-        { longitude: -122.3321, latitude: 47.6062, formatted_address: '...' }
+        { longitude: -122.4194, latitude: 37.7749, formatted_address: '123 Main St, San Francisco, CA' },
+        { longitude: -122.3321, latitude: 47.6062, formatted_address: '789 Pine Ln, Seattle, WA' }
     ]);
 
      const res = await request(app)
@@ -128,9 +131,6 @@ Bob,Builder,789 Pine Ln,Seattle,WA,98101,New`;
       .attach('file', Buffer.from(importCsv, 'utf-8'), 'import.csv');
 
     expect(res.statusCode).toEqual(200);
-    // Should verify that duplicates were detected.
-    // Note: The controller logic counts "duplicates" as `leadsToProcess.length - successCount`.
-    // The query excludes existing ones based on street_address.
     expect(res.body.totalLeads).toBe(1); // Only Bob should be added
     expect(res.body.duplicates).toBe(1); // John is a duplicate
 

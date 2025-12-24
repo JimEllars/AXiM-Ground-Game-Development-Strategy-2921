@@ -1,18 +1,18 @@
-import request from 'supertest';
-import app from '../../app';
-import { pool } from '../../config/database';
-import jwt from 'jsonwebtoken';
 import { jest } from '@jest/globals';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-// Mock aximService
+// 1. Mock aximService BEFORE importing modules that use it
 jest.unstable_mockModule('../../services/aximService.js', () => ({
-  syncLeadToCore: jest.fn().mockResolvedValue({ success: true }),
+  syncLeadToCore: jest.fn(),
 }));
 
-// Import after mocking
+// 2. Import modules dynamically AFTER mocking
 const { syncLeadToCore } = await import('../../services/aximService.js');
+const { default: app } = await import('../../app.js');
+const { pool } = await import('../../config/database.js');
 
 describe('Lead Update Route', () => {
   let token: string;
@@ -49,6 +49,10 @@ describe('Lead Update Route', () => {
   });
 
   beforeEach(async () => {
+    // Reset mock
+    // Using explicit unknown cast to bypass TS type check for this test file
+    (syncLeadToCore as unknown as jest.Mock).mockResolvedValue({ success: true } as never);
+
      // Create a lead to update
     const leadResult = await pool.query(
         `INSERT INTO leads (organization_id, status, notes, location)
