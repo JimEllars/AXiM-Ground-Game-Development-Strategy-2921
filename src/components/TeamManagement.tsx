@@ -27,10 +27,13 @@ import {
   Grid,
   Paper,
   TableSortLabel,
+  Tabs,
+  Tab,
 } from '@mui/material';
-import { FiUsers, FiUserPlus, FiEdit2, FiTrash2, FiMail, FiMapPin } from 'react-icons/fi';
+import { FiUsers, FiUserPlus, FiEdit2, FiTrash2, FiMail, FiMapPin, FiBriefcase } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
-import { usersAPI } from '@/services/api';
+import { usersAPI, teamsAPI } from '@/services/api';
+import { Team } from '@/types';
 
 // Use a local interface that matches what the API returns (Uppercase roles)
 interface User {
@@ -42,23 +45,68 @@ interface User {
   isActive: boolean;
   createdAt: string;
   assignedTerritories?: number;
+  teamId?: string;
+}
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
 }
 
 const TeamManagement: React.FC = () => {
+  const [activeTab, setActiveTab] = useState(0);
   const [users, setUsers] = useState<User[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
+
+  // User Dialog State
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>(null);
-  const [formData, setFormData] = useState({
+  const [userFormData, setUserFormData] = useState({
     email: '',
     firstName: '',
     lastName: '',
     role: 'REP' as 'ADMIN' | 'MANAGER' | 'REP',
     password: '',
   });
+
+  // Team Dialog State
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<Team | null>(null);
+  const [teamFormData, setTeamFormData] = useState({
+    name: '',
+    description: '',
+  });
+
+  // Assign Team Dialog State
+  const [assignTeamDialogOpen, setAssignTeamDialogOpen] = useState(false);
+  const [selectedUserForTeam, setSelectedUserForTeam] = useState<User | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>(null);
 
   const sortedUsers = React.useMemo(() => {
     let sortableUsers = [...users];
@@ -87,61 +135,59 @@ const TeamManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    loadUsers();
+    loadData();
   }, []);
 
-  const loadUsers = async () => {
+  const loadData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await usersAPI.getUsers();
-      setUsers(response.data);
+      const [usersRes, teamsRes] = await Promise.all([
+        usersAPI.getUsers(),
+        teamsAPI.getTeams()
+      ]);
+      setUsers(usersRes.data);
+      setTeams(teamsRes.data);
     } catch (error: any) {
-      console.error('Failed to load users', error);
-      setError(error.response?.data?.error || 'Failed to load users');
+      console.error('Failed to load data', error);
+      setError(error.response?.data?.error || 'Failed to load data');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setActiveTab(newValue);
+  };
+
+  // --- USER MANAGEMENT ---
+
   const handleCreateUser = async () => {
     try {
       setLoading(true);
       setError('');
-      if (!formData.email || !formData.firstName || !formData.lastName || !formData.password) {
+      if (!userFormData.email || !userFormData.firstName || !userFormData.lastName || !userFormData.password) {
         setError('All fields are required');
         return;
       }
 
       await usersAPI.createUser({
-        email: formData.email,
-        password: formData.password,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        role: formData.role,
+        email: userFormData.email,
+        password: userFormData.password,
+        firstName: userFormData.firstName,
+        lastName: userFormData.lastName,
+        role: userFormData.role,
       });
 
       setSuccess('User created successfully');
-      setDialogOpen(false);
-      resetForm();
-      loadUsers();
+      setUserDialogOpen(false);
+      resetUserForm();
+      loadData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error: any) {
       setError(error.response?.data?.error || 'Failed to create user');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleEditUser = (user: User) => {
-    setEditingUser(user);
-    setFormData({
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-      password: '',
-    });
-    setDialogOpen(true);
   };
 
   const handleUpdateUser = async () => {
@@ -151,16 +197,16 @@ const TeamManagement: React.FC = () => {
       setError('');
 
       await usersAPI.updateUser(editingUser.id, {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        role: formData.role,
-        password: formData.password || undefined,
+        firstName: userFormData.firstName,
+        lastName: userFormData.lastName,
+        role: userFormData.role,
+        password: userFormData.password || undefined,
       });
 
       setSuccess('User updated successfully');
-      setDialogOpen(false);
-      resetForm();
-      loadUsers();
+      setUserDialogOpen(false);
+      resetUserForm();
+      loadData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error: any) {
       setError(error.response?.data?.error || 'Failed to update user');
@@ -175,10 +221,9 @@ const TeamManagement: React.FC = () => {
     }
     try {
       setLoading(true);
-      setError('');
       await usersAPI.deleteUser(userId);
       setSuccess('User deleted successfully');
-      loadUsers();
+      loadData();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error: any) {
       setError(error.response?.data?.error || 'Failed to delete user');
@@ -187,21 +232,125 @@ const TeamManagement: React.FC = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({ email: '', firstName: '', lastName: '', role: 'REP', password: '' });
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setUserFormData({
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      password: '',
+    });
+    setUserDialogOpen(true);
+  };
+
+  const resetUserForm = () => {
+    setUserFormData({ email: '', firstName: '', lastName: '', role: 'REP', password: '' });
     setEditingUser(null);
+  };
+
+  // --- TEAM MANAGEMENT ---
+
+  const handleCreateTeam = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      if (!teamFormData.name) {
+        setError('Team name is required');
+        return;
+      }
+
+      await teamsAPI.createTeam(teamFormData);
+      setSuccess('Team created successfully');
+      setTeamDialogOpen(false);
+      resetTeamForm();
+      loadData();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error: any) {
+      setError(error.response?.data?.error || 'Failed to create team');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateTeam = async () => {
+    if (!editingTeam) return;
+    try {
+      setLoading(true);
+      setError('');
+
+      await teamsAPI.updateTeam(editingTeam.id, teamFormData);
+      setSuccess('Team updated successfully');
+      setTeamDialogOpen(false);
+      resetTeamForm();
+      loadData();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error: any) {
+      setError(error.response?.data?.error || 'Failed to update team');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    if (!window.confirm('Are you sure you want to delete this team? Users will be unassigned.')) {
+      return;
+    }
+    try {
+      setLoading(true);
+      await teamsAPI.deleteTeam(teamId);
+      setSuccess('Team deleted successfully');
+      loadData();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error: any) {
+      setError(error.response?.data?.error || 'Failed to delete team');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditTeam = (team: Team) => {
+    setEditingTeam(team);
+    setTeamFormData({
+      name: team.name,
+      description: team.description || '',
+    });
+    setTeamDialogOpen(true);
+  };
+
+  const resetTeamForm = () => {
+    setTeamFormData({ name: '', description: '' });
+    setEditingTeam(null);
+  };
+
+  const handleAssignTeamClick = (user: User) => {
+    setSelectedUserForTeam(user);
+    setSelectedTeamId(user.teamId || '');
+    setAssignTeamDialogOpen(true);
+  };
+
+  const handleAssignTeamSubmit = async () => {
+    if (!selectedUserForTeam || !selectedTeamId) return;
+    try {
+      setLoading(true);
+      await teamsAPI.assignUser(selectedTeamId, selectedUserForTeam.id);
+      setSuccess('User assigned to team successfully');
+      setAssignTeamDialogOpen(false);
+      loadData();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error: any) {
+      setError(error.response?.data?.error || 'Failed to assign user to team');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'ADMIN':
-        return 'error';
-      case 'MANAGER':
-        return 'warning';
-      case 'REP':
-        return 'primary';
-      default:
-        return 'default';
+      case 'ADMIN': return 'error';
+      case 'MANAGER': return 'warning';
+      case 'REP': return 'primary';
+      default: return 'default';
     }
   };
 
@@ -220,61 +369,58 @@ const TeamManagement: React.FC = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Team Management</Typography>
-        <Button
-          variant="contained"
-          startIcon={<SafeIcon icon={FiUserPlus} />}
-          onClick={() => {
-            resetForm();
-            setDialogOpen(true);
-          }}
-          data-testid="add-user-btn"
-        >
-          Add Team Member
-        </Button>
+        <Typography variant="h4">Organization Management</Typography>
       </Box>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
-          {success}
-        </Alert>
-      )}
 
-      {/* Role Statistics */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {getRoleStats().map((stat) => (
-            <Grid item xs={12} sm={4} key={stat.role}>
-              <Card elevation={2}>
-                <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Avatar sx={{ bgcolor: stat.color }}>
-                    <SafeIcon icon={FiUsers} />
-                  </Avatar>
-                  <Box>
-                    <Typography variant="h4" color={stat.color}>
-                      {stat.count}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {stat.role}s
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>{success}</Alert>}
 
-      {/* Users Table */}
-      <Paper sx={{ width: '100%' }}>
-        <Typography variant="h6" sx={{ p: 2 }}>
-          Team Members
-        </Typography>
-        <TableContainer>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={activeTab} onChange={handleTabChange} aria-label="organization tabs">
+          <Tab label="Users" />
+          <Tab label="Teams" />
+        </Tabs>
+      </Box>
+
+      {/* USERS TAB */}
+      <TabPanel value={activeTab} index={0}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<SafeIcon icon={FiUserPlus} />}
+            onClick={() => { resetUserForm(); setUserDialogOpen(true); }}
+            data-testid="add-user-btn"
+          >
+            Add Member
+          </Button>
+        </Box>
+
+        {/* Role Statistics */}
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+            {getRoleStats().map((stat) => (
+                <Grid item xs={12} sm={4} key={stat.role}>
+                <Card elevation={2}>
+                    <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Avatar sx={{ bgcolor: stat.color }}>
+                        <SafeIcon icon={FiUsers} />
+                    </Avatar>
+                    <Box>
+                        <Typography variant="h4" color={stat.color}>
+                        {stat.count}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                        {stat.role}s
+                        </Typography>
+                    </Box>
+                    </Box>
+                </CardContent>
+                </Card>
+            </Grid>
+            ))}
+        </Grid>
+
+        <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
@@ -288,8 +434,9 @@ const TeamManagement: React.FC = () => {
                   </TableSortLabel>
                 </TableCell>
                 <TableCell>Role</TableCell>
-                <TableCell>Status</TableCell>
+                <TableCell>Team</TableCell>
                 <TableCell>Territories</TableCell>
+                <TableCell>Status</TableCell>
                 <TableCell sortDirection={sortConfig?.key === 'createdAt' ? sortConfig.direction : false}>
                   <TableSortLabel
                     active={sortConfig?.key === 'createdAt'}
@@ -305,81 +452,135 @@ const TeamManagement: React.FC = () => {
             <TableBody>
               {loading && users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
+                  <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
                     Loading users...
                   </TableCell>
                 </TableRow>
               ) : sortedUsers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
+                  <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
                     No users found
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedUsers.map((user) => (
-                  <TableRow key={user.id} hover>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar sx={{ bgcolor: getRoleColor(user.role) as any }}>
-                          {user.firstName[0]}
-                          {user.lastName[0]}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="body2" fontWeight="medium">
-                            {user.firstName} {user.lastName}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            <SafeIcon icon={FiMail} style={{ fontSize: 12, marginRight: 4 }} />
-                            {user.email}
-                          </Typography>
-                        </Box>
+              sortedUsers.map((user) => (
+                <TableRow key={user.id} hover>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Avatar sx={{ bgcolor: getRoleColor(user.role) as any }}>
+                        {user.firstName[0]}{user.lastName[0]}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">
+                          {user.firstName} {user.lastName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {user.email}
+                        </Typography>
                       </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip label={user.role} size="small" color={getRoleColor(user.role) as any} />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={user.isActive ? 'Active' : 'Inactive'}
-                        size="small"
-                        color={user.isActive ? 'success' : 'default'}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <SafeIcon icon={FiMapPin} style={{ fontSize: 14 }} />
-                        <Typography variant="body2">{user.assignedTerritories || 0}</Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="caption">
-                        {new Date(user.createdAt).toLocaleDateString()}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        <IconButton size="small" onClick={() => handleEditUser(user)}>
-                          <SafeIcon icon={FiEdit2} />
-                        </IconButton>
-                        <IconButton
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip label={user.role} size="small" color={getRoleColor(user.role) as any} />
+                  </TableCell>
+                  <TableCell>
+                    {user.teamId ? (
+                        <Chip
+                          label={teams.find(t => t.id === user.teamId)?.name || 'Unknown Team'}
                           size="small"
-                          onClick={() => handleDeleteUser(user.id)}
-                          disabled={user.role === 'ADMIN'}
-                        >
-                          <SafeIcon icon={FiTrash2} />
-                        </IconButton>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+                          icon={<SafeIcon icon={FiBriefcase} />}
+                          onClick={() => handleAssignTeamClick(user)}
+                        />
+                    ) : (
+                        <Button size="small" onClick={() => handleAssignTeamClick(user)}>Assign Team</Button>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <SafeIcon icon={FiMapPin} style={{ fontSize: 14 }} />
+                      <Typography variant="body2">{user.assignedTerritories || 0}</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={user.isActive ? 'Active' : 'Inactive'}
+                      size="small"
+                      color={user.isActive ? 'success' : 'default'}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="caption">
+                      {new Date(user.createdAt).toLocaleDateString()}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <IconButton size="small" onClick={() => handleEditUser(user)}>
+                      <SafeIcon icon={FiEdit2} />
+                    </IconButton>
+                    <IconButton size="small" onClick={() => handleDeleteUser(user.id)} disabled={user.role === 'ADMIN'}>
+                      <SafeIcon icon={FiTrash2} />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              )))}
             </TableBody>
           </Table>
         </TableContainer>
-      </Paper>
+      </TabPanel>
 
-      {/* Create/Edit User Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+      {/* TEAMS TAB */}
+      <TabPanel value={activeTab} index={1}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+          <Button
+            variant="contained"
+            startIcon={<SafeIcon icon={FiUsers} />}
+            onClick={() => { resetTeamForm(); setTeamDialogOpen(true); }}
+          >
+            Create Team
+          </Button>
+        </Box>
+
+        <Grid container spacing={3}>
+            {teams.map(team => (
+                <Grid item xs={12} md={6} lg={4} key={team.id}>
+                    <Card>
+                        <CardContent>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <Typography variant="h6">{team.name}</Typography>
+                                <Box>
+                                    <IconButton size="small" onClick={() => handleEditTeam(team)}>
+                                        <SafeIcon icon={FiEdit2} />
+                                    </IconButton>
+                                    <IconButton size="small" onClick={() => handleDeleteTeam(team.id)}>
+                                        <SafeIcon icon={FiTrash2} />
+                                    </IconButton>
+                                </Box>
+                            </Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                {team.description || 'No description'}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <SafeIcon icon={FiUsers} />
+                                <Typography variant="body2">
+                                    {team.memberCount || 0} Members
+                                </Typography>
+                            </Box>
+                        </CardContent>
+                    </Card>
+                </Grid>
+            ))}
+            {teams.length === 0 && (
+                <Grid item xs={12}>
+                    <Paper sx={{ p: 3, textAlign: 'center' }}>
+                        <Typography color="text.secondary">No teams found. Create one to get started.</Typography>
+                    </Paper>
+                </Grid>
+            )}
+        </Grid>
+      </TabPanel>
+
+      {/* User Dialog */}
+      <Dialog open={userDialogOpen} onClose={() => setUserDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{editingUser ? 'Edit User' : 'Add Team Member'}</DialogTitle>
         <DialogContent>
           <TextField
@@ -389,18 +590,18 @@ const TeamManagement: React.FC = () => {
             type="email"
             fullWidth
             variant="outlined"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            value={userFormData.email}
+            onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
             sx={{ mb: 2 }}
-            disabled={!!editingUser} // Email should usually not be editable or requires special handling
+            disabled={!!editingUser}
           />
           <TextField
             margin="dense"
             label="First Name"
             fullWidth
             variant="outlined"
-            value={formData.firstName}
-            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+            value={userFormData.firstName}
+            onChange={(e) => setUserFormData({ ...userFormData, firstName: e.target.value })}
             sx={{ mb: 2 }}
           />
           <TextField
@@ -408,15 +609,15 @@ const TeamManagement: React.FC = () => {
             label="Last Name"
             fullWidth
             variant="outlined"
-            value={formData.lastName}
-            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+            value={userFormData.lastName}
+            onChange={(e) => setUserFormData({ ...userFormData, lastName: e.target.value })}
             sx={{ mb: 2 }}
           />
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Role</InputLabel>
             <Select
-              value={formData.role}
-              onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+              value={userFormData.role}
+              onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value as any })}
               label="Role"
             >
               <MenuItem value="REP">Field Representative</MenuItem>
@@ -430,22 +631,80 @@ const TeamManagement: React.FC = () => {
             type="password"
             fullWidth
             variant="outlined"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            value={userFormData.password}
+            onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
             helperText={editingUser ? 'Leave blank to keep current password' : ''}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={editingUser ? handleUpdateUser : handleCreateUser}
-            variant="contained"
-            disabled={loading}
-          >
-            {loading ? 'Saving...' : editingUser ? 'Update' : 'Create'}
+          <Button onClick={() => setUserDialogOpen(false)}>Cancel</Button>
+          <Button onClick={editingUser ? handleUpdateUser : handleCreateUser} variant="contained">
+            {editingUser ? 'Update' : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Team Dialog */}
+      <Dialog open={teamDialogOpen} onClose={() => setTeamDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingTeam ? 'Edit Team' : 'Create Team'}</DialogTitle>
+        <DialogContent>
+            <TextField
+                autoFocus
+                margin="dense"
+                label="Team Name"
+                fullWidth
+                variant="outlined"
+                value={teamFormData.name}
+                onChange={(e) => setTeamFormData({ ...teamFormData, name: e.target.value })}
+                sx={{ mb: 2 }}
+                inputProps={{ "aria-label": "Team Name" }} // Add accessibility label for tests
+            />
+            <TextField
+                margin="dense"
+                label="Description"
+                fullWidth
+                multiline
+                rows={3}
+                variant="outlined"
+                value={teamFormData.description}
+                onChange={(e) => setTeamFormData({ ...teamFormData, description: e.target.value })}
+                inputProps={{ "aria-label": "Description" }}
+            />
+        </DialogContent>
+        <DialogActions>
+            <Button onClick={() => setTeamDialogOpen(false)}>Cancel</Button>
+            <Button onClick={editingTeam ? handleUpdateTeam : handleCreateTeam} variant="contained">
+                {editingTeam ? 'Update' : 'Create'}
+            </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Assign Team Dialog */}
+      <Dialog open={assignTeamDialogOpen} onClose={() => setAssignTeamDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>Assign to Team</DialogTitle>
+          <DialogContent>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                  Assigning <strong>{selectedUserForTeam?.firstName} {selectedUserForTeam?.lastName}</strong>
+              </Typography>
+              <FormControl fullWidth>
+                  <InputLabel>Select Team</InputLabel>
+                  <Select
+                    value={selectedTeamId}
+                    label="Select Team"
+                    onChange={(e) => setSelectedTeamId(e.target.value)}
+                  >
+                      {teams.map(team => (
+                          <MenuItem key={team.id} value={team.id}>{team.name}</MenuItem>
+                      ))}
+                  </Select>
+              </FormControl>
+          </DialogContent>
+          <DialogActions>
+              <Button onClick={() => setAssignTeamDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleAssignTeamSubmit} variant="contained">Save</Button>
+          </DialogActions>
+      </Dialog>
+
     </Box>
   );
 };
