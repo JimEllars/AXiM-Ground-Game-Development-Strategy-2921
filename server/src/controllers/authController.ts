@@ -13,7 +13,9 @@ const DEBUG_AUTH = process.env.DEBUG_AUTH === 'true';
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, firstName, lastName, organizationId, role = 'REP' } = req.body;
+    // Explicitly ignore 'role' from req.body to prevent privilege escalation
+    const { email, password, firstName, lastName, organizationId } = req.body;
+    const role = 'REP'; // Force default role for public registration
 
     // Validate required fields
     if (!email || !password || !firstName || !lastName || !organizationId) {

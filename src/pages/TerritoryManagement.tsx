@@ -49,7 +49,7 @@ import { Territory, User } from '@/types';
         const territoryToDelete = territories.find(t => t.id === id);
         if (!territoryToDelete) return;
 
-        if (!window.confirm(`Are you sure you want to delete the territory "${territoryToDelete.name}"?`)) {
+        if (!window.confirm(`Are you sure you want to delete the territory "${territoryToDelete.name}"? This action will NOT delete the leads within the territory.`)) {
           return;
         }
         try {
