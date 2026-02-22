@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS territories CASCADE;
 DROP TABLE IF EXISTS lead_pii CASCADE;
 DROP TABLE IF EXISTS leads CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS teams CASCADE;
 DROP TABLE IF EXISTS organizations CASCADE;
 DROP TYPE IF EXISTS user_role CASCADE;
 
@@ -22,6 +23,16 @@ CREATE TABLE organizations (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Teams table
+CREATE TABLE teams (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- User roles enum
 CREATE TYPE user_role AS ENUM ('ADMIN', 'MANAGER', 'REP');
 
@@ -29,6 +40,7 @@ CREATE TYPE user_role AS ENUM ('ADMIN', 'MANAGER', 'REP');
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(100) NOT NULL,
@@ -128,6 +140,7 @@ $$ language 'plpgsql';
 
 -- Triggers for updated_at
 CREATE TRIGGER update_organizations_updated_at BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_teams_updated_at BEFORE UPDATE ON teams FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_leads_updated_at BEFORE UPDATE ON leads FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_lead_pii_updated_at BEFORE UPDATE ON lead_pii FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -138,10 +151,13 @@ TRUNCATE TABLE organizations CASCADE;
 INSERT INTO organizations (id, name) VALUES 
     ('550e8400-e29b-41d4-a716-446655440000', 'Demo Organization');
 
-INSERT INTO users (id, organization_id, email, password_hash, first_name, last_name, role) VALUES 
-    ('550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', 'admin@axim.com', '$2b$10$/3wbZwtwXLMqPZ0qH1mcCepgU5IjqH5lZOXoDUXdBA70A6/PX9V82', 'Admin', 'User', 'ADMIN'),
-    ('550e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440000', 'manager@axim.com', '$2b$10$/3wbZwtwXLMqPZ0qH1mcCepgU5IjqH5lZOXoDUXdBA70A6/PX9V82', 'Manager', 'User', 'MANAGER'),
-    ('550e8400-e29b-41d4-a716-446655440003', '550e8400-e29b-41d4-a716-446655440000', 'rep@axim.com', '$2b$10$/3wbZwtwXLMqPZ0qH1mcCepgU5IjqH5lZOXoDUXdBA70A6/PX9V82', 'Rep', 'User', 'REP');
+INSERT INTO teams (id, organization_id, name, description) VALUES
+    ('550e8400-e29b-41d4-a716-446655440006', '550e8400-e29b-41d4-a716-446655440000', 'Alpha Team', 'The primary canvassing team');
+
+INSERT INTO users (id, organization_id, team_id, email, password_hash, first_name, last_name, role) VALUES
+    ('550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', NULL, 'admin@axim.com', '$2b$10$/3wbZwtwXLMqPZ0qH1mcCepgU5IjqH5lZOXoDUXdBA70A6/PX9V82', 'Admin', 'User', 'ADMIN'),
+    ('550e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440006', 'manager@axim.com', '$2b$10$/3wbZwtwXLMqPZ0qH1mcCepgU5IjqH5lZOXoDUXdBA70A6/PX9V82', 'Manager', 'User', 'MANAGER'),
+    ('550e8400-e29b-41d4-a716-446655440003', '550e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440006', 'rep@axim.com', '$2b$10$/3wbZwtwXLMqPZ0qH1mcCepgU5IjqH5lZOXoDUXdBA70A6/PX9V82', 'Rep', 'User', 'REP');
 
 -- Sample Leads
 WITH lead_insert AS (

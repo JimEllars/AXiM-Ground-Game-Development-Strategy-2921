@@ -28,3 +28,8 @@ export const leadSchema = z.object({
   email: data.email || null,
   notes: data.notes || null,
 }));
+
+export const teamSchema = z.object({
+  name: z.string().trim().min(2, "Team name must be at least 2 characters"),
+  description: z.string().trim().optional(),
+});

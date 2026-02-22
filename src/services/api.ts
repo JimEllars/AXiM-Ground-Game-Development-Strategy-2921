@@ -153,6 +153,7 @@ export const usersAPI = {
     firstName: string;
     lastName: string;
     role?: string;
+    teamId?: string;
   }) =>
     api.post('/users', data),
   updateUser: (userId: string, data: {
@@ -161,6 +162,7 @@ export const usersAPI = {
     role?: string;
     password?: string;
     isActive?: boolean;
+    teamId?: string | null;
   }) =>
     api.put(`/users/${userId}`, data),
   deleteUser: (userId: string) =>
@@ -169,13 +171,18 @@ export const usersAPI = {
     api.get('/users/stats'),
 };
 
-// Stub for unimplemented Teams API to fix build errors
+// Teams API
 export const teamsAPI = {
-  getTeams: () => Promise.resolve({ data: [] }),
-  createTeam: (data: any) => Promise.reject(new Error('Feature not implemented')),
-  updateTeam: (id: string, data: any) => Promise.reject(new Error('Feature not implemented')),
-  deleteTeam: (id: string) => Promise.reject(new Error('Feature not implemented')),
-  assignUser: (teamId: string, userId: string) => Promise.reject(new Error('Feature not implemented')),
+  getTeams: () =>
+    api.get('/teams'),
+  createTeam: (data: { name: string; description?: string }) =>
+    api.post('/teams', data),
+  updateTeam: (id: string, data: { name?: string; description?: string }) =>
+    api.put(`/teams/${id}`, data),
+  deleteTeam: (id: string) =>
+    api.delete(`/teams/${id}`),
+  assignUser: (teamId: string, userId: string) =>
+    api.post(`/teams/${teamId}/assign`, { userId }),
 };
 
 export default api;
