@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { pool } from '../config/database.js';
 import { User, AuthRequest } from '../types/index.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export interface JWTPayload {
   userId: string;
@@ -20,8 +20,13 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     return res.status(401).json({ error: 'Access token required' });
   }
 
+  if (!JWT_SECRET) {
+    console.error('[auth] JWT_SECRET is not configured');
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const payload = jwt.verify(token, JWT_SECRET!) as JWTPayload;
     
     // Fetch user from database to ensure they still exist and are active
     const result = await pool.query(

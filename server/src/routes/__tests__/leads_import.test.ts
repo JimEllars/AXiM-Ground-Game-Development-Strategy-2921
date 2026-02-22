@@ -3,7 +3,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { Pool } from 'pg';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 // Define the mock type
 type BatchGeocodeMock = jest.Mock<() => Promise<{ longitude: number; latitude: number; formatted_address: string; }[]>>;
