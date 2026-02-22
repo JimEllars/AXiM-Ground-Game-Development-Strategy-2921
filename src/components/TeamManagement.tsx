@@ -30,7 +30,7 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import { FiUsers, FiUserPlus, FiEdit2, FiTrash2, FiMail, FiMapPin, FiBriefcase } from 'react-icons/fi';
+import { FiUsers, FiUserPlus, FiEdit2, FiTrash2, FiMapPin, FiBriefcase } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import { usersAPI, teamsAPI } from '@/services/api';
 import { Team } from '@/types';
@@ -106,19 +106,18 @@ const TeamManagement: React.FC = () => {
   const [selectedUserForTeam, setSelectedUserForTeam] = useState<User | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>(null);
+  type SortableUserKey = 'lastName' | 'createdAt';
+  const [sortConfig, setSortConfig] = useState<{ key: SortableUserKey; direction: 'asc' | 'desc' } | null>(null);
 
   const sortedUsers = React.useMemo(() => {
     let sortableUsers = [...users];
     if (sortConfig !== null) {
       sortableUsers.sort((a, b) => {
-        // @ts-ignore
         if (a[sortConfig.key] < b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? -1 : 1;
+          return sortConfig.direction === 'asc' ? -1 : 1;
         }
-        // @ts-ignore
         if (a[sortConfig.key] > b[sortConfig.key]) {
-          return sortConfig.direction === 'ascending' ? 1 : -1;
+          return sortConfig.direction === 'asc' ? 1 : -1;
         }
         return 0;
       });
@@ -126,10 +125,10 @@ const TeamManagement: React.FC = () => {
     return sortableUsers;
   }, [users, sortConfig]);
 
-  const requestSort = (key: string) => {
-    let direction: 'ascending' | 'descending' = 'ascending';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
+  const requestSort = (key: SortableUserKey) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
     }
     setSortConfig({ key, direction });
   };
@@ -155,7 +154,7 @@ const TeamManagement: React.FC = () => {
     }
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
 
