@@ -169,4 +169,13 @@ export const usersAPI = {
     api.get('/users/stats'),
 };
 
+// Stub for unimplemented Teams API to fix build errors
+export const teamsAPI = {
+  getTeams: () => Promise.resolve({ data: [] }),
+  createTeam: (data: any) => Promise.reject(new Error('Feature not implemented')),
+  updateTeam: (id: string, data: any) => Promise.reject(new Error('Feature not implemented')),
+  deleteTeam: (id: string) => Promise.reject(new Error('Feature not implemented')),
+  assignUser: (teamId: string, userId: string) => Promise.reject(new Error('Feature not implemented')),
+};
+
 export default api;
