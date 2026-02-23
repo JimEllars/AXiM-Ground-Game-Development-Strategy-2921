@@ -61,15 +61,30 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
 
   const togglePanel = () => setPanelVisible(!panelVisible);
 
-  const bounds = useMemo(() => {
-    if (territories.length === 0) return null;
+  const { bounds, territoryData } = useMemo(() => {
+    if (territories.length === 0) {
+      return { bounds: null, territoryData: { type: 'FeatureCollection', features: [] } };
+    }
+
     const b = new LngLatBounds();
-    territories.forEach((territory) => {
-      territory.boundary.coordinates[0].forEach((coord: any) => {
+    const features = territories.map((t) => {
+      t.boundary.coordinates[0].forEach((coord: any) => {
         b.extend(coord);
       });
+      return {
+        type: 'Feature',
+        geometry: t.boundary,
+        properties: { id: t.id },
+      };
     });
-    return b;
+
+    return {
+      bounds: b,
+      territoryData: {
+        type: 'FeatureCollection',
+        features,
+      },
+    };
   }, [territories]);
 
   useEffect(() => {
@@ -105,18 +120,6 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
   };
 
   const selectedTerritory = territories.find((t) => t.id === selectedTerritoryId);
-
-  const territoryData = useMemo(
-    () => ({
-      type: 'FeatureCollection',
-      features: territories.map((t) => ({
-        type: 'Feature',
-        geometry: t.boundary,
-        properties: { id: t.id },
-      })),
-    }),
-    [territories]
-  );
 
   const onMapClick = (event: any) => {
     if (!event.features || event.features.length === 0) {
