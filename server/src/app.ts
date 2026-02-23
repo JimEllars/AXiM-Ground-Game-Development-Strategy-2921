@@ -20,8 +20,12 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true
 }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Increase payload limit for territory operations (GeoJSON can be large)
+app.use('/api/territories', express.json({ limit: '5mb' }));
+app.use('/api/territories', express.urlencoded({ extended: true, limit: '5mb' }));
+
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
