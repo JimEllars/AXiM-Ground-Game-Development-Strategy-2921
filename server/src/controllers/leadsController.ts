@@ -343,7 +343,7 @@ export const updateLead = async (req: AuthRequest, res: Response) => {
       notes: row.notes,
       location: row.longitude && row.latitude ? {
         type: 'Point' as const,
-        coordinates: [row.longitude, row.latitude]
+        coordinates: [row.longitude, row.latitude] as [number, number]
       } : null,
       createdAt: row.created_at,
       updatedAt: row.updated_at
