@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Map, { Source, Layer, NavigationControl, useControl } from 'react-map-gl';
 import { LngLatBounds } from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
@@ -8,8 +8,9 @@ import { Box, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
 import TerritoryPanel from './TerritoryPanel';
 import { useTerritoryPanelState } from '../hooks/useTerritoryPanelState';
 import { Territory, User } from '@/types';
+import { config } from '../config';
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
+const MAPBOX_TOKEN = config.mapboxToken;
 
 function DrawControl(props: any) {
   useControl(
@@ -60,17 +61,22 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
 
   const togglePanel = () => setPanelVisible(!panelVisible);
 
-  useEffect(() => {
-    if (territories.length > 0 && mapRef.current) {
-      const bounds = new LngLatBounds();
-      territories.forEach(territory => {
-        territory.boundary.coordinates[0].forEach((coord: any) => {
-          bounds.extend(coord);
-        });
+  const bounds = useMemo(() => {
+    if (territories.length === 0) return null;
+    const b = new LngLatBounds();
+    territories.forEach((territory) => {
+      territory.boundary.coordinates[0].forEach((coord: any) => {
+        b.extend(coord);
       });
+    });
+    return b;
+  }, [territories]);
+
+  useEffect(() => {
+    if (bounds && mapRef.current) {
       mapRef.current.fitBounds(bounds, { padding: 40, duration: 1000 });
     }
-  }, [territories]);
+  }, [bounds]);
 
   const [mapLoaded, setMapLoaded] = useState(false);
   const {
@@ -100,11 +106,17 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
 
   const selectedTerritory = territories.find((t) => t.id === selectedTerritoryId);
 
-  const territoryFeatures = territories.map((t) => ({
-    type: 'Feature',
-    geometry: t.boundary,
-    properties: { id: t.id },
-  }));
+  const territoryData = useMemo(
+    () => ({
+      type: 'FeatureCollection',
+      features: territories.map((t) => ({
+        type: 'Feature',
+        geometry: t.boundary,
+        properties: { id: t.id },
+      })),
+    }),
+    [territories]
+  );
 
   const onMapClick = (event: any) => {
     if (!event.features || event.features.length === 0) {
@@ -172,7 +184,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
           <Source
             id="territories-data"
             type="geojson"
-            data={{ type: 'FeatureCollection', features: territoryFeatures }}
+            data={territoryData}
           >
             <Layer
               id="territory-fills"
