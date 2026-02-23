@@ -15,7 +15,27 @@ const aximClient = axios.create({
   },
 });
 
-export const syncLeadToCore = async (leadData: any) => {
+export interface CoreLeadData {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  streetAddress: string;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  phone: string | null;
+  email: string | null;
+  status: string;
+  notes: string | null;
+  location: {
+    type: 'Point';
+    coordinates: [number, number];
+  } | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const syncLeadToCore = async (leadData: CoreLeadData) => {
   try {
     const response = await aximClient.post('/leads/sync', leadData);
     return response.data;
