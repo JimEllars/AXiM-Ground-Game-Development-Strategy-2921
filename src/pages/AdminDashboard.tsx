@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Tabs, Tab, Alert, Grid, Card, CardContent, CircularProgress, Chip } from '@mui/material';
+import { Box, Typography, Tabs, Tab, Alert, Grid, Card, CircularProgress, Chip } from '@mui/material';
 import { FiBarChart2, FiUsers, FiTarget, FiTrendingUp, FiMap } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
+import StatCard from '@/components/StatCard';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
 import TeamManagement from '@/components/TeamManagement';
 import PerformanceMetrics from '@/components/PerformanceMetrics';
@@ -61,32 +62,6 @@ const AdminDashboard: React.FC = () => {
     setTabValue(newValue);
   };
 
-  const StatCard: React.FC<{
-    title: string;
-    value: string | number;
-    icon: any;
-    color: string;
-    subtitle?: string;
-  }> = ({ title, value, icon, color, subtitle }) => (
-    <Card elevation={2}>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <SafeIcon icon={icon} style={{ fontSize: 24, color: color, marginRight: 12 }} />
-          <Typography variant="h6" color="text.secondary">
-            {title}
-          </Typography>
-        </Box>
-        <Typography variant="h3" fontWeight="bold" color={color}>
-          {value}
-        </Typography>
-        {subtitle && (
-          <Typography variant="body2" color="text.secondary">
-            {subtitle}
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
-  );
 
   if (loading) {
     return (

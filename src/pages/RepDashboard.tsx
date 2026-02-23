@@ -4,8 +4,6 @@ import React, { useState, useEffect } from 'react';
       Paper,
       Typography,
       Box,
-      Card,
-      CardContent,
       Chip,
       List,
       ListItem,
@@ -17,6 +15,7 @@ import React, { useState, useEffect } from 'react';
     } from '@mui/material';
     import { FiMap, FiUsers, FiTarget, FiTrendingUp, FiMapPin, FiPlay, FiCheck } from 'react-icons/fi';
     import SafeIcon from '@/common/SafeIcon';
+    import StatCard from '@/components/StatCard';
     import { repsAPI, interactionsAPI } from '@/services/api';
 
     const RepDashboard: React.FC = () => {
@@ -56,32 +55,6 @@ import React, { useState, useEffect } from 'react';
         }
       };
 
-      const StatCard: React.FC<{
-        title: string;
-        value: string | number;
-        icon: any;
-        color: string;
-        subtitle?: string;
-      }> = ({ title, value, icon, color, subtitle }) => (
-        <Card elevation={2}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <SafeIcon icon={icon} style={{ fontSize: 24, color: color, marginRight: 12 }} />
-              <Typography variant="h6" color="text.secondary">
-                {title}
-              </Typography>
-            </Box>
-            <Typography variant="h3" fontWeight="bold" color={color}>
-              {value}
-            </Typography>
-            {subtitle && (
-              <Typography variant="body2" color="text.secondary">
-                {subtitle}
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-      );
 
       if (loading) {
         return (
