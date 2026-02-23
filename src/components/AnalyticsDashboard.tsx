@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
     import {
       Box,
-      Card,
-      CardContent,
       Typography,
       Grid,
       Select,
@@ -36,6 +34,7 @@ import React, { useState, useEffect } from 'react';
       Cell,
     } from 'recharts';
     import SafeIcon from '@/common/SafeIcon';
+    import StatCard from '@/components/StatCard';
     import { territoriesAPI, leadsAPI, interactionsAPI } from '@/services/api';
 
     interface TabPanelProps {
@@ -201,32 +200,6 @@ import React, { useState, useEffect } from 'react';
         linkElement.click();
       };
 
-      const StatCard: React.FC<{
-        title: string;
-        value: string | number;
-        icon: any;
-        color: string;
-        subtitle?: string;
-      }> = ({ title, value, icon, color, subtitle }) => (
-        <Card elevation={2}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-              <SafeIcon icon={icon} style={{ fontSize: 24, color: color, marginRight: 12 }} />
-              <Typography variant="h6" color="text.secondary">
-                {title}
-              </Typography>
-            </Box>
-            <Typography variant="h3" fontWeight="bold" color={color}>
-              {value}
-            </Typography>
-            {subtitle && (
-              <Typography variant="body2" color="text.secondary">
-                {subtitle}
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-      );
 
       if (loading) {
         return (
