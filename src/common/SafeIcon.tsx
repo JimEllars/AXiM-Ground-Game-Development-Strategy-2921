@@ -9,12 +9,19 @@ interface SafeIconProps {
   [key: string]: any;
 }
 
+// Type guard to check if a string is a valid key of FiIcons
+function isIconKey(key: string): key is keyof typeof FiIcons {
+  return key in FiIcons;
+}
+
 const SafeIcon: React.FC<SafeIconProps> = ({ icon, name, ...props }) => {
-  let IconComponent: IconType | undefined;
-  try {
-    IconComponent = icon || (name && (FiIcons as any)[`Fi${name}`]);
-  } catch (e) {
-    IconComponent = undefined;
+  let IconComponent: IconType | undefined = icon;
+
+  if (!IconComponent && name) {
+    const iconName = `Fi${name}`;
+    if (isIconKey(iconName)) {
+      IconComponent = FiIcons[iconName];
+    }
   }
 
   if (IconComponent) {
