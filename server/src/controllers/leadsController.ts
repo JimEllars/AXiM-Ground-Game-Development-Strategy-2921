@@ -15,6 +15,21 @@ const upload = multer({
 
 export const uploadMiddleware = upload.single('file');
 
+interface ProcessedLead {
+  first_name: string | null;
+  last_name: string | null;
+  street_address: string;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  phone: string | null;
+  email: string | null;
+  status: string;
+  notes: string | null;
+  longitude: number | null;
+  latitude: number | null;
+}
+
 export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
   const user = req.user!;
   const file = req.file;
@@ -71,7 +86,7 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
   const geocodeResults = await batchGeocode(addresses);
 
   // 4. Prepare Leads for DB
-  const leadsToProcess = validatedRows.map((row, index) => {
+  const leadsToProcess: ProcessedLead[] = validatedRows.map((row, index) => {
     const geocode = geocodeResults[index];
     return {
       first_name: row!.first_name || null,
@@ -113,8 +128,8 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
 
     // Use unnest for efficient bulk insertion into the temporary table
     if (leadsToProcess.length > 0) {
-      const columns = [ 'first_name', 'last_name', 'street_address', 'city', 'state', 'zip', 'phone', 'email', 'status', 'notes', 'longitude', 'latitude' ];
-      const params = columns.map(col => leadsToProcess.map(lead => (lead as any)[col]));
+      const columns: (keyof ProcessedLead)[] = [ 'first_name', 'last_name', 'street_address', 'city', 'state', 'zip', 'phone', 'email', 'status', 'notes', 'longitude', 'latitude' ];
+      const params = columns.map(col => leadsToProcess.map(lead => lead[col]));
       const types = [ 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'float8[]', 'float8[]' ];
 
       const tempInsertQuery = `
@@ -134,7 +149,7 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
       );
     `;
     const newLeadsResult = await client.query(nonDuplicateLeadsQuery, [user.organization_id]);
-    const newLeadsData = newLeadsResult.rows;
+    const newLeadsData = newLeadsResult.rows as ProcessedLead[];
 
     let leadInsertResult: { rows: any[]; rowCount: number | null } = { rows: [], rowCount: 0 };
 
@@ -165,7 +180,7 @@ export const bulkImportLeads = async (req: AuthRequest, res: Response) => {
       const piiColumns = ['lead_id', 'first_name', 'last_name', 'street_address', 'city', 'state', 'zip', 'phone', 'email'];
       const piiParams = [
         leadInsertResult.rows.map(row => row.id),
-        ...piiColumns.slice(1).map(col => newLeadsData.map(lead => (lead as any)[col]))
+        ...piiColumns.slice(1).map(col => newLeadsData.map(lead => lead[col as keyof ProcessedLead]))
       ];
       const piiTypes = ['uuid[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]'];
 
