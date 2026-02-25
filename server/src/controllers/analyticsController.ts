@@ -99,39 +99,51 @@ export const getAnalytics = async (req: AuthRequest, res: Response) => {
       : 0;
 
     // Process interaction trends
-    const trends = interactions
-      .filter(row => row.interaction_date && row.outcome)
-      .reduce((acc: any[], row) => {
-        const existing = acc.find(item => item.date === row.interaction_date);
-        if (existing) {
-          existing.interactions += parseInt(row.outcome_count);
-          existing.uniqueLeads += 1; // This is simplified - in production, you'd count unique leads properly
-        } else {
-          acc.push({
-            date: new Date(row.interaction_date).toLocaleDateString(),
-            interactions: parseInt(row.outcome_count),
-            uniqueLeads: 1
-          });
-        }
-        return acc;
-      }, [])
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const trendsMap = new Map();
+
+    interactions.forEach(row => {
+      if (!row.interaction_date || !row.outcome) return;
+
+      const dateKey = new Date(row.interaction_date).toLocaleDateString();
+      const count = parseInt(row.outcome_count);
+
+      if (trendsMap.has(dateKey)) {
+        const existing = trendsMap.get(dateKey);
+        existing.interactions += count;
+        existing.uniqueLeads += 1; // This is simplified - in production, you'd count unique leads properly
+      } else {
+        trendsMap.set(dateKey, {
+          date: dateKey,
+          interactions: count,
+          uniqueLeads: 1
+        });
+      }
+    });
+
+    const trends = Array.from(trendsMap.values())
+      .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     // Process outcomes distribution
-    const outcomes = interactions
-      .filter(row => row.outcome)
-      .reduce((acc: any[], row) => {
-        const existing = acc.find(item => item.name === row.outcome);
-        if (existing) {
-          existing.value += parseInt(row.outcome_count);
-        } else {
-          acc.push({
-            name: row.outcome,
-            value: parseInt(row.outcome_count)
-          });
-        }
-        return acc;
-      }, []);
+    const outcomesMap = new Map();
+
+    interactions.forEach(row => {
+      if (!row.outcome) return;
+
+      const name = row.outcome;
+      const count = parseInt(row.outcome_count);
+
+      if (outcomesMap.has(name)) {
+        const existing = outcomesMap.get(name);
+        existing.value += count;
+      } else {
+        outcomesMap.set(name, {
+          name: name,
+          value: count
+        });
+      }
+    });
+
+    const outcomes = Array.from(outcomesMap.values());
 
     // Process top performers
     const topPerformers = userStats
