@@ -105,30 +105,33 @@ import React, { useState, useEffect } from 'react';
                 </Typography>
                 {territories.length > 0 ? (
                   <List>
-                    {territories.map((territory) => (
-                      <ListItem key={territory.id} divider>
-                        <ListItemIcon>
-                          <SafeIcon icon={FiMapPin} />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={territory.name}
-                          secondary={`${territory.leads.length} leads • ${
-                            territory.leads.filter((l: any) => l.lastInteraction).length
-                          } completed`}
-                        />
-                        <Chip
-                          label={`${
-                            Math.round(
-                              (territory.leads.filter((l: any) => l.lastInteraction).length /
-                                territory.leads.length) *
-                                100
-                            ) || 0
-                          }%`}
-                          color="primary"
-                          size="small"
-                        />
-                      </ListItem>
-                    ))}
+                    {territories.map((territory) => {
+                      const totalLeads = territory.leads.length;
+                      const completedLeads = territory.leads.reduce(
+                        (count: number, l: any) => count + (l.lastInteraction ? 1 : 0),
+                        0
+                      );
+                      const completionPercentage = totalLeads > 0
+                        ? Math.round((completedLeads / totalLeads) * 100)
+                        : 0;
+
+                      return (
+                        <ListItem key={territory.id} divider>
+                          <ListItemIcon>
+                            <SafeIcon icon={FiMapPin} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={territory.name}
+                            secondary={`${totalLeads} leads • ${completedLeads} completed`}
+                          />
+                          <Chip
+                            label={`${completionPercentage}%`}
+                            color="primary"
+                            size="small"
+                          />
+                        </ListItem>
+                      );
+                    })}
                   </List>
                 ) : (
                   <Typography color="text.secondary">No territories assigned yet</Typography>
