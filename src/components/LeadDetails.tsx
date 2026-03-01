@@ -53,10 +53,19 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
 
   // Fix location parsing: backend returns { type: 'Point', coordinates: [lon, lat] }
   // or sometimes { x: ..., y: ... } depending on legacy code, but we know it's GeoJSON now.
-  const coordinates = lead.location?.coordinates;
-  const longitude = coordinates ? coordinates[0] : null;
-  const latitude = coordinates ? coordinates[1] : null;
-  const hasLocation = longitude !== null && latitude !== null;
+  let longitude: number | null = null;
+  let latitude: number | null = null;
+
+  if (lead.location) {
+    if (lead.location.type === 'Point' && Array.isArray(lead.location.coordinates)) {
+      longitude = lead.location.coordinates[0];
+      latitude = lead.location.coordinates[1];
+    } else if (typeof lead.location.x === 'number' && typeof lead.location.y === 'number') {
+      longitude = lead.location.x;
+      latitude = lead.location.y;
+    }
+  }
+  const hasLocation = longitude !== null && latitude !== null && !isNaN(longitude) && !isNaN(latitude);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
