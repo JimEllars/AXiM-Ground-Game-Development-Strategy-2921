@@ -147,7 +147,6 @@ const TeamManagement: React.FC = () => {
       setUsers(usersRes.data);
       setTeams(teamsRes.data);
     } catch (error: any) {
-      console.error('Failed to load data', error);
       setError(error.response?.data?.error || 'Failed to load data');
     } finally {
       setLoading(false);
