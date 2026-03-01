@@ -46,21 +46,23 @@ export const geocodeAddress = async (address: string): Promise<GeocodeResult | n
 };
 
 export const batchGeocode = async (addresses: string[]): Promise<(GeocodeResult | null)[]> => {
-  const results: (GeocodeResult | null)[] = [];
-  
   // Process in batches to avoid rate limiting
   const batchSize = 5;
+  const batches: string[][] = [];
+
   for (let i = 0; i < addresses.length; i += batchSize) {
-    const batch = addresses.slice(i, i + batchSize);
-    const batchPromises = batch.map(address => geocodeAddress(address));
-    const batchResults = await Promise.all(batchPromises);
-    results.push(...batchResults);
-    
-    // Small delay between batches
-    if (i + batchSize < addresses.length) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
+    batches.push(addresses.slice(i, i + batchSize));
   }
-  
-  return results;
+
+  const batchPromises = batches.map(async (batch, index) => {
+    // Small delay between batches, staggered by their index
+    if (index > 0) {
+      await new Promise(resolve => setTimeout(resolve, index * 100));
+    }
+    const promises = batch.map(address => geocodeAddress(address));
+    return Promise.all(promises);
+  });
+
+  const results = await Promise.all(batchPromises);
+  return results.flat();
 };
