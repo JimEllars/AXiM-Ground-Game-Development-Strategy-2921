@@ -42,7 +42,11 @@ export const createInteractions = async (req: AuthRequest, res: Response) => {
     const results = await Promise.all(insertPromises);
 
     // Update lead status based on interaction outcome
-    const statusUpdatePromises = validInteractions.map((interaction, index) => {
+    const updateValues: string[] = [];
+    const updateParams: any[] = [];
+    let paramCount = 1;
+
+    validInteractions.forEach((interaction) => {
       let newStatus = 'Contacted';
       
       // Map outcomes to statuses
@@ -65,13 +69,20 @@ export const createInteractions = async (req: AuthRequest, res: Response) => {
           newStatus = 'Contacted';
       }
 
-      return pool.query(
-        'UPDATE leads SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-        [newStatus, interaction.leadId]
-      );
+      updateValues.push(`($${paramCount}::uuid, $${paramCount + 1}::varchar)`);
+      updateParams.push(interaction.leadId, newStatus);
+      paramCount += 2;
     });
 
-    await Promise.all(statusUpdatePromises);
+    if (updateValues.length > 0) {
+      await pool.query(
+        `UPDATE leads
+         SET status = v.status, updated_at = CURRENT_TIMESTAMP
+         FROM (VALUES ${updateValues.join(', ')}) AS v(id, status)
+         WHERE leads.id = v.id`,
+        updateParams
+      );
+    }
 
     res.json({
       message: 'Interactions created successfully',
