@@ -47,6 +47,47 @@ describe('errorHandler middleware', () => {
     });
   });
 
+  it('should handle generic errors with specific statusCode', () => {
+    const error = new Error('Some random error') as any;
+    error.statusCode = 404;
+
+    errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
+
+    expect(mockRes.status).toHaveBeenCalledWith(404);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      status: 'error',
+      statusCode: 404,
+      message: 'An unexpected error occurred.',
+    });
+  });
+
+  it('should handle generic errors with statusCode set to 0 (falsy) by defaulting to 500', () => {
+    const error = new Error('Some random error') as any;
+    error.statusCode = 0; // The logic does `const statusCode = err.statusCode || 500;`
+
+    errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
+
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      status: 'error',
+      statusCode: 500,
+      message: 'An unexpected error occurred.',
+    });
+  });
+
+  it('should fallback to Internal Server Error if error has no message', () => {
+    const error = {} as any;
+    error.isOperational = true;
+    errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
+
+    expect(mockRes.status).toHaveBeenCalledWith(500);
+    expect(mockRes.json).toHaveBeenCalledWith({
+      status: 'error',
+      statusCode: 500,
+      message: 'Internal Server Error',
+    });
+  });
+
   it('should handle AppError correctly', () => {
     const error = new AppError('Operational error', 400);
 
@@ -116,21 +157,6 @@ describe('errorHandler middleware', () => {
       status: 'error',
       statusCode: 500,
       message: 'Database error',
-    });
-  });
-
-  it('should fallback to 500 if error.statusCode evaluates to falsy after assignments', () => {
-    const error = new Error('Unknown error') as any;
-    error.statusCode = 0; // Falsy
-    error.isOperational = true;
-
-    errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
-
-    expect(mockRes.status).toHaveBeenCalledWith(500);
-    expect(mockRes.json).toHaveBeenCalledWith({
-      status: 'error',
-      statusCode: 500,
-      message: 'Unknown error',
     });
   });
 

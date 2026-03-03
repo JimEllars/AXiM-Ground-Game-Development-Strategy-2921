@@ -25,9 +25,9 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
   }
 
   // Send a user-friendly error response
-  res.status(error.statusCode || 500).json({
+  res.status(error.statusCode).json({
     status: 'error',
-    statusCode: error.statusCode || 500,
+    statusCode: error.statusCode,
     message: error.isOperational ? error.message : 'An unexpected error occurred.',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
