@@ -1,6 +1,9 @@
+import { Request } from 'express';
+
 export interface User {
   id: string;
   organization_id: string;
+  team_id?: string;
   email: string;
   password_hash: string;
   first_name: string;
@@ -14,6 +17,15 @@ export interface User {
 export interface Organization {
   id: string;
   name: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface Team {
+  id: string;
+  organization_id: string;
+  name: string;
+  description?: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -67,8 +79,6 @@ export interface Interaction {
   synced_at?: Date;
   created_at: Date;
 }
-
-import { Request } from 'express';
 
 export interface AuthRequest extends Request {
   user?: User;

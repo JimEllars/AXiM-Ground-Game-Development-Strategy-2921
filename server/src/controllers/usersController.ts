@@ -26,7 +26,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
 
     const result = await pool.query(
       `SELECT 
-        id, email, first_name, last_name, role, is_active, created_at,
+        id, email, first_name, last_name, role, is_active, created_at, team_id,
         (SELECT COUNT(*) FROM territory_assignments ta WHERE ta.user_id = users.id) as assigned_territories
       FROM users 
       ${whereClause}
@@ -42,7 +42,8 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
       role: row.role,
       isActive: row.is_active,
       createdAt: row.created_at,
-      assignedTerritories: parseInt(row.assigned_territories)
+      assignedTerritories: parseInt(row.assigned_territories),
+      teamId: row.team_id
     }));
 
     res.json(users);
@@ -55,7 +56,7 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
 export const createUser = async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user!;
-    const { email, password, firstName, lastName, role = 'REP' } = req.body;
+    const { email, password, firstName, lastName, role = 'REP', teamId } = req.body;
 
     if (!email || !password || !firstName || !lastName) {
       return res.status(400).json({ error: 'Email, password, first name, and last name are required' });
@@ -71,16 +72,27 @@ export const createUser = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'User with this email already exists' });
     }
 
+    // Validate team if provided
+    if (teamId) {
+      const teamCheck = await pool.query(
+        'SELECT id FROM teams WHERE id = $1 AND organization_id = $2',
+        [teamId, user.organization_id]
+      );
+      if (teamCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid team ID' });
+      }
+    }
+
     // Hash password
     const saltRounds = 10;
     const passwordHash = await bcrypt.hash(password, saltRounds);
 
     // Create user
     const result = await pool.query(
-      `INSERT INTO users (organization_id, email, password_hash, first_name, last_name, role) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
-       RETURNING id, email, first_name, last_name, role, is_active, created_at`,
-      [user.organization_id, email, passwordHash, firstName, lastName, role]
+      `INSERT INTO users (organization_id, email, password_hash, first_name, last_name, role, team_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id, email, first_name, last_name, role, is_active, created_at, team_id`,
+      [user.organization_id, email, passwordHash, firstName, lastName, role, teamId || null]
     );
 
     const newUser = result.rows[0];
@@ -92,7 +104,8 @@ export const createUser = async (req: AuthRequest, res: Response) => {
       lastName: newUser.last_name,
       role: newUser.role,
       isActive: newUser.is_active,
-      createdAt: newUser.created_at
+      createdAt: newUser.created_at,
+      teamId: newUser.team_id
     });
   } catch (error) {
     console.error('Create user error:', error);
@@ -103,7 +116,7 @@ export const createUser = async (req: AuthRequest, res: Response) => {
 export const updateUser = async (req: AuthRequest, res: Response) => {
   try {
     const { userId } = req.params;
-    const { firstName, lastName, role, password, isActive } = req.body;
+    const { firstName, lastName, role, password, isActive, teamId } = req.body;
     const currentUser = req.user!;
 
     // Verify user belongs to organization
@@ -165,6 +178,21 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       paramIndex++;
     }
 
+    if (teamId !== undefined) {
+      if (teamId) {
+        const teamCheck = await pool.query(
+          'SELECT id FROM teams WHERE id = $1 AND organization_id = $2',
+          [teamId, currentUser.organization_id]
+        );
+        if (teamCheck.rows.length === 0) {
+          return res.status(400).json({ error: 'Invalid team ID' });
+        }
+      }
+      updates.push(`team_id = $${paramIndex}`);
+      params.push(teamId || null);
+      paramIndex++;
+    }
+
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
     }
@@ -187,7 +215,8 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
       role: updatedUser.role,
       isActive: updatedUser.is_active,
       createdAt: updatedUser.created_at,
-      updatedAt: updatedUser.updated_at
+      updatedAt: updatedUser.updated_at,
+      teamId: updatedUser.team_id
     });
   } catch (error) {
     console.error('Update user error:', error);

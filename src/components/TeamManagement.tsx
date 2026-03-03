@@ -33,20 +33,7 @@ import {
 import { FiUsers, FiUserPlus, FiEdit2, FiTrash2, FiMapPin, FiBriefcase } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import { usersAPI, teamsAPI } from '@/services/api';
-import { Team } from '@/types';
-
-// Use a local interface that matches what the API returns (Uppercase roles)
-interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: 'ADMIN' | 'MANAGER' | 'REP';
-  isActive: boolean;
-  createdAt: string;
-  assignedTerritories?: number;
-  teamId?: string;
-}
+import { Team, User } from '@/types';
 
 interface TabPanelProps {
   children?: React.ReactNode;

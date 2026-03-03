@@ -3,8 +3,22 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: 'Admin' | 'Manager' | 'Rep';
+  role: 'ADMIN' | 'MANAGER' | 'REP';
   organizationId: string;
+  teamId?: string;
+  isActive: boolean;
+  assignedTerritories?: number;
+  createdAt: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  description?: string;
+  organizationId: string;
+  createdAt: string;
+  updatedAt: string;
+  memberCount?: number;
 }
 
 export interface Territory {
