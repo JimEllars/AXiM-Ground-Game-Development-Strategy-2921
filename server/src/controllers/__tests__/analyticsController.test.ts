@@ -74,13 +74,13 @@ describe('getAnalytics', () => {
     expect(trends).toHaveLength(2);
 
     // Find the aggregated entry for Jan 1st
-    const entry1 = trends.find((t: any) => t.date === date1.toLocaleDateString());
+    const entry1 = trends.find((t: any) => t.date === date1.toISOString().split('T')[0]);
     expect(entry1).toBeDefined();
     // 2 + 3 = 5
     expect(entry1.interactions).toBe(5);
 
     // Find the aggregated entry for Jan 2nd
-    const entry2 = trends.find((t: any) => t.date === date3.toLocaleDateString());
+    const entry2 = trends.find((t: any) => t.date === date3.toISOString().split('T')[0]);
     expect(entry2).toBeDefined();
     expect(entry2.interactions).toBe(1);
   });

@@ -104,7 +104,7 @@ export const getAnalytics = async (req: AuthRequest, res: Response) => {
     interactions.forEach(row => {
       if (!row.interaction_date || !row.outcome) return;
 
-      const dateKey = new Date(row.interaction_date).toLocaleDateString();
+      const dateKey = new Date(row.interaction_date).toISOString().split('T')[0];
       const count = parseInt(row.outcome_count);
 
       if (trendsMap.has(dateKey)) {
@@ -233,7 +233,7 @@ export const getPerformanceMetrics = async (req: AuthRequest, res: Response) => 
       const date = row.date;
       if (!acc[date]) {
         acc[date] = {
-          date: new Date(date).toLocaleDateString(),
+          date: new Date(date).toISOString().split('T')[0],
           totalInteractions: 0,
           uniqueLeads: new Set(),
           activeUsers: new Set(),
