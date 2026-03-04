@@ -11,6 +11,9 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 // Optional debug flag for auth troubleshooting (set DEBUG_AUTH=true in .env.test only)
 const DEBUG_AUTH = process.env.DEBUG_AUTH === 'true';
 
+// Dummy hash for mitigating timing attacks during login (cost factor 10)
+const DUMMY_PASSWORD_HASH = '$2b$10$gtWG4BuswmCR1U7EDfH0OeVw9eLnYbweYCQXt7mkxL9vLLi2DipFy';
+
 export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Explicitly ignore 'role' from req.body to prevent privilege escalation
@@ -90,6 +93,8 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     if (result.rows.length === 0) {
       if (DEBUG_AUTH) console.debug('[auth] login: user not found or inactive', { email });
+      // Perform a dummy comparison to equalize response times
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
       return next(new AppError('Invalid email or password', 401));
     }
 
@@ -98,6 +103,8 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     // Ensure there is a password hash stored
     if (!user.password_hash) {
       if (DEBUG_AUTH) console.debug('[auth] login: missing password_hash for user', { userId: user.id });
+      // Perform a dummy comparison to equalize response times
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
       return next(new AppError('Invalid email or password', 401));
     }
 
