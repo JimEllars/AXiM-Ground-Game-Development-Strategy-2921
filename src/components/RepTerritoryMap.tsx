@@ -47,15 +47,31 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
     type: 'FeatureCollection' as const,
     features: leads.reduce((acc: any[], lead) => {
       // Ensure lead.location is valid and has coordinates
-      if (lead.location && lead.location.coordinates) {
-        acc.push({
-          type: 'Feature' as const,
-          geometry: lead.location,
-          properties: {
-              id: lead.id,
-              status: lead.status,
-          }
-        });
+      if (lead.location) {
+        let lon: number | null = null;
+        let lat: number | null = null;
+        let geometry: any = null;
+
+        if (lead.location.type === 'Point' && Array.isArray(lead.location.coordinates)) {
+          lon = lead.location.coordinates[0];
+          lat = lead.location.coordinates[1];
+          geometry = lead.location;
+        } else if (typeof (lead.location as any).x === 'number' && typeof (lead.location as any).y === 'number') {
+          lon = (lead.location as any).x;
+          lat = (lead.location as any).y;
+          geometry = { type: 'Point', coordinates: [lon, lat] };
+        }
+
+        if (lon !== null && lat !== null && !isNaN(lon) && !isNaN(lat)) {
+          acc.push({
+            type: 'Feature' as const,
+            geometry: geometry,
+            properties: {
+                id: lead.id,
+                status: lead.status,
+            }
+          });
+        }
       }
       return acc;
     }, [])

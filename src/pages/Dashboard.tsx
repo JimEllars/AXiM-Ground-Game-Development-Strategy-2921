@@ -100,26 +100,53 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
                 />
               </Source>
             ))}
-            {allLeads.map((lead) => (
-              lead.location && (
+            {allLeads.map((lead) => {
+              let lon = null;
+              let lat = null;
+              if (lead.location) {
+                if (lead.location.type === 'Point' && Array.isArray(lead.location.coordinates)) {
+                  lon = lead.location.coordinates[0];
+                  lat = lead.location.coordinates[1];
+                } else if (typeof (lead.location as any).x === 'number' && typeof (lead.location as any).y === 'number') {
+                  lon = (lead.location as any).x;
+                  lat = (lead.location as any).y;
+                }
+              }
+              const hasLocation = lon !== null && lat !== null && !isNaN(lon) && !isNaN(lat);
+
+              return hasLocation && (
                 <Marker
                   key={lead.id}
-                  longitude={lead.location.coordinates[0]}
-                  latitude={lead.location.coordinates[1]}
+                  longitude={lon as number}
+                  latitude={lat as number}
                   onClick={(e) => {
                     e.originalEvent.stopPropagation();
                     setSelectedLead(lead);
                   }}
                 />
-              )
-            ))}
-            {selectedLead && (
-              <Popup
-                longitude={selectedLead.location.coordinates[0]}
-                latitude={selectedLead.location.coordinates[1]}
-                onClose={() => setSelectedLead(null)}
-                anchor="top"
-              >
+              );
+            })}
+            {(() => {
+              let slon = null;
+              let slat = null;
+              if (selectedLead && selectedLead.location) {
+                if (selectedLead.location.type === 'Point' && Array.isArray(selectedLead.location.coordinates)) {
+                  slon = selectedLead.location.coordinates[0];
+                  slat = selectedLead.location.coordinates[1];
+                } else if (typeof (selectedLead.location as any).x === 'number' && typeof (selectedLead.location as any).y === 'number') {
+                  slon = (selectedLead.location as any).x;
+                  slat = (selectedLead.location as any).y;
+                }
+              }
+              const hasSLocation = slon !== null && slat !== null && !isNaN(slon) && !isNaN(slat);
+
+              return hasSLocation && (
+                <Popup
+                  longitude={slon as number}
+                  latitude={slat as number}
+                  onClose={() => setSelectedLead(null)}
+                  anchor="top"
+                >
                 <div>
                   <Typography variant="subtitle2">
                     {selectedLead.firstName} {selectedLead.lastName}
@@ -128,7 +155,8 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
                   <Chip label={selectedLead.status} size="small" />
                 </div>
               </Popup>
-            )}
+              );
+            })()}
           </Map>
         </Paper>
       </Grid>
