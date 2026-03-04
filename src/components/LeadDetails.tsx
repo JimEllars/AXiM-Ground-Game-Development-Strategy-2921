@@ -82,7 +82,6 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
         onUpdate();
       }
     } catch (err: any) {
-      console.error('Failed to update lead:', err);
       setError(err.response?.data?.error || 'Failed to update lead');
     } finally {
       setLoading(false);
