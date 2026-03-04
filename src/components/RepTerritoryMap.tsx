@@ -45,20 +45,20 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
 
   const leadsData = {
     type: 'FeatureCollection' as const,
-    features: leads.map(lead => {
+    features: leads.reduce((acc: any[], lead) => {
       // Ensure lead.location is valid and has coordinates
-      if (!lead.location || !lead.location.coordinates) {
-          return null;
+      if (lead.location && lead.location.coordinates) {
+        acc.push({
+          type: 'Feature' as const,
+          geometry: lead.location,
+          properties: {
+              id: lead.id,
+              status: lead.status,
+          }
+        });
       }
-      return {
-        type: 'Feature' as const,
-        geometry: lead.location,
-        properties: {
-            id: lead.id,
-            status: lead.status,
-        }
-      };
-    }).filter(feature => feature !== null) // Filter out invalid features
+      return acc;
+    }, [])
   };
 
   return (
