@@ -56,13 +56,22 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
   let longitude: number | null = null;
   let latitude: number | null = null;
 
-  if (lead.location) {
-    if (lead.location.type === 'Point' && Array.isArray(lead.location.coordinates)) {
-      longitude = lead.location.coordinates[0];
-      latitude = lead.location.coordinates[1];
-    } else if (typeof lead.location.x === 'number' && typeof lead.location.y === 'number') {
-      longitude = lead.location.x;
-      latitude = lead.location.y;
+  if (lead?.location) {
+    try {
+      const loc = typeof lead.location === 'string' ? JSON.parse(lead.location) : lead.location;
+
+      if (loc?.type === 'Point' && Array.isArray(loc?.coordinates)) {
+        longitude = Number(loc.coordinates[0]);
+        latitude = Number(loc.coordinates[1]);
+      } else if (typeof loc?.x === 'number' && typeof loc?.y === 'number') {
+        longitude = loc.x;
+        latitude = loc.y;
+      } else if (Array.isArray(loc?.coordinates) && loc.coordinates.length >= 2) {
+        longitude = Number(loc.coordinates[0]);
+        latitude = Number(loc.coordinates[1]);
+      }
+    } catch (err) {
+      // gracefully ignore parsing errors
     }
   }
   const hasLocation = longitude !== null && latitude !== null && !isNaN(longitude) && !isNaN(latitude);
