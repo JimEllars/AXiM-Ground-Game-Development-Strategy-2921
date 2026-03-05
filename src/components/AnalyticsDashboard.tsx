@@ -133,9 +133,10 @@ import React, { useState, useEffect } from 'react';
 
       const calculateCompletionRate = (leads: any[] = []) => {
         if (!leads || leads.length === 0) return 0;
-        const completedLeads = leads.filter(
-          (lead) => lead && (lead.status === 'Completed' || lead.status === 'Sold')
-        ).length;
+        const completedLeads = leads.reduce(
+          (count: number, lead: any) => count + (lead && (lead.status === 'Completed' || lead.status === 'Sold') ? 1 : 0),
+          0
+        );
         return Math.round((completedLeads / leads.length) * 100);
       };
 

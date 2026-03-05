@@ -9,7 +9,10 @@ import React from 'react';
 
     const TerritoryStats: React.FC<TerritoryStatsProps> = ({ territory }) => {
       const totalLeads = territory.leads?.length || 0;
-      const completedLeads = territory.leads?.filter((l: any) => l.lastInteraction).length || 0;
+      const completedLeads = territory.leads?.reduce(
+        (count: number, l: any) => count + (l.lastInteraction ? 1 : 0),
+        0
+      ) || 0;
       const completionRate = totalLeads > 0 ? Math.round((completedLeads / totalLeads) * 100) : 0;
 
       const stats = [

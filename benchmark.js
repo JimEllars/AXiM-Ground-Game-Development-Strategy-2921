@@ -1,38 +1,29 @@
 const leads = Array.from({ length: 100000 }, (_, i) => ({
-  id: i,
-  lastInteraction: i % 2 === 0 ? new Date() : null,
+  status: i % 2 === 0 ? 'Completed' : 'New',
+  lastInteraction: i % 3 === 0 ? new Date() : null,
 }));
 
-console.log("Benchmarking length: ", leads.length);
+console.log("Benchmarking filter.length vs reduce...");
 
-const startFilter1 = performance.now();
-for (let i = 0; i < 100; i++) {
-  const count1 = leads.filter(l => l.lastInteraction).length;
-  const count2 = leads.filter(l => l.lastInteraction).length;
+const ITERATIONS = 1000;
+
+console.time("filter.length");
+for (let i = 0; i < ITERATIONS; i++) {
+  const count = leads.filter(l => l.lastInteraction).length;
 }
-const endFilter1 = performance.now();
-console.log("Original `filter().length` * 2 time:", endFilter1 - startFilter1, "ms");
+console.timeEnd("filter.length");
 
-
-const startReduce1 = performance.now();
-for (let i = 0; i < 100; i++) {
-  const count = leads.reduce((c, l) => c + (l.lastInteraction ? 1 : 0), 0);
-  const count1 = count;
-  const count2 = count;
+console.time("reduce");
+for (let i = 0; i < ITERATIONS; i++) {
+  const count = leads.reduce((acc, l) => acc + (l.lastInteraction ? 1 : 0), 0);
 }
-const endReduce1 = performance.now();
-console.log("Optimized `reduce` once time:", endReduce1 - startReduce1, "ms");
+console.timeEnd("reduce");
 
-const startLoop1 = performance.now();
-for (let i = 0; i < 100; i++) {
+console.time("for loop");
+for (let i = 0; i < ITERATIONS; i++) {
   let count = 0;
   for (let j = 0; j < leads.length; j++) {
-    if (leads[j].lastInteraction) {
-      count++;
-    }
+    if (leads[j].lastInteraction) count++;
   }
-  const count1 = count;
-  const count2 = count;
 }
-const endLoop1 = performance.now();
-console.log("Optimized `for loop` once time:", endLoop1 - startLoop1, "ms");
+console.timeEnd("for loop");
