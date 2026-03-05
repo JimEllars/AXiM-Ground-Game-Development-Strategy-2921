@@ -20,18 +20,19 @@ import { FiMap, FiUsers, FiMapPin } from 'react-icons/fi';
     import RepDashboard from './RepDashboard';
     import AdminDashboard from './AdminDashboard';
 import { authAPI, territoriesAPI, leadsAPI } from '@/services/api';
+import { User, Territory, Lead } from '@/types';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
     const Dashboard: React.FC = () => {
-      const [user, setUser] = useState<any>(null);
-      const [territories, setTerritories] = useState<any[]>([]);
-      const [recentActivity, setRecentActivity] = useState<any[]>([]);
-  const [allLeads, setAllLeads] = useState<any[]>([]);
+      const [user, setUser] = useState<User | null>(null);
+      const [territories, setTerritories] = useState<Territory[]>([]);
+      const [recentActivity, setRecentActivity] = useState<Lead[]>([]);
+  const [allLeads, setAllLeads] = useState<Lead[]>([]);
       const [loading, setLoading] = useState(true);
       const [error, setError] = useState('');
       const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
       useEffect(() => {
         loadDashboardData();
