@@ -172,7 +172,7 @@ export const getAnalytics = async (req: AuthRequest, res: Response) => {
           row.outcome ? sum + parseInt(row.outcome_count) : sum, 0),
         uniqueLeadsContacted: interactions.reduce((sum, row) => 
           row.outcome && row.lead_id ? sum + 1 : sum, 0),
-        activeDays: new Set(interactions.filter(row => row.interaction_date).map(row => row.interaction_date)).size,
+        activeDays: new Set(interactions.filter(row => row.interaction_date).map(row => new Date(row.interaction_date).toISOString().split('T')[0])).size,
         completionRate
       },
       trends,
@@ -230,10 +230,10 @@ export const getPerformanceMetrics = async (req: AuthRequest, res: Response) => 
 
     // Process daily performance data
     const dailyData = performanceResult.rows.reduce((acc: any, row) => {
-      const date = row.date;
-      if (!acc[date]) {
-        acc[date] = {
-          date: new Date(date).toISOString().split('T')[0],
+      const dateKey = new Date(row.date).toISOString().split('T')[0];
+      if (!acc[dateKey]) {
+        acc[dateKey] = {
+          date: dateKey,
           totalInteractions: 0,
           uniqueLeads: new Set(),
           activeUsers: new Set(),
@@ -242,12 +242,12 @@ export const getPerformanceMetrics = async (req: AuthRequest, res: Response) => 
         };
       }
       
-      acc[date].totalInteractions += parseInt(row.interactions);
-      acc[date].uniqueLeads.add(row.lead_id);
-      acc[date].activeUsers.add(row.user_id);
-      acc[date].completedInteractions += parseInt(row.completed_interactions);
+      acc[dateKey].totalInteractions += parseInt(row.interactions);
+      acc[dateKey].uniqueLeads.add(row.lead_id);
+      acc[dateKey].activeUsers.add(row.user_id);
+      acc[dateKey].completedInteractions += parseInt(row.completed_interactions);
       
-      acc[date].users.push({
+      acc[dateKey].users.push({
         id: row.user_id,
         name: `${row.first_name} ${row.last_name}`,
         interactions: parseInt(row.interactions),
