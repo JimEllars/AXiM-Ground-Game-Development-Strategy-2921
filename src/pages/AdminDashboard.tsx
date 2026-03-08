@@ -11,6 +11,7 @@ import LeadManagement from './LeadManagement';
 import { analyticsAPI, leadsAPI, territoriesAPI } from '@/services/api';
 import Map, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { parseLeadLocation } from '@/common/locationUtils';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -194,24 +195,12 @@ const AdminDashboard: React.FC = () => {
                 </Source>
               ))}
               {allLeads.map((lead) => {
-                let lon = null;
-                let lat = null;
-                if (lead.location) {
-                  if (lead.location.type === 'Point' && Array.isArray(lead.location.coordinates)) {
-                    lon = lead.location.coordinates[0];
-                    lat = lead.location.coordinates[1];
-                  } else if (typeof (lead.location as any).x === 'number' && typeof (lead.location as any).y === 'number') {
-                    lon = (lead.location as any).x;
-                    lat = (lead.location as any).y;
-                  }
-                }
-                const hasLocation = lon !== null && lat !== null && !isNaN(lon) && !isNaN(lat);
-
-                return hasLocation && (
+                const parsedLocation = parseLeadLocation(lead.location);
+                return parsedLocation && (
                   <Marker
                     key={lead.id}
-                    longitude={lon as number}
-                    latitude={lat as number}
+                    longitude={parsedLocation.longitude}
+                    latitude={parsedLocation.latitude}
                     onClick={(e) => {
                       e.originalEvent.stopPropagation();
                       setSelectedLead(lead);
@@ -220,23 +209,11 @@ const AdminDashboard: React.FC = () => {
                 );
               })}
               {(() => {
-                let slon = null;
-                let slat = null;
-                if (selectedLead && selectedLead.location) {
-                  if (selectedLead.location.type === 'Point' && Array.isArray(selectedLead.location.coordinates)) {
-                    slon = selectedLead.location.coordinates[0];
-                    slat = selectedLead.location.coordinates[1];
-                  } else if (typeof (selectedLead.location as any).x === 'number' && typeof (selectedLead.location as any).y === 'number') {
-                    slon = (selectedLead.location as any).x;
-                    slat = (selectedLead.location as any).y;
-                  }
-                }
-                const hasSLocation = slon !== null && slat !== null && !isNaN(slon) && !isNaN(slat);
-
-                return hasSLocation && (
+                const parsedLocation = parseLeadLocation(selectedLead?.location);
+                return parsedLocation && (
                   <Popup
-                    longitude={slon as number}
-                    latitude={slat as number}
+                    longitude={parsedLocation.longitude}
+                    latitude={parsedLocation.latitude}
                     onClose={() => setSelectedLead(null)}
                     anchor="top"
                   >

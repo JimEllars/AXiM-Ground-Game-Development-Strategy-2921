@@ -16,6 +16,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { FiMapPin, FiEdit2, FiSave, FiX } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import { leadsAPI } from '@/services/api';
+import { parseLeadLocation } from '@/common/locationUtils';
 
 // Handle potentially undefined import.meta.env in test environment
 const getMapboxToken = () => {
@@ -51,30 +52,11 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Fix location parsing: backend returns { type: 'Point', coordinates: [lon, lat] }
-  // or sometimes { x: ..., y: ... } depending on legacy code, but we know it's GeoJSON now.
-  let longitude: number | null = null;
-  let latitude: number | null = null;
-
-  if (lead?.location) {
-    try {
-      const loc = typeof lead.location === 'string' ? JSON.parse(lead.location) : lead.location;
-
-      if (loc?.type === 'Point' && Array.isArray(loc?.coordinates)) {
-        longitude = Number(loc.coordinates[0]);
-        latitude = Number(loc.coordinates[1]);
-      } else if (typeof loc?.x === 'number' && typeof loc?.y === 'number') {
-        longitude = loc.x;
-        latitude = loc.y;
-      } else if (Array.isArray(loc?.coordinates) && loc.coordinates.length >= 2) {
-        longitude = Number(loc.coordinates[0]);
-        latitude = Number(loc.coordinates[1]);
-      }
-    } catch (err) {
-      // gracefully ignore parsing errors
-    }
-  }
-  const hasLocation = longitude !== null && latitude !== null && !isNaN(longitude) && !isNaN(latitude);
+  // Parse location using robust utility
+  const parsedLocation = parseLeadLocation(lead?.location);
+  const longitude = parsedLocation?.longitude ?? null;
+  const latitude = parsedLocation?.latitude ?? null;
+  const hasLocation = !!parsedLocation;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
