@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { pool } from '../config/database.js';
 import { AuthRequest } from '../types/index.js';
 import bcrypt from 'bcrypt';
