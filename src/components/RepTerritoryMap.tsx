@@ -3,6 +3,7 @@ import React from 'react';
 import Map, { Source, Layer } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Territory, Lead } from '@/types';
+import { parseLeadLocation } from '@/common/locationUtils';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -46,35 +47,22 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
   const leadsData = {
     type: 'FeatureCollection' as const,
     features: leads.reduce((acc: any[], lead) => {
-      // Ensure lead.location is valid and has coordinates
-      if (lead.location) {
-        let lon: number | null = null;
-        let lat: number | null = null;
-        let geometry: any = null;
-
-        if (lead.location.type === 'Point' && Array.isArray(lead.location.coordinates)) {
-          lon = lead.location.coordinates[0];
-          lat = lead.location.coordinates[1];
-          geometry = lead.location;
-        } else if (typeof (lead.location as any).x === 'number' && typeof (lead.location as any).y === 'number') {
-          lon = (lead.location as any).x;
-          lat = (lead.location as any).y;
-          geometry = { type: 'Point', coordinates: [lon, lat] };
-        }
-
-        if (lon !== null && lat !== null && !isNaN(lon) && !isNaN(lat)) {
-          acc.push({
-            type: 'Feature' as const,
-            geometry: geometry,
-            properties: {
-                id: lead.id,
-                status: lead.status,
-            }
-          });
-        }
+      const parsedLocation = parseLeadLocation(lead.location);
+      if (parsedLocation) {
+        acc.push({
+          type: 'Feature' as const,
+          geometry: {
+            type: 'Point',
+            coordinates: [parsedLocation.longitude, parsedLocation.latitude],
+          },
+          properties: {
+            id: lead.id,
+            status: lead.status,
+          },
+        });
       }
       return acc;
-    }, [])
+    }, []),
   };
 
   return (
