@@ -402,25 +402,36 @@ export const getLeads = async (req: AuthRequest, res: Response) => {
 
     const orderDirection = (order as string).toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
-    let whereClause = 'WHERE l.organization_id = $1';
+    // Structured Query Building to prevent SQL injection and improve maintainability
+    const conditions: string[] = ['l.organization_id = $1'];
     const params: any[] = [user.organization_id];
     let paramIndex = 2;
 
     if (status) {
-      whereClause += ` AND l.status = $${paramIndex}`;
+      conditions.push(`l.status = $${paramIndex}`);
       params.push(status);
       paramIndex++;
     }
 
     if (search) {
-      whereClause += ` AND (
+      conditions.push(`(
         pii.first_name ILIKE $${paramIndex} OR
         pii.last_name ILIKE $${paramIndex} OR
         pii.street_address ILIKE $${paramIndex}
-      )`;
+      )`);
       params.push(`%${search}%`);
       paramIndex++;
     }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Whitelist mapping for sort columns to avoid direct interpolation of possibly unsafe strings
+    const sortMap: Record<string, string> = {
+      'created_at': 'l.created_at',
+      'last_name': 'pii.last_name',
+      'status': 'l.status'
+    };
+    const sortColumn = sortMap[sort as string] || 'l.created_at';
 
     const offset = (Number(page) - 1) * Number(limit);
 
@@ -444,7 +455,7 @@ export const getLeads = async (req: AuthRequest, res: Response) => {
        FROM leads l
        JOIN lead_pii pii ON l.id = pii.lead_id
        ${whereClause}
-       ORDER BY ${sort === 'last_name' ? 'pii.last_name' : `l.${sort}`} ${orderDirection}
+       ORDER BY ${sortColumn} ${orderDirection}
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...params, Number(limit), offset]
     );
