@@ -7,12 +7,12 @@ export const getAnalytics = async (req: AuthRequest, res: Response) => {
     const user = req.user!;
     const { startDate, endDate } = req.query;
 
-    let dateFilter = '';
+    const conditions: string[] = ['l.organization_id = $1'];
     const params: any[] = [user.organization_id];
     let paramIndex = 2;
 
     if (startDate && endDate) {
-      dateFilter = ' AND i.interaction_date BETWEEN $2 AND $3';
+      conditions.push(`i.interaction_date BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
       params.push(startDate as string, endDate as string);
       paramIndex += 2;
     }
@@ -61,7 +61,7 @@ export const getAnalytics = async (req: AuthRequest, res: Response) => {
         FROM interactions i
         JOIN leads l ON i.lead_id = l.id
         JOIN users u ON i.user_id = u.id
-        WHERE l.organization_id = $1${dateFilter}
+        WHERE ${conditions.join(' AND ')}
         GROUP BY ROLLUP(i.outcome, DATE(i.interaction_date), u.id, u.first_name, u.last_name)
         ORDER BY interaction_date DESC`,
         params
@@ -198,12 +198,14 @@ export const getPerformanceMetrics = async (req: AuthRequest, res: Response) => 
     const user = req.user!;
     const { startDate, endDate } = req.query;
 
-    let dateFilter = '';
+    const conditions: string[] = ['l.organization_id = $1'];
     const params: any[] = [user.organization_id];
+    let paramIndex = 2;
 
     if (startDate && endDate) {
-      dateFilter = ' AND i.interaction_date BETWEEN $2 AND $3';
+      conditions.push(`i.interaction_date BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
       params.push(startDate as string, endDate as string);
+      paramIndex += 2;
     }
 
     // Get detailed performance metrics
@@ -221,7 +223,7 @@ export const getPerformanceMetrics = async (req: AuthRequest, res: Response) => 
         FROM interactions i
         JOIN leads l ON i.lead_id = l.id
         JOIN users u ON i.user_id = u.id
-        WHERE l.organization_id = $1${dateFilter}
+        WHERE ${conditions.join(' AND ')}
         GROUP BY DATE(i.interaction_date), u.id, u.first_name, u.last_name
         ORDER BY date DESC`,
         params
