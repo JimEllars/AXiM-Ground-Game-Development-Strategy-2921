@@ -1,6 +1,8 @@
 import axios from 'axios';
+import { config } from '../config';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+// Handle potentially undefined import.meta.env in test environment
+const API_BASE_URL = config.apiBaseUrl || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -68,6 +70,8 @@ export const territoriesAPI = {
     api.get('/territories/available-reps'),
   getMyTerritories: () => 
     api.get('/territories/my-territories'),
+  getUserTerritories: (userId: string) =>
+    api.get(`/territories/user/${userId}`),
 };
 
 // Leads API
