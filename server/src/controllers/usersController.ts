@@ -8,21 +8,23 @@ export const getUsers = async (req: AuthRequest, res: Response) => {
     const user = req.user!;
     const { role, isActive } = req.query;
 
-    let whereClause = 'WHERE organization_id = $1';
+    const conditions: string[] = ['organization_id = $1'];
     const params: any[] = [user.organization_id];
     let paramIndex = 2;
 
     if (role) {
-      whereClause += ` AND role = $${paramIndex}`;
+      conditions.push(`role = $${paramIndex}`);
       params.push(role);
       paramIndex++;
     }
 
     if (isActive !== undefined) {
-      whereClause += ` AND is_active = $${paramIndex}`;
+      conditions.push(`is_active = $${paramIndex}`);
       params.push(isActive === 'true');
       paramIndex++;
     }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const result = await pool.query(
       `SELECT 
