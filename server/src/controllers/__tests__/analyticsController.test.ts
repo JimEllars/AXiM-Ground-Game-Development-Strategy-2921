@@ -33,6 +33,8 @@ const mockRes = () => {
   return res;
 };
 
+const mockNext = jest.fn();
+
 describe('getAnalytics', () => {
   let req: any;
   let res: any;
@@ -61,7 +63,7 @@ describe('getAnalytics', () => {
       } as any)
       .mockResolvedValueOnce({ rows: [] } as any); // userStats
 
-    await getAnalytics(req, res);
+    await getAnalytics(req, res, mockNext);
 
     const json = res.json.mock.calls[0][0];
     const trends = json.trends;
