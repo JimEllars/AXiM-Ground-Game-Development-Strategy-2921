@@ -1,5 +1,5 @@
 import React from 'react';
-    import { Box, Typography, Card, CardContent, Grid, Chip } from '@mui/material';
+    import { Box, Typography, Card, CardContent, Grid, Chip, useTheme } from '@mui/material';
     import { FiMapPin, FiUsers, FiCheckCircle, FiActivity } from 'react-icons/fi';
     import SafeIcon from '@/common/SafeIcon';
 
@@ -8,6 +8,7 @@ import React from 'react';
     }
 
     const TerritoryStats: React.FC<TerritoryStatsProps> = ({ territory }) => {
+      const theme = useTheme();
       const totalLeads = territory.leads?.length || 0;
       const completedLeads = territory.leads?.reduce(
         (count: number, l: any) => count + (l.lastInteraction ? 1 : 0),
@@ -16,10 +17,10 @@ import React from 'react';
       const completionRate = totalLeads > 0 ? Math.round((completedLeads / totalLeads) * 100) : 0;
 
       const stats = [
-        { label: 'Total Leads', value: totalLeads, icon: FiUsers, color: '#1976d2' },
-        { label: 'Completed', value: completedLeads, icon: FiCheckCircle, color: '#388e3c' },
-        { label: 'Pending', value: totalLeads - completedLeads, icon: FiActivity, color: '#f57c00' },
-        { label: 'Completion Rate', value: `${completionRate}%`, icon: FiMapPin, color: '#7b1fa2' },
+        { label: 'Total Leads', value: totalLeads, icon: FiUsers, color: theme.palette.primary.main },
+        { label: 'Completed', value: completedLeads, icon: FiCheckCircle, color: theme.palette.success.main },
+        { label: 'Pending', value: totalLeads - completedLeads, icon: FiActivity, color: theme.palette.warning.main },
+        { label: 'Completion Rate', value: `${completionRate}%`, icon: FiMapPin, color: theme.palette.secondary.main },
       ];
 
       return (
