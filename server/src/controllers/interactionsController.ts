@@ -20,26 +20,43 @@ export const createInteractions = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'No valid interactions provided' });
     }
 
-    // Batch insert interactions
-    const insertPromises = validInteractions.map(interaction => {
-      const locationWKT = interaction.location 
+    // Batch insert interactions using UNNEST for optimal performance
+    const leadIdsArr: string[] = [];
+    const userIdsArr: string[] = [];
+    const outcomesArr: string[] = [];
+    const notesArr: (string | null)[] = [];
+    const datesArr: Date[] = [];
+    const locationsArr: (string | null)[] = [];
+
+    for (const interaction of validInteractions) {
+      leadIdsArr.push(interaction.leadId);
+      userIdsArr.push(user.id);
+      outcomesArr.push(interaction.outcome);
+      notesArr.push(interaction.notes || null);
+      datesArr.push(interaction.interactionDate || new Date());
+      locationsArr.push(interaction.location
         ? `POINT(${interaction.location.longitude} ${interaction.location.latitude})`
-        : null;
+        : null);
+    }
 
-      return pool.query(
-        `INSERT INTO interactions 
-         (lead_id, user_id, outcome, notes, interaction_date, location, synced_at)
-         VALUES ($1, $2, $3, $4, $5, ${locationWKT ? 'ST_GeomFromText($6, 4326)' : 'NULL'}, CURRENT_TIMESTAMP)
-         RETURNING id, interaction_date`,
-        locationWKT 
-          ? [interaction.leadId, user.id, interaction.outcome, interaction.notes || null, 
-             interaction.interactionDate || new Date(), locationWKT]
-          : [interaction.leadId, user.id, interaction.outcome, interaction.notes || null,
-             interaction.interactionDate || new Date()]
-      );
-    });
-
-    const results = await Promise.all(insertPromises);
+    const results = await pool.query(
+      `INSERT INTO interactions
+       (lead_id, user_id, outcome, notes, interaction_date, location, synced_at)
+       SELECT
+         t.lead_id, t.user_id, t.outcome, t.notes, t.interaction_date,
+         CASE WHEN t.loc IS NOT NULL THEN ST_GeomFromText(t.loc, 4326) ELSE NULL END,
+         CURRENT_TIMESTAMP
+       FROM unnest(
+         $1::uuid[],
+         $2::uuid[],
+         $3::varchar[],
+         $4::text[],
+         $5::timestamp[],
+         $6::text[]
+       ) AS t(lead_id, user_id, outcome, notes, interaction_date, loc)
+       RETURNING id, interaction_date`,
+       [leadIdsArr, userIdsArr, outcomesArr, notesArr, datesArr, locationsArr]
+    );
 
     // Update lead status based on interaction outcome
     const updateValues: string[] = [];
@@ -86,10 +103,10 @@ export const createInteractions = async (req: AuthRequest, res: Response) => {
 
     res.json({
       message: 'Interactions created successfully',
-      count: results.length,
-      interactions: results.map(result => ({
-        id: result.rows[0].id,
-        interactionDate: result.rows[0].interaction_date
+      count: results.rows.length,
+      interactions: results.rows.map(row => ({
+        id: row.id,
+        interactionDate: row.interaction_date
       }))
     });
   } catch (error) {
