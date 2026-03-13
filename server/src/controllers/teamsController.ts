@@ -1,41 +1,37 @@
-import { Response } from 'express';
-import { pool } from '../config/database.js';
-import { AuthRequest } from '../types/index.js';
-import { teamSchema } from '../utils/validationSchemas.js';
+import { Response } from "express";
+import { pool } from "../config/database.js";
+import { AuthRequest } from "../types/index.js";
+import { teamSchema } from "../utils/validationSchemas.js";
+import catchAsync from "../utils/catchAsync.js";
 
-export const getTeams = async (req: AuthRequest, res: Response) => {
-  try {
-    const user = req.user!;
+export const getTeams = catchAsync(async (req: AuthRequest, res: Response) => {
+  const user = req.user!;
 
-    // Get all teams for the organization
-    const result = await pool.query(
-      `SELECT
+  // Get all teams for the organization
+  const result = await pool.query(
+    `SELECT
         t.id, t.name, t.description, t.created_at, t.updated_at,
         (SELECT COUNT(*) FROM users u WHERE u.team_id = t.id) as member_count
       FROM teams t
       WHERE t.organization_id = $1
       ORDER BY t.name ASC`,
-      [user.organization_id]
-    );
+    [user.organization_id],
+  );
 
-    const teams = result.rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      memberCount: parseInt(row.member_count)
-    }));
+  const teams = result.rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    memberCount: parseInt(row.member_count),
+  }));
 
-    res.json(teams);
-  } catch (error) {
-    console.error('Get teams error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
+  res.json(teams);
+});
 
-export const createTeam = async (req: AuthRequest, res: Response) => {
-  try {
+export const createTeam = catchAsync(
+  async (req: AuthRequest, res: Response) => {
     const user = req.user!;
     const validation = teamSchema.safeParse(req.body);
 
@@ -49,7 +45,7 @@ export const createTeam = async (req: AuthRequest, res: Response) => {
       `INSERT INTO teams (organization_id, name, description)
        VALUES ($1, $2, $3)
        RETURNING *`,
-      [user.organization_id, name, description]
+      [user.organization_id, name, description],
     );
 
     const newTeam = result.rows[0];
@@ -60,16 +56,13 @@ export const createTeam = async (req: AuthRequest, res: Response) => {
       description: newTeam.description,
       createdAt: newTeam.created_at,
       updatedAt: newTeam.updated_at,
-      memberCount: 0
+      memberCount: 0,
     });
-  } catch (error) {
-    console.error('Create team error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
+  },
+);
 
-export const updateTeam = async (req: AuthRequest, res: Response) => {
-  try {
+export const updateTeam = catchAsync(
+  async (req: AuthRequest, res: Response) => {
     const user = req.user!;
     const { id } = req.params;
     const validation = teamSchema.partial().safeParse(req.body);
@@ -82,12 +75,12 @@ export const updateTeam = async (req: AuthRequest, res: Response) => {
 
     // Check if team exists and belongs to org
     const teamCheck = await pool.query(
-      'SELECT id FROM teams WHERE id = $1 AND organization_id = $2',
-      [id, user.organization_id]
+      "SELECT id FROM teams WHERE id = $1 AND organization_id = $2",
+      [id, user.organization_id],
     );
 
     if (teamCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Team not found' });
+      return res.status(404).json({ error: "Team not found" });
     }
 
     const updates: string[] = [];
@@ -107,21 +100,21 @@ export const updateTeam = async (req: AuthRequest, res: Response) => {
     }
 
     if (updates.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
+      return res.status(400).json({ error: "No fields to update" });
     }
 
     params.push(id);
     const result = await pool.query(
-      `UPDATE teams SET ${updates.join(', ')} WHERE id = $${paramIndex} RETURNING *`,
-      params
+      `UPDATE teams SET ${updates.join(", ")} WHERE id = $${paramIndex} RETURNING *`,
+      params,
     );
 
     const updatedTeam = result.rows[0];
 
     // Fetch member count separately or just return the team
     const countResult = await pool.query(
-        'SELECT COUNT(*) as member_count FROM users WHERE team_id = $1',
-        [id]
+      "SELECT COUNT(*) as member_count FROM users WHERE team_id = $1",
+      [id],
     );
     const memberCount = parseInt(countResult.rows[0].member_count);
 
@@ -131,78 +124,68 @@ export const updateTeam = async (req: AuthRequest, res: Response) => {
       description: updatedTeam.description,
       createdAt: updatedTeam.created_at,
       updatedAt: updatedTeam.updated_at,
-      memberCount
+      memberCount,
     });
+  },
+);
 
-  } catch (error) {
-    console.error('Update team error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-export const deleteTeam = async (req: AuthRequest, res: Response) => {
-  try {
+export const deleteTeam = catchAsync(
+  async (req: AuthRequest, res: Response) => {
     const user = req.user!;
     const { id } = req.params;
 
     // Check ownership
     const result = await pool.query(
-      'DELETE FROM teams WHERE id = $1 AND organization_id = $2 RETURNING id',
-      [id, user.organization_id]
+      "DELETE FROM teams WHERE id = $1 AND organization_id = $2 RETURNING id",
+      [id, user.organization_id],
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Team not found' });
+      return res.status(404).json({ error: "Team not found" });
     }
 
     // Users who were in this team will have team_id set to NULL automatically due to ON DELETE SET NULL
 
-    res.json({ message: 'Team deleted successfully' });
-  } catch (error) {
-    console.error('Delete team error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
+    res.json({ message: "Team deleted successfully" });
+  },
+);
 
-export const assignUserToTeam = async (req: AuthRequest, res: Response) => {
-  try {
+export const assignUserToTeam = catchAsync(
+  async (req: AuthRequest, res: Response) => {
     const currentUser = req.user!;
     const { id } = req.params; // teamId
     const { userId } = req.body;
 
     if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
+      return res.status(400).json({ error: "User ID is required" });
     }
 
     // Verify team belongs to organization
     const teamCheck = await pool.query(
-      'SELECT id FROM teams WHERE id = $1 AND organization_id = $2',
-      [id, currentUser.organization_id]
+      "SELECT id FROM teams WHERE id = $1 AND organization_id = $2",
+      [id, currentUser.organization_id],
     );
 
     if (teamCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'Team not found' });
+      return res.status(404).json({ error: "Team not found" });
     }
 
     // Verify target user belongs to organization
     const userCheck = await pool.query(
-      'SELECT id FROM users WHERE id = $1 AND organization_id = $2',
-      [userId, currentUser.organization_id]
+      "SELECT id FROM users WHERE id = $1 AND organization_id = $2",
+      [userId, currentUser.organization_id],
     );
 
     if (userCheck.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     // Update user
-    await pool.query(
-      'UPDATE users SET team_id = $1 WHERE id = $2',
-      [id, userId]
-    );
+    await pool.query("UPDATE users SET team_id = $1 WHERE id = $2", [
+      id,
+      userId,
+    ]);
 
-    res.json({ message: 'User assigned to team successfully' });
-  } catch (error) {
-    console.error('Assign user to team error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
+    res.json({ message: "User assigned to team successfully" });
+  },
+);

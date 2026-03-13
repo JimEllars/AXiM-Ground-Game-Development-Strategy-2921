@@ -43,7 +43,7 @@ describe('errorHandler middleware', () => {
     expect(mockRes.json).toHaveBeenCalledWith({
       status: 'error',
       statusCode: 500,
-      message: 'An unexpected error occurred.',
+      message: 'An unexpected error occurred.', error: 'An unexpected error occurred.',
     });
   });
 
@@ -57,7 +57,7 @@ describe('errorHandler middleware', () => {
     expect(mockRes.json).toHaveBeenCalledWith({
       status: 'error',
       statusCode: 404,
-      message: 'An unexpected error occurred.',
+      message: 'An unexpected error occurred.', error: 'An unexpected error occurred.',
     });
   });
 
@@ -71,7 +71,7 @@ describe('errorHandler middleware', () => {
     expect(mockRes.json).toHaveBeenCalledWith({
       status: 'error',
       statusCode: 500,
-      message: 'An unexpected error occurred.',
+      message: 'An unexpected error occurred.', error: 'An unexpected error occurred.',
     });
   });
 
@@ -84,7 +84,7 @@ describe('errorHandler middleware', () => {
     expect(mockRes.json).toHaveBeenCalledWith({
       status: 'error',
       statusCode: 500,
-      message: 'Internal Server Error',
+      message: 'Internal Server Error', error: 'Internal Server Error',
     });
   });
 
@@ -97,7 +97,7 @@ describe('errorHandler middleware', () => {
     expect(mockRes.json).toHaveBeenCalledWith({
       status: 'error',
       statusCode: 400,
-      message: 'Operational error',
+      message: 'Operational error', error: 'Operational error',
     });
   });
 
@@ -111,7 +111,7 @@ describe('errorHandler middleware', () => {
     expect(mockRes.json).toHaveBeenCalledWith({
       status: 'error',
       statusCode: 400,
-      message: 'Duplicate field value entered.',
+      message: 'Duplicate field value entered.', error: 'Duplicate field value entered.',
     });
   });
 
@@ -125,7 +125,7 @@ describe('errorHandler middleware', () => {
     expect(mockRes.json).toHaveBeenCalledWith({
       status: 'error',
       statusCode: 400,
-      message: 'Invalid data provided.',
+      message: 'Invalid data provided.', error: 'Invalid data provided.',
     });
   });
 
@@ -140,7 +140,7 @@ describe('errorHandler middleware', () => {
     expect(mockRes.json).toHaveBeenCalledWith({
       status: 'error',
       statusCode: 500,
-      message: 'Unknown error',
+      message: 'Unknown error', error: 'Unknown error',
     });
   });
 
@@ -156,7 +156,7 @@ describe('errorHandler middleware', () => {
     expect(mockRes.json).toHaveBeenCalledWith({
       status: 'error',
       statusCode: 500,
-      message: 'Database error',
+      message: 'Database error', error: 'Database error',
     });
   });
 
@@ -171,7 +171,7 @@ describe('errorHandler middleware', () => {
     expect(mockRes.json).toHaveBeenCalledWith({
       status: 'error',
       statusCode: 500,
-      message: 'An unexpected error occurred.',
+      message: 'An unexpected error occurred.', error: 'An unexpected error occurred.',
       stack: 'Error stack trace here',
     });
 
@@ -190,7 +190,7 @@ describe('errorHandler middleware', () => {
     expect(mockRes.json).toHaveBeenCalledWith({
       status: 'error',
       statusCode: 500,
-      message: 'An unexpected error occurred.',
+      message: 'An unexpected error occurred.', error: 'An unexpected error occurred.',
     });
 
     // In production environment it should still log to console.error

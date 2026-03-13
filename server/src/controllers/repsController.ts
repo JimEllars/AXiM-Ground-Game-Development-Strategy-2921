@@ -1,14 +1,14 @@
-import { Response } from 'express';
-import { pool } from '../config/database.js';
-import { AuthRequest } from '../types/index.js';
+import { Response } from "express";
+import { pool } from "../config/database.js";
+import { AuthRequest } from "../types/index.js";
+import catchAsync from "../utils/catchAsync.js";
 
-export const getMyTurf = async (req: AuthRequest, res: Response) => {
-  try {
-    const user = req.user!;
+export const getMyTurf = catchAsync(async (req: AuthRequest, res: Response) => {
+  const user = req.user!;
 
-    // Get user's assigned territories and leads within those territories
-    const result = await pool.query(
-      `SELECT 
+  // Get user's assigned territories and leads within those territories
+  const result = await pool.query(
+    `SELECT
          -- Territory data
          t.id as territory_id,
          t.name as territory_name,
@@ -52,88 +52,91 @@ export const getMyTurf = async (req: AuthRequest, res: Response) => {
        
        WHERE ta.user_id = $1
        ORDER BY t.name, lp.street_address`,
-      [user.id]
-    );
+    [user.id],
+  );
 
-    // Group results by territory
-    const territoriesMap = new Map();
+  // Group results by territory
+  const territoriesMap = new Map();
 
-    result.rows.forEach(row => {
-      const territoryId = row.territory_id;
-      
-      if (!territoriesMap.has(territoryId)) {
-        territoriesMap.set(territoryId, {
-          id: territoryId,
-          name: row.territory_name,
-          description: row.territory_description,
-          createdAt: row.territory_created_at,
-          boundary: JSON.parse(row.territory_boundary),
-          leads: []
-        });
-      }
+  result.rows.forEach((row) => {
+    const territoryId = row.territory_id;
 
-      // Add lead if it exists
-      if (row.lead_id) {
-        const territory = territoriesMap.get(territoryId);
-        territory.leads.push({
-          id: row.lead_id,
-          firstName: row.first_name,
-          lastName: row.last_name,
-          streetAddress: row.street_address,
-          city: row.city,
-          state: row.state,
-          zip: row.zip,
-          phone: row.phone,
-          email: row.email,
-          status: row.status,
-          notes: row.notes,
-          location: row.longitude && row.latitude ? {
-            type: 'Point' as const,
-            coordinates: [row.longitude, row.latitude]
-          } : null,
-          createdAt: row.lead_created_at,
-          lastInteraction: row.last_outcome ? {
-            outcome: row.last_outcome,
-            notes: row.last_notes,
-            date: row.last_interaction_date
-          } : null
-        });
-      }
-    });
+    if (!territoriesMap.has(territoryId)) {
+      territoriesMap.set(territoryId, {
+        id: territoryId,
+        name: row.territory_name,
+        description: row.territory_description,
+        createdAt: row.territory_created_at,
+        boundary: JSON.parse(row.territory_boundary),
+        leads: [],
+      });
+    }
 
-    const territories = Array.from(territoriesMap.values());
+    // Add lead if it exists
+    if (row.lead_id) {
+      const territory = territoriesMap.get(territoryId);
+      territory.leads.push({
+        id: row.lead_id,
+        firstName: row.first_name,
+        lastName: row.last_name,
+        streetAddress: row.street_address,
+        city: row.city,
+        state: row.state,
+        zip: row.zip,
+        phone: row.phone,
+        email: row.email,
+        status: row.status,
+        notes: row.notes,
+        location:
+          row.longitude && row.latitude
+            ? {
+                type: "Point" as const,
+                coordinates: [row.longitude, row.latitude],
+              }
+            : null,
+        createdAt: row.lead_created_at,
+        lastInteraction: row.last_outcome
+          ? {
+              outcome: row.last_outcome,
+              notes: row.last_notes,
+              date: row.last_interaction_date,
+            }
+          : null,
+      });
+    }
+  });
 
-    // Calculate summary statistics
-    const totalLeads = territories.reduce((sum, t) => sum + t.leads.length, 0);
-    const completedLeads = territories.reduce((sum, t) => 
-      sum + t.leads.filter((l: any) => l.lastInteraction).length, 0
-    );
+  const territories = Array.from(territoriesMap.values());
 
-    res.json({
-      territories,
-      summary: {
-        totalTerritories: territories.length,
-        totalLeads,
-        completedLeads,
-        completionRate: totalLeads > 0 ? Math.round((completedLeads / totalLeads) * 100) : 0
-      }
-    });
-  } catch (error) {
-    console.error('Get my turf error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
+  // Calculate summary statistics
+  const totalLeads = territories.reduce((sum, t) => sum + t.leads.length, 0);
+  const completedLeads = territories.reduce(
+    (sum, t) => sum + t.leads.filter((l: any) => l.lastInteraction).length,
+    0,
+  );
 
-export const getRepStats = async (req: AuthRequest, res: Response) => {
-  try {
+  res.json({
+    territories,
+    summary: {
+      totalTerritories: territories.length,
+      totalLeads,
+      completedLeads,
+      completionRate:
+        totalLeads > 0 ? Math.round((completedLeads / totalLeads) * 100) : 0,
+    },
+  });
+});
+
+export const getRepStats = catchAsync(
+  async (req: AuthRequest, res: Response) => {
     const user = req.user!;
     const { startDate, endDate } = req.query;
 
-    let dateFilter = '';
+    let dateFilter = "";
     const params = [user.id];
 
     if (startDate && endDate) {
-      dateFilter = 'AND i.interaction_date BETWEEN $2 AND $3';
+      dateFilter = "AND i.interaction_date BETWEEN $2 AND $3";
       params.push(startDate as string, endDate as string);
     }
 
@@ -148,31 +151,28 @@ export const getRepStats = async (req: AuthRequest, res: Response) => {
        WHERE i.user_id = $1 ${dateFilter}
        GROUP BY ROLLUP(outcome)
        ORDER BY outcome NULLS FIRST`,
-      params
+      params,
     );
 
     const stats = result.rows;
-    const summary = stats.find(s => s.outcome === null) || { 
-      total_interactions: 0, 
-      unique_leads_contacted: 0, 
-      active_days: 0 
+    const summary = stats.find((s) => s.outcome === null) || {
+      total_interactions: 0,
+      unique_leads_contacted: 0,
+      active_days: 0,
     };
-    
+
     const outcomeBreakdown = stats
-      .filter(s => s.outcome !== null)
-      .map(s => ({
+      .filter((s) => s.outcome !== null)
+      .map((s) => ({
         outcome: s.outcome,
-        count: parseInt(s.outcome_count)
+        count: parseInt(s.outcome_count),
       }));
 
     res.json({
       totalInteractions: parseInt(summary.total_interactions),
       uniqueLeadsContacted: parseInt(summary.unique_leads_contacted),
       activeDays: parseInt(summary.active_days),
-      outcomeBreakdown
+      outcomeBreakdown,
     });
-  } catch (error) {
-    console.error('Get rep stats error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
+  },
+);

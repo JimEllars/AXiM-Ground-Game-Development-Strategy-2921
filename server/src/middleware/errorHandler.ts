@@ -29,6 +29,7 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
     status: 'error',
     statusCode: error.statusCode,
     message: error.isOperational ? error.message : 'An unexpected error occurred.',
+    error: error.isOperational ? error.message : 'An unexpected error occurred.',
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 };

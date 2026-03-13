@@ -110,16 +110,15 @@ describe('usersController', () => {
       expect(queryCall[1]).toEqual(['org1', 'ADMIN', false]);
     });
 
-    it('should return 500 on database error', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      mockQuery.mockRejectedValueOnce(new Error('Database error'));
+    it('should pass error to next on database error', async () => {
+      const error = new Error('Database error');
+      mockQuery.mockRejectedValueOnce(error);
+      const next = jest.fn();
 
-      await getUsers(req, res);
+      await getUsers(req, res, next);
 
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Internal server error' });
-
-      consoleErrorSpy.mockRestore();
+      expect(next).toHaveBeenCalledWith(error);
+      expect(res.status).not.toHaveBeenCalled();
     });
   });
 });

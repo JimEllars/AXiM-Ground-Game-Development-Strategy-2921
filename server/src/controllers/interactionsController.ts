@@ -1,23 +1,26 @@
-import { Response } from 'express';
-import { pool } from '../config/database.js';
-import { AuthRequest } from '../types/index.js';
+import { Response } from "express";
+import { pool } from "../config/database.js";
+import { AuthRequest } from "../types/index.js";
+import catchAsync from "../utils/catchAsync.js";
 
-export const createInteractions = async (req: AuthRequest, res: Response) => {
-  try {
+export const createInteractions = catchAsync(
+  async (req: AuthRequest, res: Response) => {
     const user = req.user!;
     const interactions = req.body;
 
     if (!Array.isArray(interactions) || interactions.length === 0) {
-      return res.status(400).json({ error: 'Array of interactions is required' });
+      return res
+        .status(400)
+        .json({ error: "Array of interactions is required" });
     }
 
     // Validate each interaction
-    const validInteractions = interactions.filter(interaction => {
+    const validInteractions = interactions.filter((interaction) => {
       return interaction.leadId && interaction.outcome;
     });
 
     if (validInteractions.length === 0) {
-      return res.status(400).json({ error: 'No valid interactions provided' });
+      return res.status(400).json({ error: "No valid interactions provided" });
     }
 
     // Batch insert interactions using UNNEST for optimal performance
@@ -34,9 +37,11 @@ export const createInteractions = async (req: AuthRequest, res: Response) => {
       outcomesArr.push(interaction.outcome);
       notesArr.push(interaction.notes || null);
       datesArr.push(interaction.interactionDate || new Date());
-      locationsArr.push(interaction.location
-        ? `POINT(${interaction.location.longitude} ${interaction.location.latitude})`
-        : null);
+      locationsArr.push(
+        interaction.location
+          ? `POINT(${interaction.location.longitude} ${interaction.location.latitude})`
+          : null,
+      );
     }
 
     const results = await pool.query(
@@ -55,7 +60,7 @@ export const createInteractions = async (req: AuthRequest, res: Response) => {
          $6::text[]
        ) AS t(lead_id, user_id, outcome, notes, interaction_date, loc)
        RETURNING id, interaction_date`,
-       [leadIdsArr, userIdsArr, outcomesArr, notesArr, datesArr, locationsArr]
+      [leadIdsArr, userIdsArr, outcomesArr, notesArr, datesArr, locationsArr],
     );
 
     // Update lead status based on interaction outcome
@@ -64,26 +69,26 @@ export const createInteractions = async (req: AuthRequest, res: Response) => {
     let paramCount = 1;
 
     validInteractions.forEach((interaction) => {
-      let newStatus = 'Contacted';
-      
+      let newStatus = "Contacted";
+
       // Map outcomes to statuses
       switch (interaction.outcome.toLowerCase()) {
-        case 'interested':
-        case 'follow-up required':
-          newStatus = 'Hot Lead';
+        case "interested":
+        case "follow-up required":
+          newStatus = "Hot Lead";
           break;
-        case 'not interested':
-          newStatus = 'Not Interested';
+        case "not interested":
+          newStatus = "Not Interested";
           break;
-        case 'not home':
-          newStatus = 'Not Home';
+        case "not home":
+          newStatus = "Not Home";
           break;
-        case 'completed':
-        case 'sold':
-          newStatus = 'Completed';
+        case "completed":
+        case "sold":
+          newStatus = "Completed";
           break;
         default:
-          newStatus = 'Contacted';
+          newStatus = "Contacted";
       }
 
       updateValues.push(`($${paramCount}::uuid, $${paramCount + 1}::varchar)`);
@@ -95,32 +100,29 @@ export const createInteractions = async (req: AuthRequest, res: Response) => {
       await pool.query(
         `UPDATE leads
          SET status = v.status, updated_at = CURRENT_TIMESTAMP
-         FROM (VALUES ${updateValues.join(', ')}) AS v(id, status)
+         FROM (VALUES ${updateValues.join(", ")}) AS v(id, status)
          WHERE leads.id = v.id`,
-        updateParams
+        updateParams,
       );
     }
 
     res.json({
-      message: 'Interactions created successfully',
+      message: "Interactions created successfully",
       count: results.rows.length,
-      interactions: results.rows.map(row => ({
+      interactions: results.rows.map((row) => ({
         id: row.id,
-        interactionDate: row.interaction_date
-      }))
+        interactionDate: row.interaction_date,
+      })),
     });
-  } catch (error) {
-    console.error('Create interactions error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
+  },
+);
 
-export const getInteractions = async (req: AuthRequest, res: Response) => {
-  try {
+export const getInteractions = catchAsync(
+  async (req: AuthRequest, res: Response) => {
     const user = req.user!;
     const { leadId, startDate, endDate, page = 1, limit = 50 } = req.query;
 
-    let whereClause = 'WHERE i.user_id = $1';
+    let whereClause = "WHERE i.user_id = $1";
     const params: any[] = [user.id];
     let paramIndex = 2;
 
@@ -162,23 +164,26 @@ export const getInteractions = async (req: AuthRequest, res: Response) => {
        ${whereClause}
        ORDER BY i.interaction_date DESC
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      [...params, Number(limit), offset]
+      [...params, Number(limit), offset],
     );
 
     const countResult = await pool.query(
       `SELECT COUNT(*) FROM interactions i ${whereClause}`,
-      params
+      params,
     );
 
-    const interactions = result.rows.map(row => ({
+    const interactions = result.rows.map((row) => ({
       id: row.id,
       outcome: row.outcome,
       notes: row.notes,
       interactionDate: row.interaction_date,
-      location: row.longitude && row.latitude ? {
-        type: 'Point' as const,
-        coordinates: [row.longitude, row.latitude]
-      } : null,
+      location:
+        row.longitude && row.latitude
+          ? {
+              type: "Point" as const,
+              coordinates: [row.longitude, row.latitude],
+            }
+          : null,
       syncedAt: row.synced_at,
       lead: {
         firstName: row.first_name,
@@ -186,8 +191,8 @@ export const getInteractions = async (req: AuthRequest, res: Response) => {
         streetAddress: row.street_address,
         city: row.city,
         state: row.state,
-        zip: row.zip
-      }
+        zip: row.zip,
+      },
     }));
 
     res.json({
@@ -196,11 +201,8 @@ export const getInteractions = async (req: AuthRequest, res: Response) => {
         page: Number(page),
         limit: Number(limit),
         total: Number(countResult.rows[0].count),
-        pages: Math.ceil(Number(countResult.rows[0].count) / Number(limit))
-      }
+        pages: Math.ceil(Number(countResult.rows[0].count) / Number(limit)),
+      },
     });
-  } catch (error) {
-    console.error('Get interactions error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
+  },
+);
