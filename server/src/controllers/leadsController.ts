@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { pool } from '../config/database.js';
 import { AuthRequest } from '../types/index.js';
 import { leadSchema } from '../utils/validationSchemas.js';
-import { geocodeAddress, batchGeocode } from '../services/geocoding.js';
+import { batchGeocode } from '../services/geocoding.js';
 import { syncLeadToCore } from '../services/aximService.js';
 import Papa from 'papaparse';
 import multer from 'multer';
