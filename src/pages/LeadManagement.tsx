@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
     import {
       Box,
       Typography,
@@ -64,6 +64,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
       const [isDetailsOpen, setDetailsOpen] = useState(false);
       const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
   const [order, setOrder] = useState<'asc' | 'desc'>('asc');
   const [orderBy, setOrderBy] = useState('createdAt');
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -359,7 +360,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
                         </TableRow>
                       ) : (
                         leads.map((lead) => {
-                          const isSelected = selected.indexOf(lead.id) !== -1;
+                          const isSelected = selectedSet.has(lead.id);
                           return (
                             <TableRow key={lead.id} hover selected={isSelected}>
                               <TableCell padding="checkbox">
