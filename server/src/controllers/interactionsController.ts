@@ -24,24 +24,24 @@ export const createInteractions = catchAsync(
     }
 
     // Batch insert interactions using UNNEST for optimal performance
-    const leadIdsArr: string[] = [];
-    const userIdsArr: string[] = [];
-    const outcomesArr: string[] = [];
-    const notesArr: (string | null)[] = [];
-    const datesArr: Date[] = [];
-    const locationsArr: (string | null)[] = [];
+    const len = validInteractions.length;
+    const leadIdsArr: string[] = new Array(len);
+    const userIdsArr: string[] = new Array(len);
+    const outcomesArr: string[] = new Array(len);
+    const notesArr: (string | null)[] = new Array(len);
+    const datesArr: Date[] = new Array(len);
+    const locationsArr: (string | null)[] = new Array(len);
 
-    for (const interaction of validInteractions) {
-      leadIdsArr.push(interaction.leadId);
-      userIdsArr.push(user.id);
-      outcomesArr.push(interaction.outcome);
-      notesArr.push(interaction.notes || null);
-      datesArr.push(interaction.interactionDate || new Date());
-      locationsArr.push(
-        interaction.location
-          ? `POINT(${interaction.location.longitude} ${interaction.location.latitude})`
-          : null,
-      );
+    for (let i = 0; i < len; i++) {
+      const interaction = validInteractions[i];
+      leadIdsArr[i] = interaction.leadId;
+      userIdsArr[i] = user.id;
+      outcomesArr[i] = interaction.outcome;
+      notesArr[i] = interaction.notes || null;
+      datesArr[i] = interaction.interactionDate || new Date();
+      locationsArr[i] = interaction.location
+        ? `POINT(${interaction.location.longitude} ${interaction.location.latitude})`
+        : null;
     }
 
     const results = await pool.query(
@@ -64,11 +64,11 @@ export const createInteractions = catchAsync(
     );
 
     // Update lead status based on interaction outcome
-    const updateValues: string[] = [];
-    const updateParams: any[] = [];
-    let paramCount = 1;
+    const updateValues: string[] = new Array(len);
+    const updateParams: any[] = new Array(len * 2);
 
-    validInteractions.forEach((interaction) => {
+    for (let i = 0; i < len; i++) {
+      const interaction = validInteractions[i];
       let newStatus = "Contacted";
 
       // Map outcomes to statuses
@@ -91,12 +91,13 @@ export const createInteractions = catchAsync(
           newStatus = "Contacted";
       }
 
-      updateValues.push(`($${paramCount}::uuid, $${paramCount + 1}::varchar)`);
-      updateParams.push(interaction.leadId, newStatus);
-      paramCount += 2;
-    });
+      const paramCount = i * 2 + 1;
+      updateValues[i] = `($${paramCount}::uuid, $${paramCount + 1}::varchar)`;
+      updateParams[paramCount - 1] = interaction.leadId;
+      updateParams[paramCount] = newStatus;
+    }
 
-    if (updateValues.length > 0) {
+    if (len > 0) {
       await pool.query(
         `UPDATE leads
          SET status = v.status, updated_at = CURRENT_TIMESTAMP
