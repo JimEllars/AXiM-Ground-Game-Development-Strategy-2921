@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { pool } from '../config/database.js';
 import { User, AuthRequest } from '../types/index.js';
 import AppError from '../utils/AppError.js';
+import catchAsync from '../utils/catchAsync.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -14,8 +15,7 @@ const DEBUG_AUTH = process.env.DEBUG_AUTH === 'true';
 // Dummy hash for mitigating timing attacks during login (cost factor 10)
 const DUMMY_PASSWORD_HASH = '$2b$10$gtWG4BuswmCR1U7EDfH0OeVw9eLnYbweYCQXt7mkxL9vLLi2DipFy';
 
-export const register = async (req: Request, res: Response, next: NextFunction) => {
-  try {
+export const register = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     // Explicitly ignore 'role' from req.body to prevent privilege escalation
     const { email, password, firstName, lastName, organizationId } = req.body;
     const role = 'REP'; // Force default role for public registration
@@ -72,13 +72,9 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         organizationId: user.organization_id,
       }
     });
-  } catch (error) {
-    next(error);
-  }
-};
+});
 
-export const login = async (req: Request, res: Response, next: NextFunction) => {
-  try {
+export const login = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -143,13 +139,9 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         organizationId: user.organization_id,
       }
     });
-  } catch (error) {
-    next(error);
-  }
-};
+});
 
-export const getProfile = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
+export const getProfile = catchAsync(async (req: AuthRequest, res: Response, next: NextFunction) => {
     const decodedUser = req.user;
 
     if (!decodedUser) {
@@ -176,7 +168,4 @@ export const getProfile = async (req: AuthRequest, res: Response, next: NextFunc
       role: freshUser.role,
       organizationId: freshUser.organization_id,
     });
-  } catch (error) {
-    next(error);
-  }
-};
+});

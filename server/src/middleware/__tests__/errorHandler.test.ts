@@ -21,8 +21,8 @@ describe('errorHandler middleware', () => {
       ip: '127.0.0.1'
     };
     mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
+      status: jest.fn().mockReturnThis() as any,
+      json: jest.fn() as any,
     };
     mockNext = jest.fn();
     consoleErrorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
