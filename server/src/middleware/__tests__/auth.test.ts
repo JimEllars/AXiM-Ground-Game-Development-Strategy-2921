@@ -11,8 +11,8 @@ describe('auth middleware - requireRole', () => {
   beforeEach(() => {
     mockReq = {};
     mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
+      status: jest.fn().mockReturnThis() as any,
+      json: jest.fn() as any,
     };
     mockNext = jest.fn();
   });
@@ -22,9 +22,10 @@ describe('auth middleware - requireRole', () => {
 
     middleware(mockReq as AuthRequest, mockRes as Response, mockNext);
 
-    expect(mockRes.status).toHaveBeenCalledWith(401);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: 'Authentication required' });
-    expect(mockNext).not.toHaveBeenCalled();
+    expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Authentication required',
+      statusCode: 401
+    }));
   });
 
   it('should return 403 if user role is not in the allowed roles list', () => {
@@ -33,9 +34,10 @@ describe('auth middleware - requireRole', () => {
 
     middleware(mockReq as AuthRequest, mockRes as Response, mockNext);
 
-    expect(mockRes.status).toHaveBeenCalledWith(403);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: 'Insufficient permissions' });
-    expect(mockNext).not.toHaveBeenCalled();
+    expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Insufficient permissions',
+      statusCode: 403
+    }));
   });
 
   it('should call next() if user role is in the allowed roles list', () => {
@@ -55,9 +57,10 @@ describe('auth middleware - requireRole', () => {
 
     middleware(mockReq as AuthRequest, mockRes as Response, mockNext);
 
-    expect(mockRes.status).toHaveBeenCalledWith(403);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: 'Insufficient permissions' });
-    expect(mockNext).not.toHaveBeenCalled();
+    expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Insufficient permissions',
+      statusCode: 403
+    }));
   });
 
   it('should return 403 if user role is empty or undefined', () => {
@@ -66,8 +69,9 @@ describe('auth middleware - requireRole', () => {
 
     middleware(mockReq as AuthRequest, mockRes as Response, mockNext);
 
-    expect(mockRes.status).toHaveBeenCalledWith(403);
-    expect(mockRes.json).toHaveBeenCalledWith({ error: 'Insufficient permissions' });
-    expect(mockNext).not.toHaveBeenCalled();
+    expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Insufficient permissions',
+      statusCode: 403
+    }));
   });
 });
