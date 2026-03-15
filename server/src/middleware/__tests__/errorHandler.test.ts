@@ -25,7 +25,8 @@ describe('errorHandler middleware', () => {
       json: jest.fn() as any,
     };
     mockNext = jest.fn();
-    consoleErrorMock = jest.spyOn(console, 'error').mockImplementation(() => {});
+    // Use any because @jest/globals types might conflict with spyOn for console
+    consoleErrorMock = jest.spyOn(console as any, 'error').mockImplementation(() => {});
     process.env.NODE_ENV = 'test';
   });
 

@@ -1,14 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import AppError from '../utils/AppError.js';
+import logger from '../utils/logger.js';
 
 const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
 
-  // Log the error for debugging purposes, but not in test environment
-  if (process.env.NODE_ENV !== 'test') {
-    console.error(`${statusCode} - ${message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
-    console.error(err.stack);
+  // Log the error for debugging purposes
+  logger.error(`${statusCode} - ${message} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
+  if (err.stack) {
+    logger.error(err.stack);
   }
 
   // Handle specific error types for better client feedback
