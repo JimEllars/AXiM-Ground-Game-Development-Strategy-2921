@@ -96,7 +96,7 @@ describe('errorHandler middleware', () => {
 
     expect(mockRes.status).toHaveBeenCalledWith(400);
     expect(mockRes.json).toHaveBeenCalledWith({
-      status: 'error',
+      status: 'fail',
       statusCode: 400,
       message: 'Operational error', error: 'Operational error',
     });
@@ -110,7 +110,7 @@ describe('errorHandler middleware', () => {
 
     expect(mockRes.status).toHaveBeenCalledWith(400);
     expect(mockRes.json).toHaveBeenCalledWith({
-      status: 'error',
+      status: 'fail',
       statusCode: 400,
       message: 'Duplicate field value entered.', error: 'Duplicate field value entered.',
     });
@@ -124,7 +124,7 @@ describe('errorHandler middleware', () => {
 
     expect(mockRes.status).toHaveBeenCalledWith(400);
     expect(mockRes.json).toHaveBeenCalledWith({
-      status: 'error',
+      status: 'fail',
       statusCode: 400,
       message: 'Invalid data provided.', error: 'Invalid data provided.',
     });

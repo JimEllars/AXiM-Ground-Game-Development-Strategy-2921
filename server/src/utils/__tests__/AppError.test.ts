@@ -10,6 +10,16 @@ describe('AppError', () => {
     expect(error.statusCode).toBe(statusCode);
   });
 
+  it('should set status to fail for 4xx status codes', () => {
+    const error = new AppError('Bad Request', 400);
+    expect(error.status).toBe('fail');
+  });
+
+  it('should set status to error for 5xx status codes', () => {
+    const error = new AppError('Internal Server Error', 500);
+    expect(error.status).toBe('error');
+  });
+
   it('should be an instance of Error', () => {
     const error = new AppError('Error', 500);
 
