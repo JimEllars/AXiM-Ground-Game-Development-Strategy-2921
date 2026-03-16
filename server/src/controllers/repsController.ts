@@ -132,12 +132,14 @@ export const getRepStats = catchAsync(
     const user = req.user!;
     const { startDate, endDate } = req.query;
 
-    let dateFilter = "";
+    const conditions = ["i.user_id = $1"];
     const params = [user.id];
+    let paramIndex = 2;
 
     if (startDate && endDate) {
-      dateFilter = "AND i.interaction_date BETWEEN $2 AND $3";
+      conditions.push(`i.interaction_date BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
       params.push(startDate as string, endDate as string);
+      paramIndex += 2;
     }
 
     const result = await pool.query(
@@ -148,7 +150,7 @@ export const getRepStats = catchAsync(
          outcome,
          COUNT(*) as outcome_count
        FROM interactions i
-       WHERE i.user_id = $1 ${dateFilter}
+       WHERE ${conditions.join(" AND ")}
        GROUP BY ROLLUP(outcome)
        ORDER BY outcome NULLS FIRST`,
       params,
