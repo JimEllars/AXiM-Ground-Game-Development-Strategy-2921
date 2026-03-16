@@ -27,7 +27,7 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
 
   // Send a user-friendly error response
   res.status(error.statusCode).json({
-    status: 'error',
+    status: error.status || 'error',
     statusCode: error.statusCode,
     message: error.isOperational ? error.message : 'An unexpected error occurred.',
     error: error.isOperational ? error.message : 'An unexpected error occurred.',
