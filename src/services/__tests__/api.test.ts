@@ -62,47 +62,87 @@ describe('API Services', () => {
   });
 
   describe('territoriesAPI', () => {
-    it('create', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: {} });
-      const data = { name: 'Territory', geoJson: {} };
-      await territoriesAPI.create(data);
-      expect(api.post).toHaveBeenCalledWith('/territories', data);
+    describe('success paths', () => {
+      it('create', async () => {
+        (api.post as jest.Mock).mockResolvedValue({ data: {} });
+        const data = { name: 'Territory', geoJson: {} };
+        await territoriesAPI.create(data);
+        expect(api.post).toHaveBeenCalledWith('/territories', data);
+      });
+
+      it('getAll', async () => {
+        (api.get as jest.Mock).mockResolvedValue({ data: {} });
+        await territoriesAPI.getAll();
+        expect(api.get).toHaveBeenCalledWith('/territories');
+      });
+
+      it('delete', async () => {
+        (api.delete as jest.Mock).mockResolvedValue({ data: {} });
+        await territoriesAPI.delete('1');
+        expect(api.delete).toHaveBeenCalledWith('/territories/1');
+      });
+
+      it('assign', async () => {
+        (api.post as jest.Mock).mockResolvedValue({ data: {} });
+        await territoriesAPI.assign('1', '2');
+        expect(api.post).toHaveBeenCalledWith('/territories/1/assign', { userId: '2' });
+      });
+
+      it('getAvailableReps', async () => {
+        (api.get as jest.Mock).mockResolvedValue({ data: {} });
+        await territoriesAPI.getAvailableReps();
+        expect(api.get).toHaveBeenCalledWith('/territories/available-reps');
+      });
+
+      it('getMyTerritories', async () => {
+        (api.get as jest.Mock).mockResolvedValue({ data: {} });
+        await territoriesAPI.getMyTerritories();
+        expect(api.get).toHaveBeenCalledWith('/territories/my-territories');
+      });
+
+      it('getUserTerritories', async () => {
+        (api.get as jest.Mock).mockResolvedValue({ data: {} });
+        await territoriesAPI.getUserTerritories('1');
+        expect(api.get).toHaveBeenCalledWith('/territories/user/1');
+      });
     });
 
-    it('getAll', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await territoriesAPI.getAll();
-      expect(api.get).toHaveBeenCalledWith('/territories');
-    });
+    describe('error paths', () => {
+      it('handles create error', async () => {
+        (api.post as jest.Mock).mockRejectedValue(new Error('Network Error'));
+        const data = { name: 'Territory', geoJson: {} };
+        await expect(territoriesAPI.create(data)).rejects.toThrow('Network Error');
+      });
 
-    it('delete', async () => {
-      (api.delete as jest.Mock).mockResolvedValue({ data: {} });
-      await territoriesAPI.delete('1');
-      expect(api.delete).toHaveBeenCalledWith('/territories/1');
-    });
+      it('handles getAll error', async () => {
+        (api.get as jest.Mock).mockRejectedValue(new Error('Network Error'));
+        await expect(territoriesAPI.getAll()).rejects.toThrow('Network Error');
+      });
 
-    it('assign', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: {} });
-      await territoriesAPI.assign('1', '2');
-      expect(api.post).toHaveBeenCalledWith('/territories/1/assign', { userId: '2' });
-    });
+      it('handles delete error', async () => {
+        (api.delete as jest.Mock).mockRejectedValue(new Error('Not Found'));
+        await expect(territoriesAPI.delete('123')).rejects.toThrow('Not Found');
+      });
 
-    it('getAvailableReps', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await territoriesAPI.getAvailableReps();
-      expect(api.get).toHaveBeenCalledWith('/territories/available-reps');
-    });
+      it('handles assign error', async () => {
+        (api.post as jest.Mock).mockRejectedValue(new Error('Network Error'));
+        await expect(territoriesAPI.assign('123', '456')).rejects.toThrow('Network Error');
+      });
 
-    it('getMyTerritories', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await territoriesAPI.getMyTerritories();
-      expect(api.get).toHaveBeenCalledWith('/territories/my-territories');
-    });
+      it('handles getAvailableReps error', async () => {
+        (api.get as jest.Mock).mockRejectedValue(new Error('Network Error'));
+        await expect(territoriesAPI.getAvailableReps()).rejects.toThrow('Network Error');
+      });
 
-    it('getUserTerritories', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await territoriesAPI.getUserTerritories('1');
-      expect(api.get).toHaveBeenCalledWith('/territories/user/1');
+      it('handles getMyTerritories error', async () => {
+        (api.get as jest.Mock).mockRejectedValue(new Error('Network Error'));
+        await expect(territoriesAPI.getMyTerritories()).rejects.toThrow('Network Error');
+      });
+
+      it('handles getUserTerritories error', async () => {
+        (api.get as jest.Mock).mockRejectedValue(new Error('Network Error'));
+        await expect(territoriesAPI.getUserTerritories('123')).rejects.toThrow('Network Error');
+      });
     });
   });
 
