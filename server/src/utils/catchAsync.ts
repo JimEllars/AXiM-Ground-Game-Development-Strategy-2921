@@ -4,7 +4,11 @@ type AsyncFunction = (req: Request | any, res: Response, next: NextFunction) => 
 
 const catchAsync = (fn: AsyncFunction) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    return fn(req, res, next).catch(next);
+    try {
+      return Promise.resolve(fn(req, res, next)).catch(next);
+    } catch (err) {
+      return next(err);
+    }
   };
 };
 

@@ -33,4 +33,17 @@ describe('catchAsync', () => {
     expect(mockAsyncFunction).toHaveBeenCalledWith(mockReq, mockRes, mockNext);
     expect(mockNext).toHaveBeenCalledWith(testError);
   });
+
+  it('should call next with the error if the function throws synchronously', async () => {
+    const testError = new Error('Synchronous error');
+    const mockSyncFunction = jest.fn().mockImplementation(() => {
+      throw testError;
+    });
+    const wrappedFunction = catchAsync(mockSyncFunction as any);
+
+    await wrappedFunction(mockReq as Request, mockRes as Response, mockNext);
+
+    expect(mockSyncFunction).toHaveBeenCalledWith(mockReq, mockRes, mockNext);
+    expect(mockNext).toHaveBeenCalledWith(testError);
+  });
 });
