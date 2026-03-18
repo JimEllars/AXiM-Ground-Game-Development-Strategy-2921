@@ -123,21 +123,23 @@ export const getInteractions = catchAsync(
     const user = req.user!;
     const { leadId, startDate, endDate, page = 1, limit = 50 } = req.query;
 
-    let whereClause = "WHERE i.user_id = $1";
+    const conditions: string[] = ["i.user_id = $1"];
     const params: any[] = [user.id];
     let paramIndex = 2;
 
     if (leadId) {
-      whereClause += ` AND i.lead_id = $${paramIndex}`;
+      conditions.push(`i.lead_id = $${paramIndex}`);
       params.push(leadId);
       paramIndex++;
     }
 
     if (startDate && endDate) {
-      whereClause += ` AND i.interaction_date BETWEEN $${paramIndex} AND $${paramIndex + 1}`;
+      conditions.push(`i.interaction_date BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
       params.push(startDate, endDate);
       paramIndex += 2;
     }
+
+    const whereClause = `WHERE ${conditions.join(' AND ')}`;
 
     const offset = (Number(page) - 1) * Number(limit);
 
