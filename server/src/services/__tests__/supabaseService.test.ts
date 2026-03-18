@@ -6,7 +6,7 @@ jest.unstable_mockModule('@supabase/supabase-js', () => ({
   createClient: mockCreateClient,
 }));
 
-describe('supabaseService', () => {
+describe('supabaseService client initialization', () => {
   const originalEnv = process.env;
   let originalConsoleWarn: any;
 
@@ -32,7 +32,7 @@ describe('supabaseService', () => {
     process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
     delete process.env.SUPABASE_ANON_KEY;
 
-    mockCreateClient.mockReturnValueOnce({ mockClient: true });
+    mockCreateClient.mockReturnValueOnce({ mockClient: 'service_role' });
 
     const module = await import('../supabaseService.js');
 
@@ -40,7 +40,7 @@ describe('supabaseService', () => {
       'http://test-supabase-url.com',
       'test-service-role-key'
     );
-    expect(module.supabase).toEqual({ mockClient: true });
+    expect(module.supabase).toEqual({ mockClient: 'service_role' });
     expect(console.warn).not.toHaveBeenCalled();
   });
 
@@ -49,7 +49,7 @@ describe('supabaseService', () => {
     delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     process.env.SUPABASE_ANON_KEY = 'test-anon-key';
 
-    mockCreateClient.mockReturnValueOnce({ mockClient: true });
+    mockCreateClient.mockReturnValueOnce({ mockClient: 'anon' });
 
     const module = await import('../supabaseService.js');
 
@@ -57,7 +57,7 @@ describe('supabaseService', () => {
       'http://test-supabase-url.com',
       'test-anon-key'
     );
-    expect(module.supabase).toEqual({ mockClient: true });
+    expect(module.supabase).toEqual({ mockClient: 'anon' });
     expect(console.warn).not.toHaveBeenCalled();
   });
 
@@ -100,5 +100,22 @@ describe('supabaseService', () => {
     expect(console.warn).toHaveBeenCalledWith(
       'Supabase credentials not found. Supabase service will not be initialized.'
     );
+  });
+
+  it('should fallback to SUPABASE_ANON_KEY if SUPABASE_SERVICE_ROLE_KEY is not provided', async () => {
+    process.env.SUPABASE_URL = 'http://test-supabase-url.com';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = '';
+    process.env.SUPABASE_ANON_KEY = 'test-anon-key';
+
+    mockCreateClient.mockReturnValueOnce({ mockClient: 'anon' });
+
+    const module = await import('../supabaseService.js');
+
+    expect(mockCreateClient).toHaveBeenCalledWith(
+      'http://test-supabase-url.com',
+      'test-anon-key'
+    );
+    expect(module.supabase).toEqual({ mockClient: 'anon' });
+    expect(console.warn).not.toHaveBeenCalled();
   });
 });
