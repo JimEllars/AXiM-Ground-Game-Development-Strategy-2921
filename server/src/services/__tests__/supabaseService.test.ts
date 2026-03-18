@@ -87,4 +87,18 @@ describe('supabaseService', () => {
       'Supabase credentials not found. Supabase service will not be initialized.'
     );
   });
+
+  it('should warn and export null when SUPABASE_URL and both keys are missing', async () => {
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    delete process.env.SUPABASE_ANON_KEY;
+
+    const module = await import('../supabaseService.js');
+
+    expect(mockCreateClient).not.toHaveBeenCalled();
+    expect(module.supabase).toBeNull();
+    expect(console.warn).toHaveBeenCalledWith(
+      'Supabase credentials not found. Supabase service will not be initialized.'
+    );
+  });
 });
