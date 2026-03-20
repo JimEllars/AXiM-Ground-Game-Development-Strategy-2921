@@ -64,46 +64,60 @@ describe('API Services', () => {
   describe('territoriesAPI', () => {
     describe('success paths', () => {
       it('create', async () => {
-        (api.post as jest.Mock).mockResolvedValue({ data: {} });
+        const mockResponse = { data: { id: 't1' } };
+        (api.post as jest.Mock).mockResolvedValue(mockResponse);
         const data = { name: 'Territory', geoJson: {} };
-        await territoriesAPI.create(data);
+        const result = await territoriesAPI.create(data);
         expect(api.post).toHaveBeenCalledWith('/territories', data);
+        expect(result).toEqual(mockResponse);
       });
 
       it('getAll', async () => {
-        (api.get as jest.Mock).mockResolvedValue({ data: {} });
-        await territoriesAPI.getAll();
+        const mockResponse = { data: [{ id: 't1' }] };
+        (api.get as jest.Mock).mockResolvedValue(mockResponse);
+        const result = await territoriesAPI.getAll();
         expect(api.get).toHaveBeenCalledWith('/territories');
+        expect(result).toEqual(mockResponse);
       });
 
       it('delete', async () => {
-        (api.delete as jest.Mock).mockResolvedValue({ data: {} });
-        await territoriesAPI.delete('1');
+        const mockResponse = { data: { success: true } };
+        (api.delete as jest.Mock).mockResolvedValue(mockResponse);
+        const result = await territoriesAPI.delete('1');
         expect(api.delete).toHaveBeenCalledWith('/territories/1');
+        expect(result).toEqual(mockResponse);
       });
 
       it('assign', async () => {
-        (api.post as jest.Mock).mockResolvedValue({ data: {} });
-        await territoriesAPI.assign('1', '2');
+        const mockResponse = { data: { success: true } };
+        (api.post as jest.Mock).mockResolvedValue(mockResponse);
+        const result = await territoriesAPI.assign('1', '2');
         expect(api.post).toHaveBeenCalledWith('/territories/1/assign', { userId: '2' });
+        expect(result).toEqual(mockResponse);
       });
 
       it('getAvailableReps', async () => {
-        (api.get as jest.Mock).mockResolvedValue({ data: {} });
-        await territoriesAPI.getAvailableReps();
+        const mockResponse = { data: [{ id: 'r1' }] };
+        (api.get as jest.Mock).mockResolvedValue(mockResponse);
+        const result = await territoriesAPI.getAvailableReps();
         expect(api.get).toHaveBeenCalledWith('/territories/available-reps');
+        expect(result).toEqual(mockResponse);
       });
 
       it('getMyTerritories', async () => {
-        (api.get as jest.Mock).mockResolvedValue({ data: {} });
-        await territoriesAPI.getMyTerritories();
+        const mockResponse = { data: [{ id: 't1' }] };
+        (api.get as jest.Mock).mockResolvedValue(mockResponse);
+        const result = await territoriesAPI.getMyTerritories();
         expect(api.get).toHaveBeenCalledWith('/territories/my-territories');
+        expect(result).toEqual(mockResponse);
       });
 
       it('getUserTerritories', async () => {
-        (api.get as jest.Mock).mockResolvedValue({ data: {} });
-        await territoriesAPI.getUserTerritories('1');
+        const mockResponse = { data: [{ id: 't2' }] };
+        (api.get as jest.Mock).mockResolvedValue(mockResponse);
+        const result = await territoriesAPI.getUserTerritories('1');
         expect(api.get).toHaveBeenCalledWith('/territories/user/1');
+        expect(result).toEqual(mockResponse);
       });
     });
 
