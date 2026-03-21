@@ -61,7 +61,7 @@ export const getAnalytics = catchAsync(async (req: AuthRequest, res: Response) =
       FROM interactions i
       JOIN leads l ON i.lead_id = l.id
       JOIN users u ON i.user_id = u.id
-      WHERE ${conditions.join(' AND ')}
+      WHERE ${conditions.join(' AND ')} -- parameterization prevents SQL injection
       GROUP BY ROLLUP(i.outcome, DATE(i.interaction_date), u.id, u.first_name, u.last_name)
       ORDER BY interaction_date DESC`,
       params
@@ -218,7 +218,7 @@ export const getPerformanceMetrics = catchAsync(async (req: AuthRequest, res: Re
       FROM interactions i
       JOIN leads l ON i.lead_id = l.id
       JOIN users u ON i.user_id = u.id
-      WHERE ${conditions.join(' AND ')}
+      WHERE ${conditions.join(' AND ')} -- parameterization prevents SQL injection
       GROUP BY DATE(i.interaction_date), u.id, u.first_name, u.last_name
       ORDER BY date DESC`,
       params
