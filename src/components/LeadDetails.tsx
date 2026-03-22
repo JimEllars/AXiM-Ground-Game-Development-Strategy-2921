@@ -52,7 +52,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Parse location using robust utility
+  // Fix location parsing: backend returns { type: 'Point', coordinates: [lon, lat] }
+  // or sometimes { x: ..., y: ... } depending on legacy code, but we know it's GeoJSON now.
+  // We use the centralized parseLeadLocation utility to handle both robustly.
   const parsedLocation = parseLeadLocation(lead?.location);
   const longitude = parsedLocation?.longitude ?? null;
   const latitude = parsedLocation?.latitude ?? null;
