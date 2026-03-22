@@ -73,16 +73,6 @@ export const updateTeam = catchAsync(
 
     const { name, description } = validation.data;
 
-    // Check if team exists and belongs to org
-    const teamCheck = await pool.query(
-      "SELECT id FROM teams WHERE id = $1 AND organization_id = $2",
-      [id, user.organization_id],
-    );
-
-    if (teamCheck.rows.length === 0) {
-      return res.status(404).json({ error: "Team not found" });
-    }
-
     const updates: string[] = [];
     const params: any[] = [];
     let paramIndex = 1;
@@ -103,20 +93,25 @@ export const updateTeam = catchAsync(
       return res.status(400).json({ error: "No fields to update" });
     }
 
+    const teamIdParamIndex = paramIndex++;
     params.push(id);
+
+    const orgIdParamIndex = paramIndex++;
+    params.push(user.organization_id);
+
     const result = await pool.query(
-      `UPDATE teams SET ${updates.join(", ")} WHERE id = $${paramIndex} RETURNING *`,
+      `UPDATE teams
+       SET ${updates.join(", ")}
+       WHERE id = $${teamIdParamIndex} AND organization_id = $${orgIdParamIndex}
+       RETURNING *, (SELECT COUNT(*) FROM users WHERE team_id = teams.id) as member_count`,
       params,
     );
 
-    const updatedTeam = result.rows[0];
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Team not found" });
+    }
 
-    // Fetch member count separately or just return the team
-    const countResult = await pool.query(
-      "SELECT COUNT(*) as member_count FROM users WHERE team_id = $1",
-      [id],
-    );
-    const memberCount = parseInt(countResult.rows[0].member_count);
+    const updatedTeam = result.rows[0];
 
     res.json({
       id: updatedTeam.id,
@@ -124,7 +119,7 @@ export const updateTeam = catchAsync(
       description: updatedTeam.description,
       createdAt: updatedTeam.created_at,
       updatedAt: updatedTeam.updated_at,
-      memberCount,
+      memberCount: parseInt(updatedTeam.member_count),
     });
   },
 );
