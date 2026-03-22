@@ -14,15 +14,15 @@ export const parseLeadLocation = (location: any): { longitude: number; latitude:
     if (loc?.type === 'Point' && Array.isArray(loc?.coordinates)) {
       longitude = Number(loc.coordinates[0]);
       latitude = Number(loc.coordinates[1]);
-    } else if (typeof loc?.x === 'number' && typeof loc?.y === 'number') {
+    } else if (loc?.x !== undefined && loc?.x !== null && loc?.y !== undefined && loc?.y !== null) {
       longitude = Number(loc.x);
       latitude = Number(loc.y);
     } else if (Array.isArray(loc?.coordinates) && loc.coordinates.length >= 2) {
       longitude = Number(loc.coordinates[0]);
       latitude = Number(loc.coordinates[1]);
-    } else if (typeof loc?.longitude === 'number' && typeof loc?.latitude === 'number') {
-      longitude = loc.longitude;
-      latitude = loc.latitude;
+    } else if (loc?.longitude !== undefined && loc?.longitude !== null && loc?.latitude !== undefined && loc?.latitude !== null) {
+      longitude = Number(loc.longitude);
+      latitude = Number(loc.latitude);
     }
 
     if (

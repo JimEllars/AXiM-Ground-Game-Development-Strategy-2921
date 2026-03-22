@@ -75,12 +75,18 @@ describe('parseLeadLocation', () => {
         longitude: -122.4194,
         latitude: 37.7749,
       });
-      expect(parseLeadLocation({ x: '-122.4194', y: '37.7749' })).toBeNull();
+      expect(parseLeadLocation({ x: '-122.4194', y: '37.7749' })).toEqual({
+        longitude: -122.4194,
+        latitude: 37.7749,
+      });
       expect(parseLeadLocation({ coordinates: ['-122.4194', '37.7749'] })).toEqual({
         longitude: -122.4194,
         latitude: 37.7749,
       });
-      expect(parseLeadLocation({ longitude: '-122.4194', latitude: '37.7749' })).toBeNull();
+      expect(parseLeadLocation({ longitude: '-122.4194', latitude: '37.7749' })).toEqual({
+        longitude: -122.4194,
+        latitude: 37.7749,
+      });
     });
 
     test('handles invalid coordinate elements', () => {
