@@ -118,4 +118,48 @@ describe('supabaseService client initialization', () => {
     expect(module.supabase).toEqual({ mockClient: 'anon' });
     expect(console.warn).not.toHaveBeenCalled();
   });
+
+  it('should prefer SUPABASE_SERVICE_ROLE_KEY over SUPABASE_ANON_KEY when both are provided', async () => {
+    process.env.SUPABASE_URL = 'http://test-supabase-url.com';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
+    process.env.SUPABASE_ANON_KEY = 'test-anon-key';
+
+    mockCreateClient.mockReturnValueOnce({ mockClient: 'service_role' });
+
+    const module = await import('../supabaseService.js');
+
+    expect(mockCreateClient).toHaveBeenCalledWith(
+      'http://test-supabase-url.com',
+      'test-service-role-key'
+    );
+    expect(module.supabase).toEqual({ mockClient: 'service_role' });
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('should warn and export null when SUPABASE_URL is an empty string', async () => {
+    process.env.SUPABASE_URL = '';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
+
+    const module = await import('../supabaseService.js');
+
+    expect(mockCreateClient).not.toHaveBeenCalled();
+    expect(module.supabase).toBeNull();
+    expect(console.warn).toHaveBeenCalledWith(
+      'Supabase credentials not found. Supabase service will not be initialized.'
+    );
+  });
+
+  it('should warn and export null when both keys are empty strings', async () => {
+    process.env.SUPABASE_URL = 'http://test-supabase-url.com';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = '';
+    process.env.SUPABASE_ANON_KEY = '';
+
+    const module = await import('../supabaseService.js');
+
+    expect(mockCreateClient).not.toHaveBeenCalled();
+    expect(module.supabase).toBeNull();
+    expect(console.warn).toHaveBeenCalledWith(
+      'Supabase credentials not found. Supabase service will not be initialized.'
+    );
+  });
 });
