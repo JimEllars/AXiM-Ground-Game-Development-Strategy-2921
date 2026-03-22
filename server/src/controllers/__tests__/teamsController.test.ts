@@ -18,10 +18,12 @@ describe('teamsController', () => {
   let req: any;
   let res: any;
   let getTeams: any;
+  let updateTeam: any;
 
   beforeAll(async () => {
     const controller = await import('../teamsController.js');
     getTeams = controller.getTeams;
+    updateTeam = controller.updateTeam;
   });
 
   beforeEach(() => {
@@ -94,6 +96,61 @@ describe('teamsController', () => {
 
       expect(next).toHaveBeenCalledWith(error);
       expect(res.status).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateTeam', () => {
+    it('should update a team and return it with member count', async () => {
+      req.params = { id: 'team1' };
+      req.body = { name: 'New Name', description: 'New Desc' };
+
+      const mockUpdatedTeam = {
+        id: 'team1',
+        name: 'New Name',
+        description: 'New Desc',
+        created_at: new Date(),
+        updated_at: new Date(),
+        member_count: '5'
+      };
+
+      mockQuery.mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [mockUpdatedTeam]
+      } as any);
+
+      await updateTeam(req, res);
+
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+      const queryCall = mockQuery.mock.calls[0];
+      expect(queryCall[0]).toContain('UPDATE teams');
+      expect(queryCall[0]).toContain('RETURNING *, (SELECT COUNT(*) FROM users WHERE team_id = teams.id) as member_count');
+
+      // params: [name, description, id, org_id]
+      expect(queryCall[1]).toEqual(['New Name', 'New Desc', 'team1', 'org1']);
+
+      expect(res.json).toHaveBeenCalledWith({
+        id: 'team1',
+        name: 'New Name',
+        description: 'New Desc',
+        createdAt: mockUpdatedTeam.created_at,
+        updatedAt: mockUpdatedTeam.updated_at,
+        memberCount: 5
+      });
+    });
+
+    it('should return 404 if team not found or not in org', async () => {
+      req.params = { id: 'nonexistent' };
+      req.body = { name: 'New Name' };
+
+      mockQuery.mockResolvedValueOnce({
+        rowCount: 0,
+        rows: []
+      } as any);
+
+      await updateTeam(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Team not found' });
     });
   });
 });
