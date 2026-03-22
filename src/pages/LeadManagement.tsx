@@ -37,6 +37,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
     import LeadDetails from '@/components/LeadDetails';
     import { leadsAPI } from '@/services/api';
     import { Lead } from '@/types';
+    import { parseLeadLocation } from '@/common/locationUtils';
 
     interface TabPanelProps {
       children?: React.ReactNode;
@@ -361,6 +362,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
                       ) : (
                         leads.map((lead) => {
                           const isSelected = selectedSet.has(lead.id);
+                          const parsedLocation = parseLeadLocation(lead.location);
                           return (
                             <TableRow key={lead.id} hover selected={isSelected}>
                               <TableCell padding="checkbox">
@@ -399,10 +401,10 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
                               </TableCell>
                               <TableCell>
                                 <Chip
-                                  label={lead.location ? 'Geocoded' : 'No Location'}
+                                  label={parsedLocation ? 'Geocoded' : 'No Location'}
                                   size="small"
                                   variant="outlined"
-                                  color={lead.location ? 'success' : 'default'}
+                                  color={parsedLocation ? 'success' : 'default'}
                                 />
                               </TableCell>
                               <TableCell>
