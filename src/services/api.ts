@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { config } from '../config';
+import logger from '../utils/logger';
 
 // Handle potentially undefined import.meta.env in test environment
 const API_BASE_URL = config.apiBaseUrl || '/api';
@@ -27,7 +28,7 @@ api.interceptors.response.use(
   (error) => {
     // Check if it's a genuine 401 error
     if (error.response && error.response.status === 401) {
-      console.error('Authentication Error: Redirecting to login.');
+      logger.error('Authentication Error: Redirecting to login.');
       localStorage.removeItem('token');
       // Use location.assign for a cleaner redirect
       if (window.location.pathname !== '/login') {

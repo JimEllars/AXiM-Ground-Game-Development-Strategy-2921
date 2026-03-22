@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
     import { Box, Typography, Button, Paper } from '@mui/material';
     import { FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
     import SafeIcon from '@/common/SafeIcon';
+    import logger from '@/utils/logger';
 
     interface Props {
       children: ReactNode;
@@ -22,7 +23,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
       }
 
       public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        console.error('Uncaught error:', error, errorInfo);
+        logger.error('Uncaught error:', error, errorInfo);
       }
 
       private handleReset = () => {

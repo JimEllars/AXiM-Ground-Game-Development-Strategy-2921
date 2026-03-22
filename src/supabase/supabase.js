@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
+import logger from '../utils/logger'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn('Missing Supabase environment variables. Supabase features may not work correctly.');
+  logger.warn('Missing Supabase environment variables. Supabase features may not work correctly.');
 }
 
 const client = (SUPABASE_URL && SUPABASE_ANON_KEY)
