@@ -18,10 +18,14 @@ describe('usersController', () => {
   let req: any;
   let res: any;
   let getUsers: any;
+  let createUser: any;
+  let updateUser: any;
 
   beforeAll(async () => {
     const controller = await import('../usersController.js');
     getUsers = controller.getUsers;
+    createUser = controller.createUser;
+    updateUser = controller.updateUser;
   });
 
   beforeEach(() => {
@@ -119,6 +123,40 @@ describe('usersController', () => {
 
       expect(next).toHaveBeenCalledWith(error);
       expect(res.status).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createUser', () => {
+    it('should return 400 if role is invalid', async () => {
+      req.body = {
+        email: 'new@example.com',
+        password: 'password123',
+        firstName: 'New',
+        lastName: 'User',
+        role: 'INVALID_ROLE'
+      };
+
+      await createUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid role' });
+    });
+  });
+
+  describe('updateUser', () => {
+    it('should return 400 if role is invalid', async () => {
+      req.params = { userId: 'user1' };
+      req.body = { role: 'INVALID_ROLE' };
+
+      // Mock user belongs to organization check
+      mockQuery.mockResolvedValueOnce({
+        rows: [{ id: 'user1', organization_id: 'org1', role: 'REP' }]
+      } as any);
+
+      await updateUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid role' });
     });
   });
 });
