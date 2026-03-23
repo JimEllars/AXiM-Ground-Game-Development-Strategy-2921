@@ -72,6 +72,12 @@ export const createUser = catchAsync(
         });
     }
 
+    // Validate role
+    const validRoles = ["ADMIN", "MANAGER", "REP"];
+    if (role && !validRoles.includes(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
+
     // Check if user already exists
     const existingUser = await pool.query(
       "SELECT id FROM users WHERE email = $1",
@@ -176,6 +182,10 @@ export const updateUser = catchAsync(
     }
 
     if (role !== undefined) {
+      const validRoles = ["ADMIN", "MANAGER", "REP"];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ error: "Invalid role" });
+      }
       updates.push(`role = $${paramIndex}`);
       params.push(role);
       paramIndex++;
