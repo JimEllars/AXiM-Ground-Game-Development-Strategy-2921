@@ -141,6 +141,36 @@ describe('usersController', () => {
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({ error: 'Invalid role' });
     });
+
+    it('should return 400 if role is empty string', async () => {
+      req.body = {
+        email: 'new@example.com',
+        password: 'password123',
+        firstName: 'New',
+        lastName: 'User',
+        role: ''
+      };
+
+      await createUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid role' });
+    });
+
+    it('should return 400 if role is null', async () => {
+      req.body = {
+        email: 'new@example.com',
+        password: 'password123',
+        firstName: 'New',
+        lastName: 'User',
+        role: null
+      };
+
+      await createUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid role' });
+    });
   });
 
   describe('updateUser', () => {

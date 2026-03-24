@@ -74,7 +74,7 @@ export const createUser = catchAsync(
 
     // Validate role
     const validRoles = ["ADMIN", "MANAGER", "REP"];
-    if (role && !validRoles.includes(role)) {
+    if (!validRoles.includes(role)) {
       return res.status(400).json({ error: "Invalid role" });
     }
 
