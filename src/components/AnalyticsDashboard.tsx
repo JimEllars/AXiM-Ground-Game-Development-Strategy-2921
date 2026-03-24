@@ -36,20 +36,7 @@ import React, { useState, useEffect } from 'react';
     import SafeIcon from '@/common/SafeIcon';
     import StatCard from '@/components/StatCard';
     import { territoriesAPI, leadsAPI, interactionsAPI } from '@/services/api';
-
-    interface TabPanelProps {
-      children?: React.ReactNode;
-      index: number;
-      value: number;
-    }
-
-    function TabPanel({ children, value, index }: TabPanelProps) {
-      return (
-        <div hidden={value !== index}>
-          {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
-        </div>
-      );
-    }
+    import { TabPanel } from './TabPanel';
 
     const COLORS = ['#1976d2', '#388e3c', '#f57c00', '#d32f2f', '#7b1fa2'];
 

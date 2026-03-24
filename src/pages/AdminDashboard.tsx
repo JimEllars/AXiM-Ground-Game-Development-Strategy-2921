@@ -12,22 +12,9 @@ import { analyticsAPI, leadsAPI, territoriesAPI } from '@/services/api';
 import Map, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { parseLeadLocation } from '@/common/locationUtils';
+import { TabPanel } from '@/components/TabPanel';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
-
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel({ children, value, index }: TabPanelProps) {
-  return (
-    <div hidden={value !== index}>
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
-    </div>
-  );
-}
 
 const AdminDashboard: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);

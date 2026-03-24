@@ -38,20 +38,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
     import { leadsAPI } from '@/services/api';
     import { Lead } from '@/types';
     import { parseLeadLocation } from '@/common/locationUtils';
-
-    interface TabPanelProps {
-      children?: React.ReactNode;
-      index: number;
-      value: number;
-    }
-
-    function TabPanel({ children, value, index }: TabPanelProps) {
-      return (
-        <div hidden={value !== index}>
-          {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
-        </div>
-      );
-    }
+    import { TabPanel } from '@/components/TabPanel';
 
     const LeadManagement: React.FC = () => {
       const [tabValue, setTabValue] = useState(0);
