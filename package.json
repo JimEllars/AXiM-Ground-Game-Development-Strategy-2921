@@ -8,7 +8,9 @@
     "build": "npm run lint && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "jest",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:serve": "vite build && vite preview --port 5173 --strictPort",
     "test:e2e": "concurrently --kill-others \"npm run server:dev\" \"npm run test:serve\"",
     "e2e": "npm run db:reset && npm run db:seed && start-server-and-test test:e2e 'http://127.0.0.1:3001/health|http://127.0.0.1:5173' 'npx playwright test tests/e2e/basic.spec.ts'",
@@ -50,6 +52,7 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "@vitest/coverage-v8": "^3.0.7",
     "autoprefixer": "^10.4.19",
     "concurrently": "^8.2.2",
     "eslint": "^9.7.0",
@@ -57,6 +60,7 @@
     "eslint-plugin-react-refresh": "0.4.9",
     "globals": "^15.8.0",
     "jest": "^29.7.0",
+    "jsdom": "^26.0.0",
     "jest-environment-jsdom": "^30.2.0",
     "postcss": "^8.4.39",
     "start-server-and-test": "^2.1.2",
@@ -64,6 +68,7 @@
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.3",
-    "vite": "^5.3.3"
+    "vite": "^5.3.3",
+    "vitest": "^3.0.7"
   }
 }
