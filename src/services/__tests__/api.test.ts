@@ -1,299 +1,373 @@
-import axios from 'axios';
-import api, {
-  authAPI,
-  territoriesAPI,
-  leadsAPI,
-  repsAPI,
-  interactionsAPI,
-  analyticsAPI,
-  usersAPI,
-  teamsAPI
-} from '../api';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-jest.mock('../../config', () => ({
+// Mock ../config before importing api.ts
+vi.mock('../config', () => ({
   config: {
     apiBaseUrl: '/api',
   },
 }));
 
-jest.mock('axios', () => {
-  const mAxiosInstance = {
-    get: jest.fn(),
-    post: jest.fn(),
-    put: jest.fn(),
-    delete: jest.fn(),
-    interceptors: {
-      request: { use: jest.fn() },
-      response: { use: jest.fn() },
-    },
-  };
-  return {
-    __esModule: true,
-    default: {
-      create: jest.fn(() => mAxiosInstance),
-    },
-  };
-});
+// Mock axios.create
+const mockAxiosInstance = {
+  get: vi.fn(),
+  post: vi.fn(),
+  put: vi.fn(),
+  delete: vi.fn(),
+  interceptors: {
+    request: { use: vi.fn() },
+    response: { use: vi.fn() },
+  },
+};
+
+vi.mock('axios', () => ({
+  default: {
+    create: vi.fn(() => mockAxiosInstance),
+  },
+}));
 
 describe('API Services', () => {
-  afterEach(() => {
-    jest.clearAllMocks();
+  let authAPI: any;
+  let territoriesAPI: any;
+  let leadsAPI: any;
+  let repsAPI: any;
+  let interactionsAPI: any;
+  let analyticsAPI: any;
+  let usersAPI: any;
+  let teamsAPI: any;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    localStorage.clear();
+
+    // Stub location and assign
+    vi.stubGlobal('location', {
+      pathname: '/',
+      assign: vi.fn(),
+    });
+
+    const module = await import('../api');
+    authAPI = module.authAPI;
+    territoriesAPI = module.territoriesAPI;
+    leadsAPI = module.leadsAPI;
+    repsAPI = module.repsAPI;
+    interactionsAPI = module.interactionsAPI;
+    analyticsAPI = module.analyticsAPI;
+    usersAPI = module.usersAPI;
+    teamsAPI = module.teamsAPI;
+  });
+
+  describe('Interceptors', () => {
+    it('request interceptor adds Authorization header if token exists', async () => {
+      const token = 'test-token';
+      localStorage.setItem('token', token);
+
+      const requestInterceptor = mockAxiosInstance.interceptors.request.use.mock.calls[0][0];
+      const config = { headers: {} } as any;
+      const result = requestInterceptor(config);
+
+      expect(result.headers.Authorization).toBe(`Bearer ${token}`);
+    });
+
+    it('response interceptor handles 401 errors', async () => {
+      localStorage.setItem('token', 'old-token');
+      const responseInterceptorError = mockAxiosInstance.interceptors.response.use.mock.calls[0][1];
+
+      const error = {
+        response: { status: 401 }
+      };
+
+      await expect(responseInterceptorError(error)).rejects.toEqual(error);
+      expect(localStorage.getItem('token')).toBeNull();
+      expect(window.location.assign).toHaveBeenCalledWith('/login');
+    });
+
+    it('response interceptor does not redirect if already on /login', async () => {
+      vi.stubGlobal('location', {
+        pathname: '/login',
+        assign: vi.fn(),
+      });
+
+      const responseInterceptorError = mockAxiosInstance.interceptors.response.use.mock.calls[0][1];
+      const error = {
+        response: { status: 401 }
+      };
+
+      await expect(responseInterceptorError(error)).rejects.toEqual(error);
+      expect(window.location.assign).not.toHaveBeenCalled();
+    });
   });
 
   describe('authAPI', () => {
-    it('login', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: {} });
-      await authAPI.login('test@test.com', 'password');
-      expect(api.post).toHaveBeenCalledWith('/auth/login', { email: 'test@test.com', password: 'password' });
+    it('login success', async () => {
+      const mockResponse = { data: { token: 'tok' } };
+      mockAxiosInstance.post.mockResolvedValue(mockResponse);
+      const result = await authAPI.login('test@test.com', 'password');
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/auth/login', { email: 'test@test.com', password: 'password' });
+      expect(result).toEqual(mockResponse);
     });
 
-    it('register', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: {} });
-      const data = { email: 't', password: 'p', firstName: 'f', lastName: 'l', organizationId: '1' };
-      await authAPI.register(data);
-      expect(api.post).toHaveBeenCalledWith('/auth/register', data);
+    it('login error', async () => {
+      mockAxiosInstance.post.mockRejectedValue(new Error('Invalid credentials'));
+      await expect(authAPI.login('test@test.com', 'wrong')).rejects.toThrow('Invalid credentials');
     });
 
-    it('getProfile', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await authAPI.getProfile();
-      expect(api.get).toHaveBeenCalledWith('/auth/profile');
+    it('register success', async () => {
+      const mockResponse = { data: { success: true } };
+      mockAxiosInstance.post.mockResolvedValue(mockResponse);
+      const data = { email: 't', password: 'p', firstName: 'f', lastName: 'l', organizationId: 'o1' };
+      const result = await authAPI.register(data);
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/auth/register', data);
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('getProfile success', async () => {
+      const mockResponse = { data: { id: 'u1' } };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const result = await authAPI.getProfile();
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/auth/profile');
+      expect(result).toEqual(mockResponse);
     });
   });
 
   describe('territoriesAPI', () => {
-    describe('success paths', () => {
-      it('create', async () => {
-        const mockResponse = { data: { id: 't1' } };
-        (api.post as jest.Mock).mockResolvedValue(mockResponse);
-        const data = { name: 'Territory', geoJson: {} };
-        const result = await territoriesAPI.create(data);
-        expect(api.post).toHaveBeenCalledWith('/territories', data);
-        expect(result).toEqual(mockResponse);
-      });
-
-      it('getAll', async () => {
-        const mockResponse = { data: [{ id: 't1' }] };
-        (api.get as jest.Mock).mockResolvedValue(mockResponse);
-        const result = await territoriesAPI.getAll();
-        expect(api.get).toHaveBeenCalledWith('/territories');
-        expect(result).toEqual(mockResponse);
-      });
-
-      it('delete', async () => {
-        const mockResponse = { data: { success: true } };
-        (api.delete as jest.Mock).mockResolvedValue(mockResponse);
-        const result = await territoriesAPI.delete('1');
-        expect(api.delete).toHaveBeenCalledWith('/territories/1');
-        expect(result).toEqual(mockResponse);
-      });
-
-      it('assign', async () => {
-        const mockResponse = { data: { success: true } };
-        (api.post as jest.Mock).mockResolvedValue(mockResponse);
-        const result = await territoriesAPI.assign('1', '2');
-        expect(api.post).toHaveBeenCalledWith('/territories/1/assign', { userId: '2' });
-        expect(result).toEqual(mockResponse);
-      });
-
-      it('getAvailableReps', async () => {
-        const mockResponse = { data: [{ id: 'r1' }] };
-        (api.get as jest.Mock).mockResolvedValue(mockResponse);
-        const result = await territoriesAPI.getAvailableReps();
-        expect(api.get).toHaveBeenCalledWith('/territories/available-reps');
-        expect(result).toEqual(mockResponse);
-      });
-
-      it('getMyTerritories', async () => {
-        const mockResponse = { data: [{ id: 't1' }] };
-        (api.get as jest.Mock).mockResolvedValue(mockResponse);
-        const result = await territoriesAPI.getMyTerritories();
-        expect(api.get).toHaveBeenCalledWith('/territories/my-territories');
-        expect(result).toEqual(mockResponse);
-      });
-
-      it('getUserTerritories', async () => {
-        const mockResponse = { data: [{ id: 't2' }] };
-        (api.get as jest.Mock).mockResolvedValue(mockResponse);
-        const result = await territoriesAPI.getUserTerritories('1');
-        expect(api.get).toHaveBeenCalledWith('/territories/user/1');
-        expect(result).toEqual(mockResponse);
-      });
+    it('create success', async () => {
+      const mockResponse = { data: { id: 't1' } };
+      mockAxiosInstance.post.mockResolvedValue(mockResponse);
+      const data = { name: 'Territory', geoJson: {} };
+      const result = await territoriesAPI.create(data);
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/territories', data);
+      expect(result).toEqual(mockResponse);
     });
 
-    describe('error paths', () => {
-      it('handles create error', async () => {
-        (api.post as jest.Mock).mockRejectedValue(new Error('Network Error'));
-        const data = { name: 'Territory', geoJson: {} };
-        await expect(territoriesAPI.create(data)).rejects.toThrow('Network Error');
-      });
+    it('getAll success', async () => {
+      const mockResponse = { data: [{ id: 't1' }] };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const result = await territoriesAPI.getAll();
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/territories');
+      expect(result).toEqual(mockResponse);
+    });
 
-      it('handles getAll error', async () => {
-        (api.get as jest.Mock).mockRejectedValue(new Error('Network Error'));
-        await expect(territoriesAPI.getAll()).rejects.toThrow('Network Error');
-      });
+    it('delete success', async () => {
+      mockAxiosInstance.delete.mockResolvedValue({ data: { success: true } });
+      await territoriesAPI.delete('1');
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith('/territories/1');
+    });
 
-      it('handles delete error', async () => {
-        (api.delete as jest.Mock).mockRejectedValue(new Error('Not Found'));
-        await expect(territoriesAPI.delete('123')).rejects.toThrow('Not Found');
-      });
+    it('assign success', async () => {
+      mockAxiosInstance.post.mockResolvedValue({ data: { success: true } });
+      await territoriesAPI.assign('1', '2');
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/territories/1/assign', { userId: '2' });
+    });
 
-      it('handles assign error', async () => {
-        (api.post as jest.Mock).mockRejectedValue(new Error('Network Error'));
-        await expect(territoriesAPI.assign('123', '456')).rejects.toThrow('Network Error');
-      });
+    it('getAvailableReps success', async () => {
+      const mockResponse = { data: [] };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const result = await territoriesAPI.getAvailableReps();
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/territories/available-reps');
+      expect(result).toEqual(mockResponse);
+    });
 
-      it('handles getAvailableReps error', async () => {
-        (api.get as jest.Mock).mockRejectedValue(new Error('Network Error'));
-        await expect(territoriesAPI.getAvailableReps()).rejects.toThrow('Network Error');
-      });
+    it('getMyTerritories success', async () => {
+      const mockResponse = { data: [] };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const result = await territoriesAPI.getMyTerritories();
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/territories/my-territories');
+      expect(result).toEqual(mockResponse);
+    });
 
-      it('handles getMyTerritories error', async () => {
-        (api.get as jest.Mock).mockRejectedValue(new Error('Network Error'));
-        await expect(territoriesAPI.getMyTerritories()).rejects.toThrow('Network Error');
-      });
+    it('getUserTerritories success', async () => {
+      const mockResponse = { data: [] };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const result = await territoriesAPI.getUserTerritories('u1');
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/territories/user/u1');
+      expect(result).toEqual(mockResponse);
+    });
 
-      it('handles getUserTerritories error', async () => {
-        (api.get as jest.Mock).mockRejectedValue(new Error('Network Error'));
-        await expect(territoriesAPI.getUserTerritories('123')).rejects.toThrow('Network Error');
-      });
+    it('handles errors', async () => {
+      mockAxiosInstance.get.mockRejectedValue(new Error('Network Error'));
+      await expect(territoriesAPI.getAll()).rejects.toThrow('Network Error');
     });
   });
 
   describe('leadsAPI', () => {
-    it('upload', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: {} });
-      const file = new File(['content'], 'test.csv', { type: 'text/csv' });
+    it('upload success', async () => {
+      mockAxiosInstance.post.mockResolvedValue({ data: { success: true } });
+      const file = new File([''], 'test.csv');
       await leadsAPI.upload(file);
-      expect(api.post).toHaveBeenCalledWith('/leads/upload', expect.any(FormData), expect.objectContaining({
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/leads/upload', expect.any(FormData), {
         headers: { 'Content-Type': 'multipart/form-data' }
-      }));
+      });
     });
 
-    it('getAll', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await leadsAPI.getAll({ page: 1 });
-      expect(api.get).toHaveBeenCalledWith('/leads', { params: { page: 1 } });
+    it('getAll success', async () => {
+      const mockResponse = { data: [] };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const params = { page: 1, limit: 10 };
+      const result = await leadsAPI.getAll(params);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/leads', { params });
+      expect(result).toEqual(mockResponse);
     });
 
-    it('update', async () => {
-      (api.put as jest.Mock).mockResolvedValue({ data: {} });
-      await leadsAPI.update('123', { status: 'new' });
-      expect(api.put).toHaveBeenCalledWith('/leads/123', { status: 'new' });
+    it('update success', async () => {
+      const mockResponse = { data: { id: '1' } };
+      mockAxiosInstance.put.mockResolvedValue(mockResponse);
+      const result = await leadsAPI.update('1', { status: 'contacted' });
+      expect(mockAxiosInstance.put).toHaveBeenCalledWith('/leads/1', { status: 'contacted' });
+      expect(result).toEqual(mockResponse);
     });
 
-    it('deleteMany', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: {} });
+    it('deleteMany success', async () => {
+      mockAxiosInstance.post.mockResolvedValue({ data: { count: 2 } });
       await leadsAPI.deleteMany(['1', '2']);
-      expect(api.post).toHaveBeenCalledWith('/leads/delete-many', { ids: ['1', '2'] });
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/leads/delete-many', { ids: ['1', '2'] });
+    });
+
+    it('handles errors', async () => {
+      mockAxiosInstance.post.mockRejectedValue(new Error('Operation failed'));
+      await expect(leadsAPI.deleteMany(['1'])).rejects.toThrow('Operation failed');
     });
   });
 
   describe('repsAPI', () => {
-    it('getMyTurf', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await repsAPI.getMyTurf();
-      expect(api.get).toHaveBeenCalledWith('/reps/me/turf');
+    it('getMyTurf success', async () => {
+      const mockResponse = { data: {} };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const result = await repsAPI.getMyTurf();
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/reps/me/turf');
+      expect(result).toEqual(mockResponse);
     });
 
-    it('getStats', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await repsAPI.getStats({ startDate: '2023-01-01' });
-      expect(api.get).toHaveBeenCalledWith('/reps/me/stats', { params: { startDate: '2023-01-01' } });
+    it('getStats success', async () => {
+      const mockResponse = { data: {} };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const params = { startDate: '2023-01-01' };
+      const result = await repsAPI.getStats(params);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/reps/me/stats', { params });
+      expect(result).toEqual(mockResponse);
     });
   });
 
   describe('interactionsAPI', () => {
-    it('create', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: {} });
-      const data = [{ leadId: '1', outcome: 'success' }];
-      await interactionsAPI.create(data);
-      expect(api.post).toHaveBeenCalledWith('/interactions', data);
+    it('create success', async () => {
+      const mockResponse = { data: { success: true } };
+      mockAxiosInstance.post.mockResolvedValue(mockResponse);
+      const data = [{ leadId: '1', outcome: 'contacted' }];
+      const result = await interactionsAPI.create(data);
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/interactions', data);
+      expect(result).toEqual(mockResponse);
     });
 
-    it('getAll', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await interactionsAPI.getAll({ leadId: '1' });
-      expect(api.get).toHaveBeenCalledWith('/interactions', { params: { leadId: '1' } });
+    it('getAll success', async () => {
+      const mockResponse = { data: [] };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const params = { leadId: '1' };
+      const result = await interactionsAPI.getAll(params);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/interactions', { params });
+      expect(result).toEqual(mockResponse);
     });
   });
 
   describe('analyticsAPI', () => {
-    it('getAnalytics', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await analyticsAPI.getAnalytics({ startDate: '2023-01-01' });
-      expect(api.get).toHaveBeenCalledWith('/analytics', { params: { startDate: '2023-01-01' } });
+    it('getAnalytics success', async () => {
+      const mockResponse = { data: {} };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const params = { startDate: '2023-01-01' };
+      const result = await analyticsAPI.getAnalytics(params);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/analytics', { params });
+      expect(result).toEqual(mockResponse);
     });
 
-    it('getPerformance', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await analyticsAPI.getPerformance({ startDate: '2023-01-01' });
-      expect(api.get).toHaveBeenCalledWith('/analytics/performance', { params: { startDate: '2023-01-01' } });
+    it('getPerformance success', async () => {
+      const mockResponse = { data: {} };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const params = { startDate: '2023-01-01' };
+      const result = await analyticsAPI.getPerformance(params);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/analytics/performance', { params });
+      expect(result).toEqual(mockResponse);
     });
   });
 
   describe('usersAPI', () => {
-    it('getUsers', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await usersAPI.getUsers({ role: 'admin' });
-      expect(api.get).toHaveBeenCalledWith('/users', { params: { role: 'admin' } });
+    it('getUsers success', async () => {
+      const mockResponse = { data: [] };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const params = { role: 'rep' };
+      const result = await usersAPI.getUsers(params);
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/users', { params });
+      expect(result).toEqual(mockResponse);
     });
 
-    it('createUser', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: {} });
-      const data = { email: 't', password: 'p', firstName: 'f', lastName: 'l' };
-      await usersAPI.createUser(data);
-      expect(api.post).toHaveBeenCalledWith('/users', data);
+    it('createUser success', async () => {
+      const mockResponse = { data: { id: 'u1' } };
+      mockAxiosInstance.post.mockResolvedValue(mockResponse);
+      const data = { email: 'e', password: 'p', firstName: 'f', lastName: 'l' };
+      const result = await usersAPI.createUser(data);
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/users', data);
+      expect(result).toEqual(mockResponse);
     });
 
-    it('updateUser', async () => {
-      (api.put as jest.Mock).mockResolvedValue({ data: {} });
-      await usersAPI.updateUser('1', { firstName: 'new' });
-      expect(api.put).toHaveBeenCalledWith('/users/1', { firstName: 'new' });
+    it('updateUser success', async () => {
+      const mockResponse = { data: { id: 'u1' } };
+      mockAxiosInstance.put.mockResolvedValue(mockResponse);
+      const data = { firstName: 'new' };
+      const result = await usersAPI.updateUser('u1', data);
+      expect(mockAxiosInstance.put).toHaveBeenCalledWith('/users/u1', data);
+      expect(result).toEqual(mockResponse);
     });
 
-    it('deleteUser', async () => {
-      (api.delete as jest.Mock).mockResolvedValue({ data: {} });
-      await usersAPI.deleteUser('1');
-      expect(api.delete).toHaveBeenCalledWith('/users/1');
+    it('deleteUser success', async () => {
+      mockAxiosInstance.delete.mockResolvedValue({ data: { success: true } });
+      await usersAPI.deleteUser('u1');
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith('/users/u1');
     });
 
-    it('getUserStats', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await usersAPI.getUserStats();
-      expect(api.get).toHaveBeenCalledWith('/users/stats');
+    it('getUserStats success', async () => {
+      const mockResponse = { data: {} };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const result = await usersAPI.getUserStats();
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/users/stats');
+      expect(result).toEqual(mockResponse);
     });
   });
 
   describe('teamsAPI', () => {
-    it('getTeams', async () => {
-      (api.get as jest.Mock).mockResolvedValue({ data: {} });
-      await teamsAPI.getTeams();
-      expect(api.get).toHaveBeenCalledWith('/teams');
+    it('getTeams success', async () => {
+      const mockResponse = { data: [] };
+      mockAxiosInstance.get.mockResolvedValue(mockResponse);
+      const result = await teamsAPI.getTeams();
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/teams');
+      expect(result).toEqual(mockResponse);
     });
 
-    it('createTeam', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: {} });
-      await teamsAPI.createTeam({ name: 'team' });
-      expect(api.post).toHaveBeenCalledWith('/teams', { name: 'team' });
+    it('createTeam success', async () => {
+      const mockResponse = { data: { id: 't1' } };
+      mockAxiosInstance.post.mockResolvedValue(mockResponse);
+      const data = { name: 'team' };
+      const result = await teamsAPI.createTeam(data);
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/teams', data);
+      expect(result).toEqual(mockResponse);
     });
 
-    it('updateTeam', async () => {
-      (api.put as jest.Mock).mockResolvedValue({ data: {} });
-      await teamsAPI.updateTeam('1', { name: 'new name' });
-      expect(api.put).toHaveBeenCalledWith('/teams/1', { name: 'new name' });
+    it('updateTeam success', async () => {
+      const mockResponse = { data: { id: 't1' } };
+      mockAxiosInstance.put.mockResolvedValue(mockResponse);
+      const data = { name: 'new' };
+      const result = await teamsAPI.updateTeam('t1', data);
+      expect(mockAxiosInstance.put).toHaveBeenCalledWith('/teams/t1', data);
+      expect(result).toEqual(mockResponse);
     });
 
-    it('deleteTeam', async () => {
-      (api.delete as jest.Mock).mockResolvedValue({ data: {} });
-      await teamsAPI.deleteTeam('1');
-      expect(api.delete).toHaveBeenCalledWith('/teams/1');
+    it('deleteTeam success', async () => {
+      mockAxiosInstance.delete.mockResolvedValue({ data: { success: true } });
+      await teamsAPI.deleteTeam('t1');
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith('/teams/t1');
     });
 
-    it('assignUser', async () => {
-      (api.post as jest.Mock).mockResolvedValue({ data: {} });
-      await teamsAPI.assignUser('1', '2');
-      expect(api.post).toHaveBeenCalledWith('/teams/1/assign', { userId: '2' });
+    it('assignUser success', async () => {
+      mockAxiosInstance.post.mockResolvedValue({ data: { success: true } });
+      await teamsAPI.assignUser('t1', 'u1');
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/teams/t1/assign', { userId: 'u1' });
     });
   });
 });
