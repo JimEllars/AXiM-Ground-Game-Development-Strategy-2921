@@ -117,5 +117,35 @@ describe('parseLeadLocation', () => {
         latitude: 37.7749,
       });
     });
+
+    describe('Additional edge cases', () => {
+      test('handles empty string coordinates which parse to 0', () => {
+        // Technically Number("") is 0
+        expect(parseLeadLocation({ type: 'Point', coordinates: ['', ''] })).toEqual({
+          longitude: 0,
+          latitude: 0,
+        });
+      });
+
+      test('handles null coordinates elements which parse to 0', () => {
+        expect(parseLeadLocation({ type: 'Point', coordinates: [null, null] })).toEqual({
+          longitude: 0,
+          latitude: 0,
+        });
+      });
+
+      test('handles boolean coordinates which parse to 0 or 1', () => {
+        expect(parseLeadLocation({ type: 'Point', coordinates: [false, true] })).toEqual({
+          longitude: 0,
+          latitude: 1,
+        });
+      });
+
+      test('handles valid zero coordinates', () => {
+        expect(parseLeadLocation({ x: 0, y: 0 })).toEqual({ longitude: 0, latitude: 0 });
+        expect(parseLeadLocation({ coordinates: [0, 0] })).toEqual({ longitude: 0, latitude: 0 });
+        expect(parseLeadLocation({ longitude: 0, latitude: 0 })).toEqual({ longitude: 0, latitude: 0 });
+      });
+    });
   });
 });
