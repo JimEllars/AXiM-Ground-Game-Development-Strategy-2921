@@ -98,52 +98,64 @@ export const getAnalytics = catchAsync(async (req: AuthRequest, res: Response) =
     ? Math.round((leads.completed_leads / leads.total_leads) * 100)
     : 0;
 
-  // Process interaction trends
+  // Process interaction trends, outcomes, and summary metrics in a single pass
   const trendsMap = new Map();
+  const outcomesMap = new Map();
+  let totalInteractions = 0;
+  let uniqueLeadsContacted = 0;
+  const activeDaysSet = new Set();
 
-  interactions.forEach(row => {
-    if (!row.interaction_date || !row.outcome) return;
+  for (let i = 0; i < interactions.length; i++) {
+    const row = interactions[i];
 
-    const dateKey = new Date(row.interaction_date).toISOString().split('T')[0];
-    const count = parseInt(row.outcome_count);
+    if (row.outcome) {
+      const count = parseInt(row.outcome_count);
+      totalInteractions += count;
 
-    if (trendsMap.has(dateKey)) {
-      const existing = trendsMap.get(dateKey);
-      existing.interactions += count;
-      existing.uniqueLeads += 1; // This is simplified - in production, you'd count unique leads properly
-    } else {
-      trendsMap.set(dateKey, {
-        date: dateKey,
-        interactions: count,
-        uniqueLeads: 1
-      });
+      if (row.lead_id) {
+        uniqueLeadsContacted += 1;
+      }
+
+      // Outcomes distribution
+      if (outcomesMap.has(row.outcome)) {
+        outcomesMap.get(row.outcome).value += count;
+      } else {
+        outcomesMap.set(row.outcome, { name: row.outcome, value: count });
+      }
+
+      // Trends map
+      if (row.interaction_date) {
+        const dateKey = row.interaction_date instanceof Date
+          ? row.interaction_date.toISOString().split('T')[0]
+          : new Date(row.interaction_date).toISOString().split('T')[0];
+
+        activeDaysSet.add(dateKey);
+
+        if (trendsMap.has(dateKey)) {
+          const existing = trendsMap.get(dateKey);
+          existing.interactions += count;
+          existing.uniqueLeads += 1;
+        } else {
+          trendsMap.set(dateKey, {
+            date: dateKey,
+            interactions: count,
+            uniqueLeads: 1
+          });
+        }
+      }
+    } else if (row.interaction_date) {
+      const dateKey = row.interaction_date instanceof Date
+        ? row.interaction_date.toISOString().split('T')[0]
+        : new Date(row.interaction_date).toISOString().split('T')[0];
+      activeDaysSet.add(dateKey);
     }
-  });
+  }
 
   const trends = Array.from(trendsMap.values())
     .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  // Process outcomes distribution
-  const outcomesMap = new Map();
-
-  interactions.forEach(row => {
-    if (!row.outcome) return;
-
-    const name = row.outcome;
-    const count = parseInt(row.outcome_count);
-
-    if (outcomesMap.has(name)) {
-      const existing = outcomesMap.get(name);
-      existing.value += count;
-    } else {
-      outcomesMap.set(name, {
-        name: name,
-        value: count
-      });
-    }
-  });
-
   const outcomes = Array.from(outcomesMap.values());
+  const activeDays = activeDaysSet.size;
 
   // Process top performers
   const topPerformers = userStats
@@ -168,11 +180,9 @@ export const getAnalytics = catchAsync(async (req: AuthRequest, res: Response) =
       totalLeads: parseInt(leads.total_leads),
       completedLeads: parseInt(leads.completed_leads),
       geocodedLeads: parseInt(leads.geocoded_leads),
-      totalInteractions: interactions.reduce((sum, row) =>
-        row.outcome ? sum + parseInt(row.outcome_count) : sum, 0),
-      uniqueLeadsContacted: interactions.reduce((sum, row) =>
-        row.outcome && row.lead_id ? sum + 1 : sum, 0),
-      activeDays: new Set(interactions.filter(row => row.interaction_date).map(row => new Date(row.interaction_date).toISOString().split('T')[0])).size,
+      totalInteractions,
+      uniqueLeadsContacted,
+      activeDays,
       completionRate
     },
     trends,
