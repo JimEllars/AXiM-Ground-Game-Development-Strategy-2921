@@ -75,4 +75,23 @@ describe('Interactions Controller', () => {
     expect(hotLeads.length).toEqual(50);
     expect(notHomeLeads.length).toEqual(50);
   });
+
+  it('should reject interactions with non-numeric coordinates (SQL Injection prevention)', async () => {
+    const maliciousInteractions = [{
+      leadId: leadIds[0],
+      outcome: 'interested',
+      location: {
+        longitude: "45.0) ; DROP TABLE leads; --",
+        latitude: 90.0
+      }
+    }];
+
+    const res = await request(app)
+      .post('/api/interactions')
+      .set('Authorization', `Bearer ${token}`)
+      .send(maliciousInteractions);
+
+    expect(res.statusCode).toEqual(400);
+    expect(res.body.error).toContain('Invalid location coordinates provided');
+  });
 });
