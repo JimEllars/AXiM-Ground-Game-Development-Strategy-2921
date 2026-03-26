@@ -23,6 +23,18 @@ export const createInteractions = catchAsync(
       return res.status(400).json({ error: "No valid interactions provided" });
     }
 
+    // Validate location coordinates to prevent SQL injection
+    for (const interaction of validInteractions) {
+      if (interaction.location) {
+        const { longitude, latitude } = interaction.location;
+        if (typeof longitude !== "number" || typeof latitude !== "number" || isNaN(longitude) || isNaN(latitude)) {
+          return res.status(400).json({
+            error: "Invalid location coordinates provided. Longitude and latitude must be numeric.",
+          });
+        }
+      }
+    }
+
     // Batch insert interactions using UNNEST for optimal performance
     const len = validInteractions.length;
     const leadIdsArr: string[] = new Array(len);
