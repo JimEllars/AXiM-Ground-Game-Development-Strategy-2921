@@ -301,6 +301,11 @@ describe('API Services', () => {
       expect(result).toEqual(mockResponse);
     });
 
+    it('getAnalytics handles errors', async () => {
+      mockAxiosInstance.get.mockRejectedValue(new Error('Failed to fetch analytics'));
+      await expect(analyticsAPI.getAnalytics()).rejects.toThrow('Failed to fetch analytics');
+    });
+
     it('getPerformance success', async () => {
       const mockResponse = { data: {} };
       mockAxiosInstance.get.mockResolvedValue(mockResponse);
@@ -308,6 +313,11 @@ describe('API Services', () => {
       const result = await analyticsAPI.getPerformance(params);
       expect(mockAxiosInstance.get).toHaveBeenCalledWith('/analytics/performance', { params });
       expect(result).toEqual(mockResponse);
+    });
+
+    it('getPerformance handles errors', async () => {
+      mockAxiosInstance.get.mockRejectedValue(new Error('Failed to fetch performance data'));
+      await expect(analyticsAPI.getPerformance()).rejects.toThrow('Failed to fetch performance data');
     });
   });
 
