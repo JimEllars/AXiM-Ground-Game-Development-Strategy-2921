@@ -192,12 +192,17 @@ describe('API Services', () => {
 
   describe('leadsAPI', () => {
     it('upload success', async () => {
-      mockAxiosInstance.post.mockResolvedValue({ data: { success: true } });
+      const mockResponse = { data: { success: true } };
+      mockAxiosInstance.post.mockResolvedValue(mockResponse);
       const file = new File([''], 'test.csv');
-      await leadsAPI.upload(file);
+      const result = await leadsAPI.upload(file);
+
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/leads/upload', expect.any(FormData), {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
+      const formDataArg = mockAxiosInstance.post.mock.calls[0][1] as FormData;
+      expect(formDataArg.get('file')).toEqual(file);
+      expect(result).toEqual(mockResponse);
     });
 
     it('getAll success', async () => {
@@ -218,14 +223,32 @@ describe('API Services', () => {
     });
 
     it('deleteMany success', async () => {
-      mockAxiosInstance.post.mockResolvedValue({ data: { count: 2 } });
-      await leadsAPI.deleteMany(['1', '2']);
+      const mockResponse = { data: { count: 2 } };
+      mockAxiosInstance.post.mockResolvedValue(mockResponse);
+      const result = await leadsAPI.deleteMany(['1', '2']);
       expect(mockAxiosInstance.post).toHaveBeenCalledWith('/leads/delete-many', { ids: ['1', '2'] });
+      expect(result).toEqual(mockResponse);
     });
 
     it('handles errors', async () => {
       mockAxiosInstance.post.mockRejectedValue(new Error('Operation failed'));
       await expect(leadsAPI.deleteMany(['1'])).rejects.toThrow('Operation failed');
+    });
+
+    it('upload handles errors', async () => {
+      mockAxiosInstance.post.mockRejectedValue(new Error('Upload failed'));
+      const file = new File([''], 'test.csv');
+      await expect(leadsAPI.upload(file)).rejects.toThrow('Upload failed');
+    });
+
+    it('getAll handles errors', async () => {
+      mockAxiosInstance.get.mockRejectedValue(new Error('Failed to fetch leads'));
+      await expect(leadsAPI.getAll()).rejects.toThrow('Failed to fetch leads');
+    });
+
+    it('update handles errors', async () => {
+      mockAxiosInstance.put.mockRejectedValue(new Error('Update failed'));
+      await expect(leadsAPI.update('1', { status: 'contacted' })).rejects.toThrow('Update failed');
     });
   });
 
