@@ -50,13 +50,3 @@ export interface Lead {
   createdAt: string;
   updatedAt: string;
 }
-
-export interface Team {
-  id: string;
-  name: string;
-  description?: string;
-  organizationId: string;
-  memberCount?: number;
-  createdAt: string;
-  updatedAt: string;
-}
