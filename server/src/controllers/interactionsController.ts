@@ -27,9 +27,15 @@ export const createInteractions = catchAsync(
     for (const interaction of validInteractions) {
       if (interaction.location) {
         const { longitude, latitude } = interaction.location;
-        if (typeof longitude !== "number" || typeof latitude !== "number" || isNaN(longitude) || isNaN(latitude)) {
+        if (
+          typeof longitude !== "number" ||
+          typeof latitude !== "number" ||
+          isNaN(longitude) ||
+          isNaN(latitude)
+        ) {
           return res.status(400).json({
-            error: "Invalid location coordinates provided. Longitude and latitude must be numeric.",
+            error:
+              "Invalid location coordinates provided. Longitude and latitude must be numeric.",
           });
         }
       }
@@ -42,7 +48,8 @@ export const createInteractions = catchAsync(
     const outcomesArr: string[] = new Array(len);
     const notesArr: (string | null)[] = new Array(len);
     const datesArr: Date[] = new Array(len);
-    const locationsArr: (string | null)[] = new Array(len);
+    const lonsArr: (number | null)[] = new Array(len);
+    const latsArr: (number | null)[] = new Array(len);
 
     for (let i = 0; i < len; i++) {
       const interaction = validInteractions[i];
@@ -51,9 +58,8 @@ export const createInteractions = catchAsync(
       outcomesArr[i] = interaction.outcome;
       notesArr[i] = interaction.notes || null;
       datesArr[i] = interaction.interactionDate || new Date();
-      locationsArr[i] = interaction.location
-        ? `POINT(${interaction.location.longitude} ${interaction.location.latitude})`
-        : null;
+      lonsArr[i] = interaction.location ? interaction.location.longitude : null;
+      latsArr[i] = interaction.location ? interaction.location.latitude : null;
     }
 
     const results = await pool.query(
@@ -61,7 +67,7 @@ export const createInteractions = catchAsync(
        (lead_id, user_id, outcome, notes, interaction_date, location, synced_at)
        SELECT
          t.lead_id, t.user_id, t.outcome, t.notes, t.interaction_date,
-         CASE WHEN t.loc IS NOT NULL THEN ST_GeomFromText(t.loc, 4326) ELSE NULL END,
+         CASE WHEN t.lon IS NOT NULL AND t.lat IS NOT NULL THEN ST_SetSRID(ST_MakePoint(t.lon, t.lat), 4326) ELSE NULL END,
          CURRENT_TIMESTAMP
        FROM unnest(
          $1::uuid[],
@@ -69,10 +75,19 @@ export const createInteractions = catchAsync(
          $3::varchar[],
          $4::text[],
          $5::timestamp[],
-         $6::text[]
-       ) AS t(lead_id, user_id, outcome, notes, interaction_date, loc)
+         $6::float8[],
+         $7::float8[]
+       ) AS t(lead_id, user_id, outcome, notes, interaction_date, lon, lat)
        RETURNING id, interaction_date`,
-      [leadIdsArr, userIdsArr, outcomesArr, notesArr, datesArr, locationsArr],
+      [
+        leadIdsArr,
+        userIdsArr,
+        outcomesArr,
+        notesArr,
+        datesArr,
+        lonsArr,
+        latsArr,
+      ],
     );
 
     // Update lead status based on interaction outcome
@@ -146,12 +161,14 @@ export const getInteractions = catchAsync(
     }
 
     if (startDate && endDate) {
-      conditions.push(`i.interaction_date BETWEEN $${paramIndex} AND $${paramIndex + 1}`);
+      conditions.push(
+        `i.interaction_date BETWEEN $${paramIndex} AND $${paramIndex + 1}`,
+      );
       params.push(startDate, endDate);
       paramIndex += 2;
     }
 
-    const whereClause = `WHERE ${conditions.join(' AND ')}`;
+    const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
     const offset = (Number(page) - 1) * Number(limit);
 
