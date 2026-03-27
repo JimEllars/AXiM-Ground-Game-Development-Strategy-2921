@@ -1,30 +1,33 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { vi } from 'vitest';
 import TerritoryManagement from '../TerritoryManagement';
 import { territoriesAPI } from '@/services/api';
 
 // Mock API
-jest.mock('@/services/api', () => ({
+vi.mock('@/services/api', () => ({
   territoriesAPI: {
-    getAll: jest.fn(),
-    getAvailableReps: jest.fn(),
-    delete: jest.fn(),
-    create: jest.fn(),
-    assign: jest.fn(),
+    getAll: vi.fn(),
+    getAvailableReps: vi.fn(),
+    delete: vi.fn(),
+    create: vi.fn(),
+    assign: vi.fn(),
   },
 }));
 
 // Mock TerritoryMap component to expose onDeleteTerritory prop
-jest.mock('@/components/TerritoryMap', () => (props: any) => (
-  <div data-testid="territory-map">
-    <button
-      data-testid="delete-btn"
-      onClick={() => props.onDeleteTerritory(props.territories[0].id)}
-    >
-      Trigger Delete
-    </button>
-  </div>
-));
+vi.mock('@/components/TerritoryMap', () => ({
+  default: (props: any) => (
+    <div data-testid="territory-map">
+      <button
+        data-testid="delete-btn"
+        onClick={() => props.onDeleteTerritory(props.territories[0].id)}
+      >
+        Trigger Delete
+      </button>
+    </div>
+  ),
+}));
 
 describe('TerritoryManagement', () => {
   const mockTerritories = [
@@ -35,14 +38,14 @@ describe('TerritoryManagement', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (territoriesAPI.getAll as jest.Mock).mockResolvedValue({ data: mockTerritories });
-    (territoriesAPI.getAvailableReps as jest.Mock).mockResolvedValue({ data: mockReps });
+    vi.clearAllMocks();
+    (territoriesAPI.getAll as ReturnType<typeof vi.fn>).mockResolvedValue({ data: mockTerritories });
+    (territoriesAPI.getAvailableReps as ReturnType<typeof vi.fn>).mockResolvedValue({ data: mockReps });
   });
 
   it('shows confirmation dialog with correct message on delete', async () => {
     // Mock window.confirm
-    const confirmSpy = jest.spyOn(window, 'confirm');
+    const confirmSpy = vi.spyOn(window, 'confirm');
     confirmSpy.mockImplementation(() => true);
 
     await act(async () => {
@@ -61,6 +64,39 @@ describe('TerritoryManagement', () => {
     );
 
     // Verify API called
+    expect(territoriesAPI.delete).toHaveBeenCalledWith('t1');
+
+    confirmSpy.mockRestore();
+  });
+
+  it('shows error message when territory deletion fails', async () => {
+    // Mock window.confirm to proceed
+    const confirmSpy = vi.spyOn(window, 'confirm');
+    confirmSpy.mockImplementation(() => true);
+
+    // Mock delete API to fail
+    (territoriesAPI.delete as ReturnType<typeof vi.fn>).mockRejectedValue({
+      response: { data: { error: 'Deletion failed' } },
+    });
+
+    await act(async () => {
+      render(<TerritoryManagement />);
+    });
+
+    // Wait for map to appear
+    await waitFor(() => expect(screen.getByTestId('delete-btn')).toBeInTheDocument());
+
+    // Click delete
+    fireEvent.click(screen.getByTestId('delete-btn'));
+
+    // Wait for error message to appear
+    await waitFor(() => {
+      expect(screen.getByText('Deletion failed')).toBeInTheDocument();
+    });
+
+    // Verify confirm was called
+    expect(confirmSpy).toHaveBeenCalled();
+    // Verify API was called
     expect(territoriesAPI.delete).toHaveBeenCalledWith('t1');
 
     confirmSpy.mockRestore();
