@@ -3,23 +3,24 @@ import { render } from '@testing-library/react';
 import TerritoryMap from '../TerritoryMap';
 import { Territory, User } from '@/types';
 import mapboxgl from 'mapbox-gl';
+import { vi } from 'vitest';
 
 // Mock config to avoid import.meta issues
-jest.mock('../../config', () => ({
+vi.mock('../../config', () => ({
   config: {
     mapboxToken: 'mock-token',
   },
 }));
 
 // Create a spy for the Source component
-const SourceSpy = jest.fn(({ children }) => <div>{children}</div>);
+const SourceSpy = vi.fn(({ children }) => <div>{children}</div>);
 
 // Mock react-map-gl
-jest.mock('react-map-gl', () => {
+vi.mock('react-map-gl', () => {
   const React = require('react');
   const MapMock = React.forwardRef((props: any, ref: any) => {
     React.useImperativeHandle(ref, () => ({
-      fitBounds: jest.fn(),
+      fitBounds: vi.fn(),
     }));
     return React.createElement('div', null, props.children);
   });
@@ -38,31 +39,38 @@ jest.mock('react-map-gl', () => {
 });
 
 // Mock mapbox-gl-draw
-jest.mock('@mapbox/mapbox-gl-draw', () => {
-  return jest.fn().mockImplementation(() => ({
-    onAdd: jest.fn(),
-    onRemove: jest.fn(),
-  }));
+vi.mock('@mapbox/mapbox-gl-draw', () => {
+  return {
+    default: vi.fn().mockImplementation(() => ({
+      onAdd: vi.fn(),
+      onRemove: vi.fn(),
+    }))
+  };
 });
 
 // Mock mapbox-gl
-jest.mock('mapbox-gl', () => {
+vi.mock('mapbox-gl', () => {
+  const LngLatBoundsMock = vi.fn().mockImplementation(() => ({
+    extend: vi.fn(),
+    getNorthEast: vi.fn().mockReturnValue({ lat: 0, lng: 0 }),
+    getSouthWest: vi.fn().mockReturnValue({ lat: 0, lng: 0 }),
+  }));
   return {
-    LngLatBounds: jest.fn().mockImplementation(() => ({
-      extend: jest.fn(),
-      getNorthEast: jest.fn().mockReturnValue({ lat: 0, lng: 0 }),
-      getSouthWest: jest.fn().mockReturnValue({ lat: 0, lng: 0 }),
-    })),
-    Map: jest.fn(),
+    default: {
+      LngLatBounds: LngLatBoundsMock,
+      Map: vi.fn(),
+    },
+    LngLatBounds: LngLatBoundsMock,
+    Map: vi.fn(),
   };
 });
 
 // Mock environment variables
-jest.mock('@mui/material', () => {
-  const actual = jest.requireActual('@mui/material');
+vi.mock('@mui/material', async () => {
+  const actual = await vi.importActual('@mui/material');
   return {
-    ...actual,
-    useMediaQuery: jest.fn().mockReturnValue(false), // Desktop view
+    ...actual as any,
+    useMediaQuery: vi.fn().mockReturnValue(false), // Desktop view
   };
 });
 
@@ -90,14 +98,14 @@ describe('TerritoryMap Benchmark', () => {
   const mockReps: User[] = [];
 
   const mockHandlers = {
-    onSaveTerritory: jest.fn(),
-    onDeleteTerritory: jest.fn(),
-    onAssignTerritory: jest.fn(),
+    onSaveTerritory: vi.fn(),
+    onDeleteTerritory: vi.fn(),
+    onAssignTerritory: vi.fn(),
   };
 
   beforeEach(() => {
     SourceSpy.mockClear();
-    (mapboxgl.LngLatBounds as unknown as jest.Mock).mockClear();
+    (mapboxgl.LngLatBounds as unknown as ReturnType<typeof vi.fn>).mockClear();
   });
 
   it('verifies optimization of territoryFeatures and bounds calculation', () => {

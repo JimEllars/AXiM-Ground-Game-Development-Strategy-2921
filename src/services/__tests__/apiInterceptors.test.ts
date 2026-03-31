@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { vi } from 'vitest';
 
-jest.mock('../../config', () => ({
+vi.mock('../../config', () => ({
   config: {
     apiBaseUrl: '/api',
   },
@@ -13,28 +14,28 @@ let responseInterceptorError: any;
 const mAxiosInstance = {
   interceptors: {
     request: {
-      use: jest.fn((req) => {
+      use: vi.fn((req) => {
         requestInterceptor = req;
       }),
     },
     response: {
-      use: jest.fn((resSuccess, resError) => {
+      use: vi.fn((resSuccess, resError) => {
         responseInterceptorSuccess = resSuccess;
         responseInterceptorError = resError;
       }),
     },
   },
-  post: jest.fn(),
-  get: jest.fn(),
-  put: jest.fn(),
-  delete: jest.fn(),
+  post: vi.fn(),
+  get: vi.fn(),
+  put: vi.fn(),
+  delete: vi.fn(),
 };
 
-jest.mock('axios', () => {
+vi.mock('axios', () => {
   return {
     __esModule: true,
     default: {
-      create: jest.fn(() => mAxiosInstance),
+      create: vi.fn(() => mAxiosInstance),
     },
   };
 });
@@ -45,18 +46,18 @@ describe('API Interceptors', () => {
   });
 
   beforeEach(() => {
-    Storage.prototype.getItem = jest.fn();
-    Storage.prototype.removeItem = jest.fn();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    Storage.prototype.getItem = vi.fn();
+    Storage.prototype.removeItem = vi.fn();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('request interceptor should add token if it exists', () => {
     const config = { headers: {} };
-    (Storage.prototype.getItem as jest.Mock).mockReturnValue('test-token');
+    (Storage.prototype.getItem as ReturnType<typeof vi.fn>).mockReturnValue('test-token');
 
     const newConfig = requestInterceptor(config);
 
@@ -66,7 +67,7 @@ describe('API Interceptors', () => {
 
   it('request interceptor should not add token if it does not exist', () => {
     const config = { headers: {} };
-    (Storage.prototype.getItem as jest.Mock).mockReturnValue(null);
+    (Storage.prototype.getItem as ReturnType<typeof vi.fn>).mockReturnValue(null);
 
     const newConfig = requestInterceptor(config);
 
@@ -84,13 +85,13 @@ describe('API Interceptors', () => {
   it('response interceptor should handle 401 error and redirect', async () => {
     const originalLocation = window.location;
     // Replace window object for this test using Object.defineProperty to set location to our mock object
-    // Wait, let's just use jest.spyOn if possible on a different approach:
+    // Wait, let's just use vi.spyOn if possible on a different approach:
     // We can spy on window.location.assign if it's already there
     // But since `pathname` throws an error when trying to redefine or assign, we just use a trick:
 
     // We will use the simplest approach. Redefine the window's properties safely using jsdom trick.
     // In jest jsdom, we can redefine window properties safely using Object.defineProperty on window itself.
-    let assignMock = jest.fn();
+    let assignMock = vi.fn();
     try {
         delete (window as any).location;
         window.location = {
@@ -115,7 +116,7 @@ describe('API Interceptors', () => {
   it('response interceptor should not redirect on 401 if already on /login', async () => {
     const originalLocation = window.location;
 
-    const assignMock = jest.fn();
+    const assignMock = vi.fn();
 
     // Attempt to override pathname and assign, it will probably throw in node 14+ JSDOM but let's mock the behavior
     // by intercepting window.location
@@ -138,7 +139,7 @@ describe('API Interceptors', () => {
   });
 
   it('response interceptor should just reject for other errors', async () => {
-    const assignMock = jest.fn();
+    const assignMock = vi.fn();
     try {
         delete (window as any).location;
         window.location = { assign: assignMock } as any;
