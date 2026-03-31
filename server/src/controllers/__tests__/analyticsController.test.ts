@@ -69,10 +69,7 @@ describe('getAnalytics', () => {
     const trends = json.trends;
 
     // Check if aggregated
-    // Current buggy implementation: 3 items (because date1 object != date string)
     // Fixed implementation: 2 items (2023-01-01 with sum 5, 2023-01-02 with sum 1)
-
-    // We expect this to FAIL with current implementation
     expect(trends).toHaveLength(2);
 
     // Find the aggregated entry for Jan 1st
