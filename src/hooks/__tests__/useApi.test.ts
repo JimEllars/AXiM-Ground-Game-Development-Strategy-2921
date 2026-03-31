@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { useAsyncApi } from '../useApi';
+import { vi } from 'vitest';
 
 describe('useAsyncApi', () => {
   it('should initialize with loading false and error null', () => {
@@ -13,7 +14,7 @@ describe('useAsyncApi', () => {
   it('should handle successful api calls', async () => {
     const { result } = renderHook(() => useAsyncApi<string>());
     const mockData = 'Success Data';
-    const mockApiCall = jest.fn().mockResolvedValue(mockData);
+    const mockApiCall = vi.fn().mockResolvedValue(mockData);
 
     let apiResult;
     await act(async () => {
@@ -30,7 +31,7 @@ describe('useAsyncApi', () => {
     const { result } = renderHook(() => useAsyncApi<string>());
 
     let resolveApi: (value: string) => void;
-    const mockApiCall = jest.fn().mockImplementation(() => {
+    const mockApiCall = vi.fn().mockImplementation(() => {
       return new Promise<string>((resolve) => {
         resolveApi = resolve;
       });
@@ -60,7 +61,7 @@ describe('useAsyncApi', () => {
   it('should handle failed api calls and set error state', async () => {
     const { result } = renderHook(() => useAsyncApi<string>());
     const mockError = new Error('API Error');
-    const mockApiCall = jest.fn().mockRejectedValue(mockError);
+    const mockApiCall = vi.fn().mockRejectedValue(mockError);
 
     let apiResult;
     await act(async () => {
@@ -78,7 +79,7 @@ describe('useAsyncApi', () => {
 
     // First call fails
     const mockError = new Error('API Error');
-    const mockFailingCall = jest.fn().mockRejectedValue(mockError);
+    const mockFailingCall = vi.fn().mockRejectedValue(mockError);
 
     await act(async () => {
       await result.current.execute(mockFailingCall);
@@ -87,7 +88,7 @@ describe('useAsyncApi', () => {
 
     // Second call is pending
     let resolveApi: (value: string) => void;
-    const mockPendingCall = jest.fn().mockImplementation(() => {
+    const mockPendingCall = vi.fn().mockImplementation(() => {
       return new Promise<string>((resolve) => {
         resolveApi = resolve;
       });

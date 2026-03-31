@@ -2,19 +2,20 @@ import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../AuthContext';
 import { authAPI } from '@/services/api';
+import { vi } from 'vitest';
 
 // Mock the API module
-jest.mock('@/services/api', () => ({
+vi.mock('@/services/api', () => ({
   authAPI: {
-    getProfile: jest.fn(),
-    login: jest.fn(),
+    getProfile: vi.fn(),
+    login: vi.fn(),
   },
 }));
 
 describe('AuthContext - logout', () => {
   beforeEach(() => {
     // Clear mocks and localStorage before each test
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     localStorage.clear();
   });
 
@@ -30,7 +31,7 @@ describe('AuthContext - logout', () => {
     };
 
     localStorage.setItem('token', 'fake-token');
-    (authAPI.getProfile as jest.Mock).mockResolvedValueOnce({ data: mockUser });
+    (authAPI.getProfile as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ data: mockUser });
 
     // Render hook inside the AuthProvider
     const { result } = renderHook(() => useAuth(), {

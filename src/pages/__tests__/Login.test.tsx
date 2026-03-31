@@ -3,8 +3,9 @@ import { render, screen } from '@testing-library/react';
 import Login from '../Login';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { vi } from 'vitest';
 
-jest.mock('@/services/api');
+vi.mock('@/services/api');
 
 describe('Login', () => {
   it('renders the login form', () => {

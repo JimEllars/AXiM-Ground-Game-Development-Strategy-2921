@@ -56,7 +56,9 @@ describe('TerritoryManagement', () => {
     await waitFor(() => expect(screen.getByTestId('delete-btn')).toBeInTheDocument());
 
     // Click delete
-    fireEvent.click(screen.getByTestId('delete-btn'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('delete-btn'));
+    });
 
     // Verify confirm called with correct message
     expect(confirmSpy).toHaveBeenCalledWith(
@@ -64,7 +66,9 @@ describe('TerritoryManagement', () => {
     );
 
     // Verify API called
-    expect(territoriesAPI.delete).toHaveBeenCalledWith('t1');
+    await waitFor(() => {
+      expect(territoriesAPI.delete).toHaveBeenCalledWith('t1');
+    });
 
     confirmSpy.mockRestore();
   });
@@ -87,7 +91,9 @@ describe('TerritoryManagement', () => {
     await waitFor(() => expect(screen.getByTestId('delete-btn')).toBeInTheDocument());
 
     // Click delete
-    fireEvent.click(screen.getByTestId('delete-btn'));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('delete-btn'));
+    });
 
     // Wait for error message to appear
     await waitFor(() => {

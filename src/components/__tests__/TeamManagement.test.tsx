@@ -3,26 +3,29 @@ import { render, screen, fireEvent, waitFor, within, act } from '@testing-librar
 import '@testing-library/jest-dom';
 import TeamManagement from '../TeamManagement';
 import { usersAPI, teamsAPI } from '@/services/api';
+import { vi } from 'vitest';
 
 // Mock dependencies
-jest.mock('@/services/api', () => ({
+vi.mock('@/services/api', () => ({
   usersAPI: {
-    getUsers: jest.fn(),
-    createUser: jest.fn(),
-    updateUser: jest.fn(),
-    deleteUser: jest.fn(),
+    getUsers: vi.fn(),
+    createUser: vi.fn(),
+    updateUser: vi.fn(),
+    deleteUser: vi.fn(),
   },
   teamsAPI: {
-    getTeams: jest.fn(),
-    createTeam: jest.fn(),
-    updateTeam: jest.fn(),
-    deleteTeam: jest.fn(),
-    assignUser: jest.fn(),
+    getTeams: vi.fn(),
+    createTeam: vi.fn(),
+    updateTeam: vi.fn(),
+    deleteTeam: vi.fn(),
+    assignUser: vi.fn(),
   },
 }));
 
 // Mock SafeIcon to return a simple span we can test against
-jest.mock('@/common/SafeIcon', () => ({ icon: Icon, ...props }: any) => <span data-testid="icon" {...props} />);
+vi.mock('@/common/SafeIcon', () => ({
+  default: ({ icon: Icon, ...props }: any) => <span data-testid="icon" {...props} />
+}));
 
 describe('TeamManagement Component', () => {
   const mockUsers = [
@@ -61,9 +64,9 @@ describe('TeamManagement Component', () => {
   ];
 
   beforeEach(() => {
-    (usersAPI.getUsers as jest.Mock).mockResolvedValue({ data: mockUsers });
-    (teamsAPI.getTeams as jest.Mock).mockResolvedValue({ data: mockTeams });
-    jest.clearAllMocks();
+    (usersAPI.getUsers as ReturnType<typeof vi.fn>).mockResolvedValue({ data: mockUsers });
+    (teamsAPI.getTeams as ReturnType<typeof vi.fn>).mockResolvedValue({ data: mockTeams });
+    vi.clearAllMocks();
   });
 
   it('renders users and teams tabs', async () => {
@@ -121,7 +124,7 @@ describe('TeamManagement Component', () => {
   });
 
   it('calls create team API on submit', async () => {
-    (teamsAPI.createTeam as jest.Mock).mockResolvedValue({
+    (teamsAPI.createTeam as ReturnType<typeof vi.fn>).mockResolvedValue({
         data: { id: 'newTeam', name: 'New Team', description: 'Desc' }
     });
 
