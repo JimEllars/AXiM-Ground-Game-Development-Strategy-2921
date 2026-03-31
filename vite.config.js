@@ -19,7 +19,18 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: true,
+    chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          mui: ['@mui/material', '@mui/icons-material'],
+          map: ['react-map-gl', 'mapbox-gl'],
+          vendor: ['axios', 'papaparse', 'date-fns']
+        }
+      }
+    }
   },
   server: {
     proxy: {

@@ -125,33 +125,45 @@ export const getAnalytics = catchAsync(async (req: AuthRequest, res: Response) =
 
       // Trends map
       if (row.interaction_date) {
-        const dateKey = row.interaction_date instanceof Date
-          ? row.interaction_date.toISOString().split('T')[0]
-          : new Date(row.interaction_date).toISOString().split('T')[0];
+        const dateObj = new Date(row.interaction_date);
+        const dateKey = !isNaN(dateObj.getTime())
+          ? dateObj.toISOString().split('T')[0]
+          : row.interaction_date; // Fallback
 
         activeDaysSet.add(dateKey);
 
         if (trendsMap.has(dateKey)) {
           const existing = trendsMap.get(dateKey);
           existing.interactions += count;
-          existing.uniqueLeads += 1;
+          if (row.lead_id && !existing.leadSet) existing.leadSet = new Set();
+          if (row.lead_id) existing.leadSet.add(row.lead_id);
+          existing.uniqueLeads = existing.leadSet ? existing.leadSet.size : 1;
         } else {
+          const leadSet = new Set();
+          if (row.lead_id) leadSet.add(row.lead_id);
           trendsMap.set(dateKey, {
             date: dateKey,
             interactions: count,
-            uniqueLeads: 1
+            leadSet: leadSet,
+            uniqueLeads: leadSet.size
           });
         }
       }
     } else if (row.interaction_date) {
-      const dateKey = row.interaction_date instanceof Date
-        ? row.interaction_date.toISOString().split('T')[0]
-        : new Date(row.interaction_date).toISOString().split('T')[0];
+      const dateObj = new Date(row.interaction_date);
+      const dateKey = !isNaN(dateObj.getTime())
+        ? dateObj.toISOString().split('T')[0]
+        : row.interaction_date; // Fallback
       activeDaysSet.add(dateKey);
     }
   }
 
   const trends = Array.from(trendsMap.values())
+    .map((item: any) => {
+      // leadSet is internal only
+      const { leadSet, ...rest } = item;
+      return rest;
+    })
     .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const outcomes = Array.from(outcomesMap.values());
