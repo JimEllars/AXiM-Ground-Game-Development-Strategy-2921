@@ -18,6 +18,8 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
     import SafeIcon from '@/common/SafeIcon';
     import StatCard from '@/components/StatCard';
     import { repsAPI, interactionsAPI } from '@/services/api';
+import { db } from '@/db';
+import { optimizeRoute } from '@/utils/routeOptimization';
 
     const RepDashboard: React.FC = () => {
       const queryClient = useQueryClient();
@@ -25,7 +27,27 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 
       const { data: turfData, isLoading: isLoadingTurf, error: turfError } = useQuery(
         'repTurf',
-        () => repsAPI.getMyTurf().then(res => res.data.territories)
+        async () => {
+          try {
+            const res = await repsAPI.getMyTurf();
+            const territories = res.data.territories;
+            // Store locally for offline access
+            for (const t of territories) {
+               await db.territories.put({
+                 id: t.id,
+                 name: t.name,
+                 boundary: t.boundary,
+                 leads: t.leads
+               });
+            }
+            return territories;
+          } catch (err: any) {
+             // Fallback to local db if offline or failed
+             const localTerritories = await db.territories.toArray();
+             if (localTerritories.length > 0) return localTerritories;
+             throw err;
+          }
+        }
       );
 
       const { data: statsData, isLoading: isLoadingStats, error: statsError } = useQuery(
@@ -34,13 +56,30 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
       );
 
       const interactionMutation = useMutation(
-        (data: { leadId: string; outcome: string }) =>
-          interactionsAPI.create([{ leadId: data.leadId, outcome: data.outcome, notes: '', interactionDate: new Date() }]),
+        async (data: { leadId: string; outcome: string }) => {
+          const interactionDate = new Date();
+          if (!navigator.onLine) {
+            await db.interactions.add({
+               leadId: data.leadId,
+               outcome: data.outcome,
+               notes: '',
+               interactionDate: interactionDate.toISOString(),
+               synced: false
+            });
+            return { offline: true };
+          } else {
+             return interactionsAPI.create([{ leadId: data.leadId, outcome: data.outcome, notes: '', interactionDate }]);
+          }
+        },
         {
-          onSuccess: () => {
+          onSuccess: (data: any) => {
+            if (data?.offline) {
+              setInteractionError('Interaction saved offline. Will sync when online.');
+            } else {
+              setInteractionError('');
+            }
             queryClient.invalidateQueries('repTurf');
             queryClient.invalidateQueries('repStats');
-            setInteractionError('');
           },
           onError: (error: any) => {
             setInteractionError(error.response?.data?.error || 'Failed to record interaction');
@@ -149,7 +188,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
                 </Typography>
                 {territories.length > 0 && territories[0].leads.length > 0 ? (
                   <List dense>
-                    {territories[0].leads.slice(0, 5).map((lead: any) => (
+                    {optimizeRoute(territories[0].leads).slice(0, 5).map((lead: any) => (
                       <ListItem key={lead.id}>
                         <ListItemText
                           primary={`${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed Lead'}

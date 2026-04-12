@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from 'react-query';
 import { Box, Typography, Tabs, Tab, Alert, Grid, Card, CircularProgress, Chip } from '@mui/material';
 import { FiBarChart2, FiUsers, FiTarget, FiTrendingUp, FiMap } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
@@ -18,33 +19,30 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
 const AdminDashboard: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
-  const [systemStats, setSystemStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [allLeads, setAllLeads] = useState<any[]>([]);
-  const [territories, setTerritories] = useState<any[]>([]);
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
 
-  useEffect(() => {
-    loadAdminData();
-  }, []);
-
-  const loadAdminData = async () => {
-    try {
-      const [statsResponse, leadsResponse, territoriesResponse] = await Promise.all([
-        analyticsAPI.getAnalytics(),
-        leadsAPI.getAll(),
-        territoriesAPI.getAll(),
-      ]);
-      setSystemStats(statsResponse.data.summary);
-      setAllLeads(leadsResponse.data.leads);
-      setTerritories(territoriesResponse.data);
-    } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to load system stats');
-    } finally {
-      setLoading(false);
-    }
+  const fetchAdminData = async () => {
+    const [statsResponse, leadsResponse, territoriesResponse] = await Promise.all([
+      analyticsAPI.getAnalytics(),
+      leadsAPI.getAll(),
+      territoriesAPI.getAll(),
+    ]);
+    return {
+      systemStats: statsResponse.data.summary,
+      allLeads: leadsResponse.data.leads,
+      territories: territoriesResponse.data,
+    };
   };
+
+  const { data, isLoading: loading, error: queryError } = useQuery('adminDashboard', fetchAdminData);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const systemStats = data?.systemStats;
+  const allLeads = data?.allLeads || [];
+  const territories = data?.territories || [];
+  const error = (queryError as any)?.response?.data?.error || errorMsg;
+  const setError = setErrorMsg;
+
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);

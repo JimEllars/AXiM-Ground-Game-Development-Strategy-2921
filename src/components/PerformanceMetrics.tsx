@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from 'react-query';
     import {
       Box,
       Card,
@@ -48,50 +49,37 @@ import React, { useState, useEffect } from 'react';
     }
 
     const PerformanceMetrics: React.FC = () => {
-      const [performance, setPerformance] = useState<PerformanceData | null>(null);
-      const [loading, setLoading] = useState(false);
-      const [error, setError] = useState('');
-
-      useEffect(() => {
-        loadPerformanceData();
-      }, []);
-
-      const loadPerformanceData = async () => {
-        try {
-          setLoading(true);
-          setError('');
-
-          // Mock performance data - in real implementation, this would come from API
-          const mockData: PerformanceData = {
-            totalInteractions: 1247,
-            averagePerDay: 45,
-            completionRate: 78,
-            activeDays: 28,
-            topPerformers: [
-              { name: 'John Smith', interactions: 234, efficiency: 92 },
-              { name: 'Sarah Johnson', interactions: 198, efficiency: 88 },
-              { name: 'Mike Davis', interactions: 187, efficiency: 85 },
-              { name: 'Emily Wilson', interactions: 176, efficiency: 90 },
-              { name: 'Chris Brown', interactions: 165, efficiency: 82 },
-            ],
-            dailyProgress: [
-              { date: 'Mon', interactions: 42, goal: 50 },
-              { date: 'Tue', interactions: 58, goal: 50 },
-              { date: 'Wed', interactions: 45, goal: 50 },
-              { date: 'Thu', interactions: 62, goal: 50 },
-              { date: 'Fri', interactions: 38, goal: 50 },
-              { date: 'Sat', interactions: 28, goal: 40 },
-              { date: 'Sun', interactions: 15, goal: 30 },
-            ],
-          };
-
-          setPerformance(mockData);
-        } catch (error: any) {
-          setError(error.response?.data?.error || 'Failed to load performance data');
-        } finally {
-          setLoading(false);
-        }
+      const fetchPerformanceData = async (): Promise<PerformanceData> => {
+        // Mock performance data - in real implementation, this would come from API
+        return {
+          totalInteractions: 1247,
+          averagePerDay: 45,
+          completionRate: 78,
+          activeDays: 28,
+          topPerformers: [
+            { name: 'John Smith', interactions: 234, efficiency: 92 },
+            { name: 'Sarah Johnson', interactions: 198, efficiency: 88 },
+            { name: 'Mike Davis', interactions: 187, efficiency: 85 },
+            { name: 'Emily Wilson', interactions: 176, efficiency: 90 },
+            { name: 'Chris Brown', interactions: 165, efficiency: 82 },
+          ],
+          dailyProgress: [
+            { date: 'Mon', interactions: 42, goal: 50 },
+            { date: 'Tue', interactions: 58, goal: 50 },
+            { date: 'Wed', interactions: 45, goal: 50 },
+            { date: 'Thu', interactions: 62, goal: 50 },
+            { date: 'Fri', interactions: 38, goal: 50 },
+            { date: 'Sat', interactions: 28, goal: 40 },
+            { date: 'Sun', interactions: 15, goal: 30 },
+          ],
+        };
       };
+
+      const { data: performance = null, isLoading: loading, error: queryError } = useQuery('performanceMetrics', fetchPerformanceData);
+      const [errorMsg, setErrorMsg] = useState('');
+      const error = (queryError as any)?.response?.data?.error || errorMsg;
+      const setError = setErrorMsg;
+
 
       const MetricCard: React.FC<{
         title: string;

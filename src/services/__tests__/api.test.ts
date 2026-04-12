@@ -197,7 +197,7 @@ describe('API Services', () => {
       const file = new File([''], 'test.csv');
       const result = await leadsAPI.upload(file);
 
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/leads/upload', expect.any(FormData), {
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/leads/bulk-import', expect.any(FormData), {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       const formDataArg = mockAxiosInstance.post.mock.calls[0][1] as FormData;

@@ -79,12 +79,14 @@ export const leadsAPI = {
   upload: (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post('/leads/upload', formData, {
+    return api.post('/leads/bulk-import', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
   },
+  getImportJobStatus: (jobId: string) =>
+    api.get(`/leads/upload/${jobId}`),
   getAll: (params?: {
     page?: number;
     limit?: number;

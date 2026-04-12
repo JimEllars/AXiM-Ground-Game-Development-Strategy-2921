@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import TeamManagement from '../TeamManagement';
+import { QueryClient, QueryClientProvider } from 'react-query';
 import { usersAPI, teamsAPI } from '@/services/api';
 import { vi } from 'vitest';
 
@@ -26,6 +27,22 @@ vi.mock('@/services/api', () => ({
 vi.mock('@/common/SafeIcon', () => ({
   default: ({ icon: Icon, ...props }: any) => <span data-testid="icon" {...props} />
 }));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
+
+const renderWithClient = (ui: React.ReactElement) => {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {ui}
+    </QueryClientProvider>
+  );
+};
 
 describe('TeamManagement Component', () => {
   const mockUsers = [
@@ -71,7 +88,7 @@ describe('TeamManagement Component', () => {
 
   it('renders users and teams tabs', async () => {
     await act(async () => {
-      render(<TeamManagement />);
+      renderWithClient(<TeamManagement />);
     });
 
     expect(screen.getByText('Organization Management')).toBeInTheDocument();
@@ -81,7 +98,7 @@ describe('TeamManagement Component', () => {
 
   it('loads and displays users', async () => {
     await act(async () => {
-      render(<TeamManagement />);
+      renderWithClient(<TeamManagement />);
     });
 
     await waitFor(() => {
@@ -92,7 +109,7 @@ describe('TeamManagement Component', () => {
 
   it('loads and displays teams when tab is switched', async () => {
     await act(async () => {
-      render(<TeamManagement />);
+      renderWithClient(<TeamManagement />);
     });
 
     const teamsTab = screen.getByRole('tab', { name: 'Teams' });
@@ -106,7 +123,7 @@ describe('TeamManagement Component', () => {
 
   it('opens create team dialog', async () => {
     await act(async () => {
-      render(<TeamManagement />);
+      renderWithClient(<TeamManagement />);
     });
 
     const teamsTab = screen.getByRole('tab', { name: 'Teams' });
@@ -129,7 +146,7 @@ describe('TeamManagement Component', () => {
     });
 
     await act(async () => {
-      render(<TeamManagement />);
+      renderWithClient(<TeamManagement />);
     });
 
     const teamsTab = screen.getByRole('tab', { name: 'Teams' });

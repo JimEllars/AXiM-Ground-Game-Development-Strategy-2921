@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { leadsAPI } from '@/services/api';
 import {
   Box, Button, Paper, Typography, LinearProgress, Alert,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip
@@ -32,6 +33,43 @@ const LeadUpload: React.FC<LeadUploadProps> = ({ onUploadComplete }) => {
     }
   };
 
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobStatus, setJobStatus] = useState<any>(null);
+
+  useEffect(() => {
+    let intervalId: any;
+
+    if (jobId && uploading) {
+      intervalId = setInterval(async () => {
+        try {
+          const res = await leadsAPI.getImportJobStatus(jobId);
+          setJobStatus(res.data);
+
+          if (res.data.state === 'completed') {
+            setUploading(false);
+            setUploadResult(res.data.result);
+            onUploadComplete(res.data.result);
+            setFile(null);
+            setJobId(null);
+            clearInterval(intervalId);
+          } else if (res.data.state === 'failed') {
+            setUploading(false);
+            setError(res.data.failedReason || 'Job failed');
+            onUploadComplete({ error: res.data.failedReason || 'Job failed' });
+            setJobId(null);
+            clearInterval(intervalId);
+          }
+        } catch (err) {
+          console.error("Error polling job status", err);
+        }
+      }, 1000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [jobId, uploading, onUploadComplete]);
+
   const handleUpload = async () => {
     if (!file) return;
 
@@ -39,39 +77,31 @@ const LeadUpload: React.FC<LeadUploadProps> = ({ onUploadComplete }) => {
     setError('');
     setValidationErrors([]);
     setUploadResult(null);
+    setJobId(null);
+    setJobStatus(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      const response = await leadsAPI.upload(file);
+      const result = response.data;
 
-      const response = await fetch('/api/leads/bulk-import', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 400 && result.details) {
-          setValidationErrors(result.details);
-          setError(result.error || 'CSV validation failed');
-        } else {
-          setError(result.error || 'An unexpected error occurred during upload.');
-        }
-        onUploadComplete({ error: result.error });
+      if (result.jobId) {
+          setJobId(result.jobId);
       } else {
         setUploadResult(result);
         onUploadComplete(result);
         setFile(null);
+        setUploading(false);
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Upload failed due to a network or server error.';
-      setError(errorMessage);
-      onUploadComplete({ error: errorMessage });
-    } finally {
+    } catch (err: any) {
+      const result = err.response?.data || {};
+      if (err.response?.status === 400 && result.details) {
+        setValidationErrors(result.details);
+        setError(result.error || 'CSV validation failed');
+      } else {
+        const errorMessage = result.error || err.message || 'Upload failed due to a network or server error.';
+        setError(errorMessage);
+        onUploadComplete({ error: errorMessage });
+      }
       setUploading(false);
     }
   };
