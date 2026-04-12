@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Map, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
     import {
@@ -15,53 +15,47 @@ import 'mapbox-gl/dist/mapbox-gl.css';
       CircularProgress,
     } from '@mui/material';
 import { FiMap, FiUsers, FiMapPin } from 'react-icons/fi';
+import { useQuery } from 'react-query';
     import SafeIcon from '@/common/SafeIcon';
     import StatCard from '@/components/StatCard';
     import RepDashboard from './RepDashboard';
     import AdminDashboard from './AdminDashboard';
 import { authAPI, territoriesAPI, leadsAPI } from '@/services/api';
-import { User, Territory, Lead } from '@/types';
+import { Lead } from '@/types';
 import { parseLeadLocation } from '@/common/locationUtils';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
     const Dashboard: React.FC = () => {
-      const [user, setUser] = useState<User | null>(null);
-      const [territories, setTerritories] = useState<Territory[]>([]);
-      const [recentActivity, setRecentActivity] = useState<Lead[]>([]);
-  const [allLeads, setAllLeads] = useState<Lead[]>([]);
-      const [loading, setLoading] = useState(true);
-      const [error, setError] = useState('');
-      const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
-      useEffect(() => {
-        loadDashboardData();
-      }, []);
+  const { data: userResponse, isLoading: isLoadingUser, error: userError } = useQuery(
+    'profile',
+    () => authAPI.getProfile().then(res => res.data)
+  );
 
-      const loadDashboardData = async () => {
-        setLoading(true);
-        try {
-      const userResponse = await authAPI.getProfile();
-          const userData = userResponse.data;
-          setUser(userData);
+  const user = userResponse;
+  const isManagerOrAdmin = user?.role === 'MANAGER' || user?.role === 'ADMIN';
 
-      if (userData.role === 'MANAGER' || userData.role === 'ADMIN') {
-            const [territoriesResponse, leadsResponse] = await Promise.all([
-              territoriesAPI.getAll(),
-          leadsAPI.getAll(),
-            ]);
-            setTerritories(territoriesResponse.data);
-        setAllLeads(leadsResponse.data.leads);
-        setRecentActivity(leadsResponse.data.leads.slice(0, 5));
-          }
-          setLastUpdated(new Date());
-        } catch (error: any) {
-          setError(error.response?.data?.error || 'Failed to load dashboard data');
-        } finally {
-          setLoading(false);
-        }
-      };
+  const { data: territoriesResponse, isLoading: isLoadingTerritories } = useQuery(
+    'territories',
+    () => territoriesAPI.getAll().then(res => res.data),
+    { enabled: isManagerOrAdmin }
+  );
+
+  const { data: leadsResponse, isLoading: isLoadingLeads } = useQuery(
+    'leads',
+    () => leadsAPI.getAll().then(res => res.data.leads),
+    { enabled: isManagerOrAdmin }
+  );
+
+  const territories = territoriesResponse || [];
+  const allLeads = leadsResponse || [];
+  const recentActivity = allLeads.slice(0, 5);
+
+  const loading = isLoadingUser || (isManagerOrAdmin && (isLoadingTerritories || isLoadingLeads));
+  const error = userError ? (userError as any).response?.data?.error || 'Failed to load dashboard data' : '';
+  const lastUpdated = new Date();
 
 
       const renderManagerDashboard = () => (

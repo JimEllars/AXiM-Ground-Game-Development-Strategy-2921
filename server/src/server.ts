@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import app from './app.js';
 import { pool } from './config/database.js';
+import './workers/leadImportWorker.js';
 import logger from './utils/logger.js';
 
 const PORT = process.env.PORT || 3001;
