@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from 'react-query';
     import {
       Box,
       Typography,
@@ -58,65 +59,54 @@ import React, { useState, useEffect } from 'react';
     const AnalyticsDashboard: React.FC = () => {
       const [tabValue, setTabValue] = useState(0);
       const [dateRange, setDateRange] = useState('7days');
-      const [loading, setLoading] = useState(false);
-      const [error, setError] = useState('');
-      const [analytics, setAnalytics] = useState<any>(initialAnalyticsState);
 
-      useEffect(() => {
-        loadAnalytics();
-      }, [dateRange, tabValue]);
-
-      const loadAnalytics = async () => {
-        try {
-          setLoading(true);
-          setError('');
-
-          // Calculate date range
-          const endDate = new Date();
-          const startDate = new Date();
-          switch (dateRange) {
-            case '7days':
-              startDate.setDate(startDate.getDate() - 7);
-              break;
-            case '30days':
-              startDate.setDate(startDate.getDate() - 30);
-              break;
-            case '90days':
-              startDate.setDate(startDate.getDate() - 90);
-              break;
-            default:
-              startDate.setDate(startDate.getDate() - 7);
-          }
-
-          const [territoriesData, leadsData, interactionsData] = await Promise.all([
-            territoriesAPI.getAll(),
-            leadsAPI.getAll({ limit: 1000 }),
-            interactionsAPI.getAll({ startDate: startDate.toISOString(), endDate: endDate.toISOString() }),
-          ]);
-
-          // Process analytics data
-          const processedData = {
-            territories: territoriesData.data || [],
-            leads: leadsData.data?.leads || [],
-            interactions: interactionsData.data?.interactions || [],
-            summary: {
-              totalTerritories: territoriesData.data?.length || 0,
-              totalLeads: leadsData.data?.pagination?.total || 0,
-              totalInteractions: interactionsData.data?.pagination?.total || 0,
-              completionRate: calculateCompletionRate(leadsData.data?.leads),
-            },
-            trends: processTrendsData(interactionsData.data?.interactions),
-            outcomes: processOutcomesData(interactionsData.data?.interactions),
-            topPerformers: processTopPerformers(interactionsData.data?.interactions),
-          };
-
-          setAnalytics(processedData);
-        } catch (error: any) {
-          setError(error.response?.data?.error || 'Failed to load analytics');
-        } finally {
-          setLoading(false);
+      const fetchAnalytics = async () => {
+        // Calculate date range
+        const endDate = new Date();
+        const startDate = new Date();
+        switch (dateRange) {
+          case '7days':
+            startDate.setDate(startDate.getDate() - 7);
+            break;
+          case '30days':
+            startDate.setDate(startDate.getDate() - 30);
+            break;
+          case '90days':
+            startDate.setDate(startDate.getDate() - 90);
+            break;
+          default:
+            startDate.setDate(startDate.getDate() - 7);
         }
+
+        const [territoriesData, leadsData, interactionsData] = await Promise.all([
+          territoriesAPI.getAll(),
+          leadsAPI.getAll({ limit: 1000 }),
+          interactionsAPI.getAll({ startDate: startDate.toISOString(), endDate: endDate.toISOString() }),
+        ]);
+
+        return {
+          territories: territoriesData.data || [],
+          leads: leadsData.data?.leads || [],
+          interactions: interactionsData.data?.interactions || [],
+          summary: {
+            totalTerritories: territoriesData.data?.length || 0,
+            totalLeads: leadsData.data?.pagination?.total || 0,
+            totalInteractions: interactionsData.data?.pagination?.total || 0,
+            completionRate: calculateCompletionRate(leadsData.data?.leads),
+          },
+          trends: processTrendsData(interactionsData.data?.interactions),
+          outcomes: processOutcomesData(interactionsData.data?.interactions),
+          topPerformers: processTopPerformers(interactionsData.data?.interactions),
+        };
       };
+
+      const { data: analytics = initialAnalyticsState, isLoading: loading, error: queryError } = useQuery(['analytics', dateRange, tabValue], fetchAnalytics, {
+          keepPreviousData: true
+      });
+      const [errorMsg, setErrorMsg] = useState('');
+      const error = (queryError as any)?.response?.data?.error || errorMsg;
+      const setError = setErrorMsg;
+
 
       const calculateCompletionRate = (leads: any[] = []) => {
         if (!leads || leads.length === 0) return 0;

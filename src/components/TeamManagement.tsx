@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Card,
@@ -33,16 +33,16 @@ import {
 import { FiUsers, FiUserPlus, FiEdit2, FiTrash2, FiMapPin, FiBriefcase } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import { usersAPI, teamsAPI } from '@/services/api';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Team, User } from '@/types';
 import { TabPanel } from './TabPanel';
 
 const TeamManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
-  const [users, setUsers] = useState<User[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  const queryClient = useQueryClient();
 
   // User Dialog State
   const [userDialogOpen, setUserDialogOpen] = useState(false);
@@ -67,6 +67,10 @@ const TeamManagement: React.FC = () => {
   const [assignTeamDialogOpen, setAssignTeamDialogOpen] = useState(false);
   const [selectedUserForTeam, setSelectedUserForTeam] = useState<User | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery('users', () => usersAPI.getUsers().then(res => res.data));
+  const { data: teams = [], isLoading: isLoadingTeams } = useQuery('teams', () => teamsAPI.getTeams().then(res => res.data));
+  const loading = isLoadingUsers || isLoadingTeams;
 
   type SortableUserKey = 'lastName' | 'createdAt';
   const [sortConfig, setSortConfig] = useState<{ key: SortableUserKey; direction: 'asc' | 'desc' } | null>(null);
@@ -95,25 +99,7 @@ const TeamManagement: React.FC = () => {
     setSortConfig({ key, direction });
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [usersRes, teamsRes] = await Promise.all([
-        usersAPI.getUsers(),
-        teamsAPI.getTeams()
-      ]);
-      setUsers(usersRes.data);
-      setTeams(teamsRes.data);
-    } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -121,74 +107,72 @@ const TeamManagement: React.FC = () => {
 
   // --- USER MANAGEMENT ---
 
-  const handleCreateUser = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      if (!userFormData.email || !userFormData.firstName || !userFormData.lastName || !userFormData.password) {
-        setError('All fields are required');
-        return;
-      }
-
-      await usersAPI.createUser({
-        email: userFormData.email,
-        password: userFormData.password,
-        firstName: userFormData.firstName,
-        lastName: userFormData.lastName,
-        role: userFormData.role,
-      });
-
+  const createUserMutation = useMutation((data: typeof userFormData) => usersAPI.createUser({
+    email: data.email,
+    password: data.password,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    role: data.role,
+  }), {
+    onSuccess: () => {
+      queryClient.invalidateQueries('users');
       setSuccess('User created successfully');
       setUserDialogOpen(false);
       resetUserForm();
-      loadData();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to create user');
-    } finally {
-      setLoading(false);
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error || 'Failed to create user');
     }
+  });
+
+  const handleCreateUser = () => {
+    setError('');
+    if (!userFormData.email || !userFormData.firstName || !userFormData.lastName || !userFormData.password) {
+      setError('All fields are required');
+      return;
+    }
+    createUserMutation.mutate(userFormData);
   };
 
-  const handleUpdateUser = async () => {
-    if (!editingUser) return;
-    try {
-      setLoading(true);
-      setError('');
-
-      await usersAPI.updateUser(editingUser.id, {
-        firstName: userFormData.firstName,
-        lastName: userFormData.lastName,
-        role: userFormData.role,
-        password: userFormData.password || undefined,
-      });
-
+  const updateUserMutation = useMutation((data: { id: string; user: any }) => usersAPI.updateUser(data.id, {
+    firstName: data.user.firstName,
+    lastName: data.user.lastName,
+    role: data.user.role,
+    password: data.user.password || undefined,
+  }), {
+    onSuccess: () => {
+      queryClient.invalidateQueries('users');
       setSuccess('User updated successfully');
       setUserDialogOpen(false);
       resetUserForm();
-      loadData();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to update user');
-    } finally {
-      setLoading(false);
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error || 'Failed to update user');
     }
+  });
+
+  const handleUpdateUser = () => {
+    if (!editingUser) return;
+    setError('');
+    updateUserMutation.mutate({ id: editingUser.id, user: userFormData });
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!window.confirm('Are you sure you want to delete this user?')) {
-      return;
-    }
-    try {
-      setLoading(true);
-      await usersAPI.deleteUser(userId);
+  const deleteUserMutation = useMutation((id: string) => usersAPI.deleteUser(id), {
+    onSuccess: () => {
+      queryClient.invalidateQueries('users');
       setSuccess('User deleted successfully');
-      loadData();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to delete user');
-    } finally {
-      setLoading(false);
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error || 'Failed to delete user');
+    }
+  });
+
+  const handleDeleteUser = (userId: string) => {
+    if (window.confirm('Are you sure you want to delete this user?')) {
+      deleteUserMutation.mutate(userId);
     }
   };
 
@@ -211,61 +195,61 @@ const TeamManagement: React.FC = () => {
 
   // --- TEAM MANAGEMENT ---
 
-  const handleCreateTeam = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      if (!teamFormData.name) {
-        setError('Team name is required');
-        return;
-      }
-
-      await teamsAPI.createTeam(teamFormData);
+  const createTeamMutation = useMutation((data: typeof teamFormData) => teamsAPI.createTeam(data), {
+    onSuccess: () => {
+      queryClient.invalidateQueries('teams');
       setSuccess('Team created successfully');
       setTeamDialogOpen(false);
       resetTeamForm();
-      loadData();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to create team');
-    } finally {
-      setLoading(false);
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error || 'Failed to create team');
     }
+  });
+
+  const handleCreateTeam = () => {
+    setError('');
+    if (!teamFormData.name) {
+      setError('Team name is required');
+      return;
+    }
+    createTeamMutation.mutate(teamFormData);
   };
 
-  const handleUpdateTeam = async () => {
-    if (!editingTeam) return;
-    try {
-      setLoading(true);
-      setError('');
-
-      await teamsAPI.updateTeam(editingTeam.id, teamFormData);
+  const updateTeamMutation = useMutation((data: { id: string; team: typeof teamFormData }) => teamsAPI.updateTeam(data.id, data.team), {
+    onSuccess: () => {
+      queryClient.invalidateQueries('teams');
       setSuccess('Team updated successfully');
       setTeamDialogOpen(false);
       resetTeamForm();
-      loadData();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to update team');
-    } finally {
-      setLoading(false);
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error || 'Failed to update team');
     }
+  });
+
+  const handleUpdateTeam = () => {
+    if (!editingTeam) return;
+    setError('');
+    updateTeamMutation.mutate({ id: editingTeam.id, team: teamFormData });
   };
 
-  const handleDeleteTeam = async (teamId: string) => {
-    if (!window.confirm('Are you sure you want to delete this team? Users will be unassigned.')) {
-      return;
-    }
-    try {
-      setLoading(true);
-      await teamsAPI.deleteTeam(teamId);
+  const deleteTeamMutation = useMutation((id: string) => teamsAPI.deleteTeam(id), {
+    onSuccess: () => {
+      queryClient.invalidateQueries('teams');
       setSuccess('Team deleted successfully');
-      loadData();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to delete team');
-    } finally {
-      setLoading(false);
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error || 'Failed to delete team');
+    }
+  });
+
+  const handleDeleteTeam = (teamId: string) => {
+    if (window.confirm('Are you sure you want to delete this team? Users will be unassigned.')) {
+      deleteTeamMutation.mutate(teamId);
     }
   };
 

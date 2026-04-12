@@ -30,6 +30,7 @@
     "@playwright/test": "^1.56.1",
     "@supabase/supabase-js": "^2.39.0",
     "axios": "^1.7.2",
+    "dexie": "^4.4.2",
     "framer-motion": "^11.18.2",
     "mapbox-gl": "^3.16.0",
     "papaparse": "^5.4.1",
@@ -40,7 +41,8 @@
     "react-query": "^3.39.3",
     "react-router-dom": "^6.24.1",
     "recharts": "^2.15.4",
-    "use-control": "^0.2.1"
+    "use-control": "^0.2.1",
+    "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.3",
@@ -60,8 +62,8 @@
     "eslint-plugin-react-refresh": "0.4.9",
     "globals": "^15.8.0",
     "jest": "^29.7.0",
-    "jsdom": "^26.0.0",
     "jest-environment-jsdom": "^30.2.0",
+    "jsdom": "^26.0.0",
     "postcss": "^8.4.39",
     "start-server-and-test": "^2.1.2",
     "tailwindcss": "^3.4.6",
