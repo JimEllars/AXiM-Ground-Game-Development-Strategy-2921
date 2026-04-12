@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
     import {
       Box,
       Typography,
@@ -13,7 +13,8 @@ import React, { useState, useEffect } from 'react';
       CircularProgress,
       Collapse,
     } from '@mui/material';
-    import { FiMapPin, FiUsers, FiCheckCircle, FiActivity, FiPlus } from 'react-icons/fi';
+    import { FiMapPin, FiPlus } from 'react-icons/fi';
+import { useQuery, useQueryClient } from 'react-query';
     import SafeIcon from '@/common/SafeIcon';
     import LeadInteractionForm from '@/components/LeadInteractionForm';
     import TerritoryStats from '@/components/TerritoryStats';
@@ -21,34 +22,24 @@ import React, { useState, useEffect } from 'react';
     import { repsAPI } from '@/services/api';
 
     const RepTurf: React.FC = () => {
-      const [territories, setTerritories] = useState<any[]>([]);
-      const [loading, setLoading] = useState(true);
-      const [error, setError] = useState('');
+      const queryClient = useQueryClient();
       const [selectedLead, setSelectedLead] = useState<any>(null);
       const [showInteractionForm, setShowInteractionForm] = useState(false);
-      const [refreshKey, setRefreshKey] = useState(0);
 
-      useEffect(() => {
-        loadTurfData();
-      }, [refreshKey]);
+      const { data: territoriesData, isLoading: loading, error: queryError } = useQuery(
+        'repTurf',
+        () => repsAPI.getMyTurf().then(res => res.data.territories)
+      );
 
-      const loadTurfData = async () => {
-        try {
-          setLoading(true);
-          const response = await repsAPI.getMyTurf();
-          setTerritories(response.data.territories);
-        } catch (error: any) {
-          setError(error.response?.data?.error || 'Failed to load turf data');
-        } finally {
-          setLoading(false);
-        }
-      };
+      const territories = territoriesData || [];
+      const errorMsg = queryError ? (queryError as any).response?.data?.error || 'Failed to load turf data' : '';
 
       const handleInteractionSubmit = () => {
         setShowInteractionForm(false);
         setSelectedLead(null);
         // Refresh data
-        setRefreshKey((prev) => prev + 1);
+        queryClient.invalidateQueries('repTurf');
+        queryClient.invalidateQueries('repStats');
       };
 
       const getStatusColor = (status: string) => {
@@ -82,9 +73,9 @@ import React, { useState, useEffect } from 'react';
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             Manage your assigned territories and track lead interactions.
           </Typography>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-              {error}
+          {errorMsg && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {errorMsg}
             </Alert>
           )}
 

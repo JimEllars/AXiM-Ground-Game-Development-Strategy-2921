@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
     import {
       Grid,
       Paper,
@@ -13,46 +13,48 @@ import React, { useState, useEffect } from 'react';
       Alert,
       CircularProgress,
     } from '@mui/material';
-    import { FiMap, FiUsers, FiTarget, FiTrendingUp, FiMapPin, FiPlay, FiCheck } from 'react-icons/fi';
+    import { FiMap, FiUsers, FiTarget, FiTrendingUp, FiMapPin, FiCheck } from 'react-icons/fi';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
     import SafeIcon from '@/common/SafeIcon';
     import StatCard from '@/components/StatCard';
     import { repsAPI, interactionsAPI } from '@/services/api';
 
     const RepDashboard: React.FC = () => {
-      const [stats, setStats] = useState<any>({});
-      const [territories, setTerritories] = useState<any[]>([]);
-      const [loading, setLoading] = useState(true);
-      const [error, setError] = useState('');
-      const [activeInteraction, setActiveInteraction] = useState(false);
+      const queryClient = useQueryClient();
+      const [interactionError, setInteractionError] = useState('');
 
-      useEffect(() => {
-        loadDashboardData();
-      }, []);
+      const { data: turfData, isLoading: isLoadingTurf, error: turfError } = useQuery(
+        'repTurf',
+        () => repsAPI.getMyTurf().then(res => res.data.territories)
+      );
 
-      const loadDashboardData = async () => {
-        try {
-          setLoading(true);
-          const [turfResponse, statsResponse] = await Promise.all([repsAPI.getMyTurf(), repsAPI.getStats()]);
-          setTerritories(turfResponse.data.territories);
-          setStats(statsResponse.data);
-        } catch (error: any) {
-          setError(error.response?.data?.error || 'Failed to load dashboard data');
-        } finally {
-          setLoading(false);
+      const { data: statsData, isLoading: isLoadingStats, error: statsError } = useQuery(
+        'repStats',
+        () => repsAPI.getStats().then(res => res.data)
+      );
+
+      const interactionMutation = useMutation(
+        (data: { leadId: string; outcome: string }) =>
+          interactionsAPI.create([{ leadId: data.leadId, outcome: data.outcome, notes: '', interactionDate: new Date() }]),
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries('repTurf');
+            queryClient.invalidateQueries('repStats');
+            setInteractionError('');
+          },
+          onError: (error: any) => {
+            setInteractionError(error.response?.data?.error || 'Failed to record interaction');
+          }
         }
-      };
+      );
 
-      const handleStartInteraction = async (leadId: string, outcome: string) => {
-        try {
-          setActiveInteraction(true);
-          await interactionsAPI.create([{ leadId, outcome, notes: '', interactionDate: new Date() }]);
-          // Refresh data
-          loadDashboardData();
-        } catch (error: any) {
-          setError(error.response?.data?.error || 'Failed to record interaction');
-        } finally {
-          setActiveInteraction(false);
-        }
+      const territories = turfData || [];
+      const stats = statsData || {};
+      const loading = isLoadingTurf || isLoadingStats;
+      const errorMsg = (turfError as any)?.response?.data?.error || (statsError as any)?.response?.data?.error || interactionError;
+
+      const handleStartInteraction = (leadId: string, outcome: string) => {
+        interactionMutation.mutate({ leadId, outcome });
       };
 
 
@@ -66,9 +68,9 @@ import React, { useState, useEffect } from 'react';
 
       return (
         <Box>
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-              {error}
+          {errorMsg && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setInteractionError('')}>
+              {errorMsg}
             </Alert>
           )}
           <Grid container spacing={3}>
@@ -159,7 +161,7 @@ import React, { useState, useEffect } from 'react';
                             variant="outlined"
                             color="success"
                             onClick={() => handleStartInteraction(lead.id, 'Contacted')}
-                            disabled={activeInteraction || lead.lastInteraction}
+                            disabled={interactionMutation.isLoading || lead.lastInteraction}
                             startIcon={<SafeIcon icon={FiCheck} />}
                           >
                             {lead.lastInteraction ? 'Done' : 'Contact'}

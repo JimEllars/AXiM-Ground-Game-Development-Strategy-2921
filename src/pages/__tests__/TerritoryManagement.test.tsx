@@ -1,8 +1,17 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from 'react-query';
 import TerritoryManagement from '../TerritoryManagement';
 import { territoriesAPI } from '@/services/api';
+
+const createTestQueryClient = () => new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
 
 // Mock API
 vi.mock('@/services/api', () => ({
@@ -48,8 +57,13 @@ describe('TerritoryManagement', () => {
     const confirmSpy = vi.spyOn(window, 'confirm');
     confirmSpy.mockImplementation(() => true);
 
+    const queryClient = createTestQueryClient();
     await act(async () => {
-      render(<TerritoryManagement />);
+      render(
+        <QueryClientProvider client={queryClient}>
+          <TerritoryManagement />
+        </QueryClientProvider>
+      );
     });
 
     // Wait for map (and button) to appear
@@ -83,8 +97,13 @@ describe('TerritoryManagement', () => {
       response: { data: { error: 'Deletion failed' } },
     });
 
+    const queryClient = createTestQueryClient();
     await act(async () => {
-      render(<TerritoryManagement />);
+      render(
+        <QueryClientProvider client={queryClient}>
+          <TerritoryManagement />
+        </QueryClientProvider>
+      );
     });
 
     // Wait for map to appear

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
     import {
       Box,
       Typography,
@@ -32,6 +32,7 @@ import React, { useState, useEffect, useMemo } from 'react';
   CardHeader,
     } from '@mui/material';
 import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
     import SafeIcon from '@/common/SafeIcon';
     import LeadUpload from '@/components/LeadUpload';
     import LeadDetails from '@/components/LeadDetails';
@@ -41,10 +42,9 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
     import { TabPanel } from '@/components/TabPanel';
 
     const LeadManagement: React.FC = () => {
+      const queryClient = useQueryClient();
       const [tabValue, setTabValue] = useState(0);
-      const [leads, setLeads] = useState<Lead[]>([]);
-      const [loading, setLoading] = useState(false);
-      const [pagination, setPagination] = useState({ page: 1, limit: 25, total: 0, pages: 0, rowsPerPage: 25 });
+      const [pagination, setPagination] = useState({ page: 1, limit: 25, rowsPerPage: 25 });
       const [searchTerm, setSearchTerm] = useState('');
       const [statusFilter, setStatusFilter] = useState('');
       const [success, setSuccess] = useState('');
@@ -57,51 +57,54 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
   const [orderBy, setOrderBy] = useState('createdAt');
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-      useEffect(() => {
-        if (tabValue === 1) {
-          loadLeads();
+      const { data: leadsData, isLoading: loading, error: queryError } = useQuery(
+        ['leads', pagination.page, pagination.rowsPerPage, searchTerm, statusFilter, orderBy, order],
+        () => leadsAPI.getAll({
+          page: pagination.page,
+          limit: pagination.rowsPerPage,
+          search: searchTerm,
+          status: statusFilter,
+          sort: orderBy,
+          order,
+        }).then(res => res.data),
+        {
+          enabled: tabValue === 1,
+          keepPreviousData: true,
+          onSuccess: () => setSelected([]),
         }
-      }, [tabValue, pagination.page, searchTerm, statusFilter]);
+      );
 
-      const loadLeads = async () => {
-        try {
-          setLoading(true);
-          const params = {
-            page: pagination.page,
-            limit: pagination.rowsPerPage,
-            ...(searchTerm && { search: searchTerm }),
-            ...(statusFilter && { status: statusFilter }),
-            sort: orderBy,
-            order,
-          };
-          const response = await leadsAPI.getAll(params);
-          setLeads(response.data.leads);
-          setPagination(response.data.pagination);
-          setSelected([]);
-        } catch (err: any) {
-          setError(err.response?.data?.error || 'Failed to load leads');
-        } finally {
-          setLoading(false);
+      const leads = leadsData?.leads || [];
+      const total = leadsData?.pagination?.total || 0;
+
+      const deleteMutation = useMutation(
+        (ids: string[]) => leadsAPI.deleteMany(ids),
+        {
+          onSuccess: (_, ids) => {
+            setSuccess(`${ids.length} leads deleted successfully`);
+            setSelected([]);
+            queryClient.invalidateQueries('leads');
+            setError('');
+          },
+          onError: (err: any) => {
+            setError(err.response?.data?.error || 'Failed to delete leads');
+          },
+          onSettled: () => {
+            setDeleteDialogOpen(false);
+          }
         }
-      };
+      );
 
       const handleUploadComplete = (result: any) => {
         if (result.error) {
           setError(result.error);
           setSuccess('');
         } else {
-          const { totalLeads, geocodedLeads, geocodingRate, duplicates } = result;
-          let successMessage = `Successfully uploaded ${totalLeads} leads.`;
-          if (geocodedLeads > 0) {
-            successMessage += ` Geocoding success rate: ${geocodingRate}.`;
-          }
-          if (duplicates > 0) {
-            successMessage += ` ${duplicates} duplicate leads were ignored.`;
-          }
-          setSuccess(successMessage);
+          const msg = result.message || 'Import started successfully.';
+          setSuccess(msg);
           setError('');
           setTabValue(1);
-          loadLeads();
+          queryClient.invalidateQueries('leads');
         }
       };
 
@@ -128,11 +131,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
       };
 
       const handleLeadUpdate = () => {
-        loadLeads();
-        // Keep the dialog open, but maybe we should re-fetch the specific lead details?
-        // Since loadLeads updates the list, if selectedLead is just a reference, it won't update automatically.
-        // We'll close and reload for simplicity or update the selectedLead object if we returned it.
-        // For now, let's close the dialog to force a refresh of the view when reopened, or just reload the list.
+        queryClient.invalidateQueries('leads');
         setDetailsOpen(false);
         setSelectedLead(null);
         setSuccess('Lead updated successfully');
@@ -163,7 +162,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
 
       const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.checked) {
-          const newSelecteds = leads.map((n) => n.id);
+          const newSelecteds = leads.map((n: Lead) => n.id);
           setSelected(newSelecteds);
           return;
         }
@@ -189,17 +188,8 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
         setSelected(newSelected);
       };
 
-      const handleDelete = async () => {
-        try {
-          await leadsAPI.deleteMany(selected);
-          setSuccess(`${selected.length} leads deleted successfully`);
-          setSelected([]);
-          loadLeads();
-        } catch (err: any) {
-          setError(err.response?.data?.error || 'Failed to delete leads');
-        } finally {
-          setDeleteDialogOpen(false);
-        }
+      const handleDelete = () => {
+        deleteMutation.mutate(selected);
       };
 
       return (
@@ -223,7 +213,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
           <Paper sx={{ width: '100%' }}>
             <Tabs value={tabValue} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider' }}>
               <Tab label="Upload Leads" />
-              <Tab label={`View Leads (${pagination.total})`} />
+              <Tab label={`View Leads (${total})`} />
             </Tabs>
             <TabPanel value={tabValue} index={0}>
               <Card>
@@ -420,7 +410,7 @@ import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
                 {/* Pagination */}
                   <TablePagination
                   component="div"
-                  count={pagination.total}
+                  count={total}
                   page={pagination.page - 1}
                   onPageChange={handlePageChange}
                   rowsPerPage={pagination.rowsPerPage}

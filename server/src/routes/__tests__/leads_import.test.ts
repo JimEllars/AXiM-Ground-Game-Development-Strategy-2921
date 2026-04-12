@@ -14,6 +14,12 @@ jest.unstable_mockModule('../../services/geocoding.js', () => ({
   geocodeAddress: jest.fn()
 }));
 
+jest.unstable_mockModule('../../config/queue.js', () => ({
+  leadImportQueue: {
+    add: jest.fn().mockResolvedValue({ id: 'test-job-123' }),
+  },
+}));
+
 // 2. Import modules dynamically AFTER mocking
 const { batchGeocode } = await import('../../services/geocoding.js');
 const { default: app } = await import('../../app.js');
@@ -64,7 +70,7 @@ describe('Leads Import Route', () => {
     jest.clearAllMocks();
   });
 
-  it('should successfully import leads from CSV', async () => {
+  it('should accept CSV and return a jobId', async () => {
     (batchGeocode as unknown as BatchGeocodeMock).mockResolvedValue([
       { longitude: -122.4194, latitude: 37.7749, formatted_address: '123 Main St, San Francisco, CA' },
       { longitude: -118.2437, latitude: 34.0522, formatted_address: '456 Oak Ave, Los Angeles, CA' }
@@ -82,73 +88,8 @@ Jane,Smith,456 Oak Ave,Los Angeles,CA,90001,Contacted`;
       .set('Authorization', `Bearer ${token}`)
       .attach('file', buffer, 'leads.csv');
 
-    expect(res.statusCode).toEqual(200);
-    expect(res.body).toHaveProperty('totalLeads', 2);
-    expect(res.body).toHaveProperty('geocodedLeads', 2);
-    expect(res.body).toHaveProperty('duplicates', 0);
-
-    // Verify DB
-    const leadsResult = await pool.query(
-      `SELECT l.status, pii.first_name, pii.last_name
-       FROM leads l
-       JOIN lead_pii pii ON l.id = pii.lead_id
-       WHERE l.organization_id = $1`,
-      [organizationId]
-    );
-    expect(leadsResult.rows).toHaveLength(2);
-    expect(leadsResult.rows.find((r: any) => r.first_name === 'John')).toBeTruthy();
-    expect(leadsResult.rows.find((r: any) => r.first_name === 'Jane')).toBeTruthy();
-  });
-
-  it('should handle duplicates correctly', async () => {
-     // Seed one lead first
-     const seedCsv = `first_name,last_name,street_address,city,state,zip,status
-John,Doe,123 Main St,San Francisco,CA,94105,New`;
-
-     (batchGeocode as unknown as BatchGeocodeMock).mockResolvedValueOnce([
-       { longitude: -122.4194, latitude: 37.7749, formatted_address: '123 Main St, San Francisco, CA' }
-     ]);
-
-     await request(app)
-      .post('/api/leads/bulk-import')
-      .set('Authorization', `Bearer ${token}`)
-      .attach('file', Buffer.from(seedCsv, 'utf-8'), 'seed.csv');
-
-     // Try to upload the same lead again along with a new one
-     const importCsv = `first_name,last_name,street_address,city,state,zip,status
-John,Doe,123 Main St,San Francisco,CA,94105,New
-Bob,Builder,789 Pine Ln,Seattle,WA,98101,New`;
-
-    (batchGeocode as unknown as BatchGeocodeMock)
-    .mockResolvedValueOnce([
-        { longitude: -122.4194, latitude: 37.7749, formatted_address: '123 Main St, San Francisco, CA' },
-        { longitude: -122.3321, latitude: 47.6062, formatted_address: '789 Pine Ln, Seattle, WA' }
-    ]);
-
-     const res = await request(app)
-      .post('/api/leads/bulk-import')
-      .set('Authorization', `Bearer ${token}`)
-      .attach('file', Buffer.from(importCsv, 'utf-8'), 'import.csv');
-
-    expect(res.statusCode).toEqual(200);
-    expect(res.body.totalLeads).toBe(1); // Only Bob should be added
-    expect(res.body.duplicates).toBe(1); // John is a duplicate
-
-    const countResult = await pool.query('SELECT COUNT(*) FROM leads WHERE organization_id = $1', [organizationId]);
-    expect(parseInt(countResult.rows[0].count)).toBe(2); // Total 2 unique leads
-  });
-
-  it('should validate CSV format', async () => {
-      const invalidCsv = `first_name,last_name
-John,Doe`; // Missing required street_address
-
-      const res = await request(app)
-        .post('/api/leads/bulk-import')
-        .set('Authorization', `Bearer ${token}`)
-        .attach('file', Buffer.from(invalidCsv, 'utf-8'), 'invalid.csv');
-
-      expect(res.statusCode).toEqual(400);
-      expect(res.body).toHaveProperty('error', 'CSV validation failed');
-      expect(res.body.details).toHaveLength(1);
+    expect(res.statusCode).toEqual(202);
+    expect(res.body).toHaveProperty('jobId');
+    expect(res.body).toHaveProperty('message', 'Lead import started successfully. Processing in background.');
   });
 });
