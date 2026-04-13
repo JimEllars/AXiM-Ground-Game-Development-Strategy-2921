@@ -1,6 +1,7 @@
 -- AXiM Ground Game Database Schema
 
 -- Drop existing tables and types to ensure a clean slate
+DROP TABLE IF EXISTS appointments CASCADE;
 DROP TABLE IF EXISTS interactions CASCADE;
 DROP TABLE IF EXISTS territory_assignments CASCADE;
 DROP TABLE IF EXISTS territories CASCADE;
@@ -155,6 +156,23 @@ CREATE TABLE custom_dispositions (
 
 CREATE INDEX custom_dispositions_organization_idx ON custom_dispositions (organization_id);
 
+-- Appointments table
+CREATE TABLE appointments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    scheduled_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    status VARCHAR(50) DEFAULT 'Scheduled',
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX appointments_organization_idx ON appointments (organization_id);
+CREATE INDEX appointments_lead_idx ON appointments (lead_id);
+CREATE INDEX appointments_user_idx ON appointments (user_id);
+CREATE INDEX appointments_scheduled_at_idx ON appointments (scheduled_at);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -174,6 +192,7 @@ CREATE TRIGGER update_lead_pii_updated_at BEFORE UPDATE ON lead_pii FOR EACH ROW
 CREATE TRIGGER update_territories_updated_at BEFORE UPDATE ON territories FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_custom_surveys_updated_at BEFORE UPDATE ON custom_surveys FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_custom_dispositions_updated_at BEFORE UPDATE ON custom_dispositions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_appointments_updated_at BEFORE UPDATE ON appointments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Sample data for development with properly hashed passwords
 TRUNCATE TABLE organizations CASCADE;

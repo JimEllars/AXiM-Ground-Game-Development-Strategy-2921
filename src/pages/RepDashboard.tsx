@@ -20,6 +20,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
     import { repsAPI, interactionsAPI } from '@/services/api';
 import { db } from '@/db';
 import { optimizeRoute } from '@/utils/routeOptimization';
+import AppointmentsList from '@/components/AppointmentsList';
 
     const RepDashboard: React.FC = () => {
       const queryClient = useQueryClient();
@@ -178,6 +179,11 @@ import { optimizeRoute } from '@/utils/routeOptimization';
                   <Typography color="text.secondary">No territories assigned yet</Typography>
                 )}
               </Paper>
+            </Grid>
+
+            {/* Appointments */}
+            <Grid item xs={12}>
+              <AppointmentsList />
             </Grid>
 
             {/* Recent Leads for Quick Actions */}

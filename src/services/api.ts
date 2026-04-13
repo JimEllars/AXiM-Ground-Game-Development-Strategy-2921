@@ -197,4 +197,14 @@ export const settingsAPI = {
   updateSettings: (data: { surveys?: any[], dispositions?: any[] }) => api.put('/settings', data),
 };
 
+export const appointmentsAPI = {
+  getAll: (params?: { startDate?: string; endDate?: string; status?: string }) =>
+    api.get('/appointments', { params }),
+  create: (data: { leadId: string; userId: string; scheduledAt: string; notes?: string }) =>
+    api.post('/appointments', data),
+  update: (id: string, data: { status?: string; scheduledAt?: string; notes?: string }) =>
+    api.put(`/appointments/${id}`, data),
+  delete: (id: string) => api.delete(`/appointments/${id}`),
+};
+
 export default api;

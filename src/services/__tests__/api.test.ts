@@ -34,6 +34,7 @@ describe('API Services', () => {
   let analyticsAPI: any;
   let usersAPI: any;
   let teamsAPI: any;
+  let appointmentsAPI: any;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -55,6 +56,7 @@ describe('API Services', () => {
     analyticsAPI = module.analyticsAPI;
     usersAPI = module.usersAPI;
     teamsAPI = module.teamsAPI;
+    appointmentsAPI = module.appointmentsAPI;
   });
 
   describe('Interceptors', () => {
@@ -361,6 +363,33 @@ describe('API Services', () => {
       const result = await usersAPI.getUserStats();
       expect(mockAxiosInstance.get).toHaveBeenCalledWith('/users/stats');
       expect(result).toEqual(mockResponse);
+    });
+  });
+
+  describe('appointmentsAPI', () => {
+    it('getAll calls GET /appointments', async () => {
+      mockAxiosInstance.get.mockResolvedValueOnce({ data: { appointments: [] } });
+      await appointmentsAPI.getAll({ status: 'Scheduled' });
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/appointments', { params: { status: 'Scheduled' } });
+    });
+
+    it('create calls POST /appointments', async () => {
+      const data = { leadId: '1', userId: '2', scheduledAt: '2023-01-01T10:00:00Z', notes: 'test' };
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: { id: '1' } });
+      await appointmentsAPI.create(data);
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/appointments', data);
+    });
+
+    it('update calls PUT /appointments/:id', async () => {
+      mockAxiosInstance.put.mockResolvedValueOnce({ data: { id: '1' } });
+      await appointmentsAPI.update('1', { status: 'Completed' });
+      expect(mockAxiosInstance.put).toHaveBeenCalledWith('/appointments/1', { status: 'Completed' });
+    });
+
+    it('delete calls DELETE /appointments/:id', async () => {
+      mockAxiosInstance.delete.mockResolvedValueOnce({ data: { success: true } });
+      await appointmentsAPI.delete('1');
+      expect(mockAxiosInstance.delete).toHaveBeenCalledWith('/appointments/1');
     });
   });
 
