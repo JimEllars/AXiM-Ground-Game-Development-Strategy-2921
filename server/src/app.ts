@@ -12,6 +12,7 @@ import interactionRoutes from './routes/interactions.js';
 import analyticsRoutes from './routes/analytics.js';
 import userRoutes from './routes/users.js';
 import teamRoutes from './routes/teams.js';
+import settingsRoutes from './routes/settings.js';
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/interactions', interactionRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

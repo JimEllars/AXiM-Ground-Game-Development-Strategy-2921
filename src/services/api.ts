@@ -191,4 +191,10 @@ export const teamsAPI = {
     api.post(`/teams/${teamId}/assign`, { userId }),
 };
 
+// Settings API
+export const settingsAPI = {
+  getSettings: () => api.get('/settings'),
+  updateSettings: (data: { surveys?: any[], dispositions?: any[] }) => api.put('/settings', data),
+};
+
 export default api;

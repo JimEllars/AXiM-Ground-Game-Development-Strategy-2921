@@ -50,6 +50,7 @@ export const createInteractions = catchAsync(
     const datesArr: Date[] = new Array(len);
     const lonsArr: (number | null)[] = new Array(len);
     const latsArr: (number | null)[] = new Array(len);
+    const surveysArr: (any | null)[] = new Array(len);
 
     for (let i = 0; i < len; i++) {
       const interaction = validInteractions[i];
@@ -60,15 +61,17 @@ export const createInteractions = catchAsync(
       datesArr[i] = interaction.interactionDate || new Date();
       lonsArr[i] = interaction.location ? interaction.location.longitude : null;
       latsArr[i] = interaction.location ? interaction.location.latitude : null;
+      surveysArr[i] = interaction.surveyData ? JSON.stringify(interaction.surveyData) : null;
     }
 
     const results = await pool.query(
       `INSERT INTO interactions
-       (lead_id, user_id, outcome, notes, interaction_date, location, synced_at)
+       (lead_id, user_id, outcome, notes, interaction_date, location, synced_at, survey_data)
        SELECT
          t.lead_id, t.user_id, t.outcome, t.notes, t.interaction_date,
          CASE WHEN t.lon IS NOT NULL AND t.lat IS NOT NULL THEN ST_SetSRID(ST_MakePoint(t.lon, t.lat), 4326) ELSE NULL END,
-         CURRENT_TIMESTAMP
+         CURRENT_TIMESTAMP,
+         t.survey_data::jsonb
        FROM unnest(
          $1::uuid[],
          $2::uuid[],
@@ -76,8 +79,9 @@ export const createInteractions = catchAsync(
          $4::text[],
          $5::timestamp[],
          $6::float8[],
-         $7::float8[]
-       ) AS t(lead_id, user_id, outcome, notes, interaction_date, lon, lat)
+         $7::float8[],
+         $8::text[]
+       ) AS t(lead_id, user_id, outcome, notes, interaction_date, lon, lat, survey_data)
        RETURNING id, interaction_date`,
       [
         leadIdsArr,
@@ -87,6 +91,7 @@ export const createInteractions = catchAsync(
         datesArr,
         lonsArr,
         latsArr,
+        surveysArr,
       ],
     );
 
@@ -181,6 +186,7 @@ export const getInteractions = catchAsync(
          ST_X(i.location) as longitude,
          ST_Y(i.location) as latitude,
          i.synced_at,
+         i.survey_data,
          
          -- Lead information
          lp.first_name,
@@ -217,6 +223,7 @@ export const getInteractions = catchAsync(
             }
           : null,
       syncedAt: row.synced_at,
+      surveyData: row.survey_data,
       lead: {
         firstName: row.first_name,
         lastName: row.last_name,
