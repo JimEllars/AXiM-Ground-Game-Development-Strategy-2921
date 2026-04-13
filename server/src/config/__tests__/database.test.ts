@@ -3,9 +3,15 @@ import { jest } from '@jest/globals';
 describe('Database Config', () => {
   const originalEnv = process.env;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
     process.env = { ...originalEnv };
+
+    // Mock dotenv to prevent it from loading .env and overriding process.env.DB_PASSWORD
+    await jest.unstable_mockModule('dotenv', () => ({
+      default: { config: jest.fn() },
+      config: jest.fn(),
+    }));
   });
 
   afterAll(() => {
