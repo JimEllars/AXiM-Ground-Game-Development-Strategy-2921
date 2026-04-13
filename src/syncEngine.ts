@@ -13,7 +13,8 @@ export const syncOfflineData = async () => {
       leadId: i.leadId,
       outcome: i.outcome,
       notes: i.notes,
-      interactionDate: new Date(i.interactionDate)
+      interactionDate: new Date(i.interactionDate),
+      surveyData: i.surveyData
     }));
 
     await interactionsAPI.create(payload);

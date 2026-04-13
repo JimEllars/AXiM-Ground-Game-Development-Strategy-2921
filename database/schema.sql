@@ -121,6 +121,7 @@ CREATE TABLE interactions (
     interaction_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     location GEOMETRY(Point, 4326),
     synced_at TIMESTAMP WITH TIME ZONE,
+    survey_data JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -128,6 +129,32 @@ CREATE INDEX interactions_lead_idx ON interactions (lead_id);
 CREATE INDEX interactions_user_idx ON interactions (user_id);
 CREATE INDEX interactions_date_idx ON interactions (interaction_date);
 CREATE INDEX interactions_synced_idx ON interactions (synced_at);
+
+-- Custom Surveys table
+CREATE TABLE custom_surveys (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    questions JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX custom_surveys_organization_idx ON custom_surveys (organization_id);
+
+-- Custom Dispositions table
+CREATE TABLE custom_dispositions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    require_notes BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX custom_dispositions_organization_idx ON custom_dispositions (organization_id);
+
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -145,6 +172,8 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECU
 CREATE TRIGGER update_leads_updated_at BEFORE UPDATE ON leads FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_lead_pii_updated_at BEFORE UPDATE ON lead_pii FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_territories_updated_at BEFORE UPDATE ON territories FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_custom_surveys_updated_at BEFORE UPDATE ON custom_surveys FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_custom_dispositions_updated_at BEFORE UPDATE ON custom_dispositions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Sample data for development with properly hashed passwords
 TRUNCATE TABLE organizations CASCADE;

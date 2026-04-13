@@ -8,6 +8,7 @@ export interface OfflineInteraction {
   notes: string;
   interactionDate: string;
   synced: boolean;
+  surveyData?: any;
 }
 
 export interface OfflineTerritory {
@@ -17,15 +18,22 @@ export interface OfflineTerritory {
   leads: Lead[];
 }
 
+export interface OfflineSetting {
+  id: string; // e.g. "surveys" or "dispositions"
+  data: any;
+}
+
 export class AppDB extends Dexie {
   interactions!: Table<OfflineInteraction, number>;
   territories!: Table<OfflineTerritory, string>;
+  settings!: Table<OfflineSetting, string>;
 
   constructor() {
     super('AximGroundGameDB');
-    this.version(1).stores({
+    this.version(2).stores({
       interactions: '++id, leadId, synced',
-      territories: 'id, name'
+      territories: 'id, name',
+      settings: 'id'
     });
   }
 }
