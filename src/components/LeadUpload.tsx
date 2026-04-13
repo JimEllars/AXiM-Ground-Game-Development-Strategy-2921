@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { leadsAPI } from '@/services/api';
+import { useQuery } from 'react-query';
 import {
   Box, Button, Paper, Typography, LinearProgress, Alert,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip
@@ -34,41 +35,38 @@ const LeadUpload: React.FC<LeadUploadProps> = ({ onUploadComplete }) => {
   };
 
   const [jobId, setJobId] = useState<string | null>(null);
-  const [jobStatus, setJobStatus] = useState<any>(null);
 
-  useEffect(() => {
-    let intervalId: any;
-
-    if (jobId && uploading) {
-      intervalId = setInterval(async () => {
-        try {
-          const res = await leadsAPI.getImportJobStatus(jobId);
-          setJobStatus(res.data);
-
-          if (res.data.state === 'completed') {
-            setUploading(false);
-            setUploadResult(res.data.result);
-            onUploadComplete(res.data.result);
-            setFile(null);
-            setJobId(null);
-            clearInterval(intervalId);
-          } else if (res.data.state === 'failed') {
-            setUploading(false);
-            setError(res.data.failedReason || 'Job failed');
-            onUploadComplete({ error: res.data.failedReason || 'Job failed' });
-            setJobId(null);
-            clearInterval(intervalId);
-          }
-        } catch (err) {
-          console.error("Error polling job status", err);
-        }
-      }, 1000);
+  const { data: jobStatus, error: jobError } = useQuery(
+    ['importJobStatus', jobId],
+    () => leadsAPI.getImportJobStatus(jobId!).then(res => res.data),
+    {
+      enabled: !!jobId && uploading,
+      refetchInterval: 1000,
     }
+  );
 
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [jobId, uploading, onUploadComplete]);
+  React.useEffect(() => {
+    if (jobStatus) {
+      if (jobStatus.state === 'completed') {
+        setUploading(false);
+        setUploadResult(jobStatus.result);
+        onUploadComplete(jobStatus.result);
+        setFile(null);
+        setJobId(null);
+      } else if (jobStatus.state === 'failed') {
+        setUploading(false);
+        setError(jobStatus.failedReason || 'Job failed');
+        onUploadComplete({ error: jobStatus.failedReason || 'Job failed' });
+        setJobId(null);
+      }
+    }
+  }, [jobStatus, onUploadComplete]);
+
+  React.useEffect(() => {
+    if (jobError) {
+      console.error("Error polling job status", jobError);
+    }
+  }, [jobError]);
 
   const handleUpload = async () => {
     if (!file) return;
@@ -78,7 +76,6 @@ const LeadUpload: React.FC<LeadUploadProps> = ({ onUploadComplete }) => {
     setValidationErrors([]);
     setUploadResult(null);
     setJobId(null);
-    setJobStatus(null);
 
     try {
       const response = await leadsAPI.upload(file);

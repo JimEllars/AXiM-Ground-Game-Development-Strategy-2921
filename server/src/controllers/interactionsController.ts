@@ -130,12 +130,13 @@ export const createInteractions = catchAsync(
     }
 
     if (len > 0) {
+      const updateParamsWithOrg = [...updateParams, user.organization_id];
       await pool.query(
         `UPDATE leads
          SET status = v.status, updated_at = CURRENT_TIMESTAMP
          FROM (VALUES ${updateValues.join(", ")}) AS v(id, status)
-         WHERE leads.id = v.id`,
-        updateParams,
+         WHERE leads.id = v.id AND leads.organization_id = $${updateParams.length + 1}`,
+        updateParamsWithOrg,
       );
     }
 
@@ -155,9 +156,9 @@ export const getInteractions = catchAsync(
     const user = req.user!;
     const { leadId, startDate, endDate, page = 1, limit = 50 } = req.query;
 
-    const conditions: string[] = ["i.user_id = $1"];
-    const params: any[] = [user.id];
-    let paramIndex = 2;
+    const conditions: string[] = ["i.user_id = $1", "l.organization_id = $2"];
+    const params: any[] = [user.id, user.organization_id];
+    let paramIndex = 3;
 
     if (leadId) {
       conditions.push(`i.lead_id = $${paramIndex}`);
