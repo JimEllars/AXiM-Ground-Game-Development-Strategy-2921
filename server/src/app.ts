@@ -13,6 +13,7 @@ import analyticsRoutes from './routes/analytics.js';
 import userRoutes from './routes/users.js';
 import teamRoutes from './routes/teams.js';
 import settingsRoutes from './routes/settings.js';
+import appointmentRoutes from './routes/appointments.js';
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/appointments', appointmentRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

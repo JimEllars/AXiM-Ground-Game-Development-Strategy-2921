@@ -13,9 +13,12 @@ import {
 } from '@mui/material';
 import Map, { Marker } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { FiMapPin, FiEdit2, FiSave, FiX } from 'react-icons/fi';
+import { FiMapPin, FiEdit2, FiSave, FiX, FiCalendar, FiPlus } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import { leadsAPI } from '@/services/api';
+import AppointmentForm from './AppointmentForm';
+import { useQueryClient } from 'react-query';
+import { Collapse } from '@mui/material';
 import { parseLeadLocation } from '@/common/locationUtils';
 
 // Handle potentially undefined import.meta.env in test environment
@@ -37,6 +40,9 @@ interface LeadDetailsProps {
 
 const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const queryClient = useQueryClient();
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+
   const [formData, setFormData] = useState({
     firstName: lead.firstName || '',
     lastName: lead.lastName || '',
@@ -99,8 +105,31 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
   };
 
   return (
-    <Grid container spacing={3}>
-      <Grid item xs={12} md={6}>
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<SafeIcon icon={FiCalendar} />}
+          onClick={() => setShowAppointmentForm(!showAppointmentForm)}
+        >
+          {showAppointmentForm ? 'Cancel Scheduling' : 'Schedule Appointment'}
+        </Button>
+      </Box>
+
+      <Collapse in={showAppointmentForm}>
+        <AppointmentForm
+          leadId={lead.id}
+          onSubmit={() => {
+            setShowAppointmentForm(false);
+            queryClient.invalidateQueries('appointments');
+          }}
+          onCancel={() => setShowAppointmentForm(false)}
+        />
+      </Collapse>
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
         <Paper sx={{ p: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Typography variant="h6">
@@ -320,6 +349,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
         )}
       </Grid>
     </Grid>
+    </Box>
   );
 };
 
