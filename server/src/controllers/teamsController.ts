@@ -176,9 +176,10 @@ export const assignUserToTeam = catchAsync(
     }
 
     // Update user
-    await pool.query("UPDATE users SET team_id = $1 WHERE id = $2", [
+    await pool.query("UPDATE users SET team_id = $1 WHERE id = $2 AND organization_id = $3", [
       id,
       userId,
+      currentUser.organization_id
     ]);
 
     res.json({ message: "User assigned to team successfully" });

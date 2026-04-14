@@ -32,6 +32,7 @@
     "axios": "^1.7.2",
     "dexie": "^4.4.2",
     "framer-motion": "^11.18.2",
+    "idb-keyval": "^6.2.2",
     "mapbox-gl": "^3.16.0",
     "papaparse": "^5.4.1",
     "react": "^18.3.1",
