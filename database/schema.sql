@@ -223,3 +223,5 @@ SELECT id,
        CASE WHEN id = '550e8400-e29b-41d4-a716-446655440004' THEN 'NY' ELSE 'CA' END,
        CASE WHEN id = '550e8400-e29b-41d4-a716-446655440004' THEN '10001' ELSE '90001' END
 FROM lead_insert;
+CREATE INDEX leads_organization_status_idx ON leads (organization_id, status);
+CREATE INDEX interactions_user_date_idx ON interactions (user_id, interaction_date);

@@ -1,0 +1,70 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:15-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: axim_ground_game_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci --legacy-peer-deps
+
+    - name: Run ESLint
+      run: npm run lint --if-present
+
+    - name: Setup Database Schema
+      run: |
+        PGPASSWORD=postgres psql -h localhost -U postgres -d axim_ground_game_test -f database/schema.sql
+
+    - name: Run Backend Tests
+      env:
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_NAME: axim_ground_game_test
+        DB_HOST: localhost
+        DB_PORT: 5432
+      run: |
+        cd server
+        npm ci --legacy-peer-deps
+        npm run test
+
+    - name: Run Frontend Tests
+      run: npm run test
+
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+
+    - name: Run E2E Tests
+      run: npm run e2e --if-present
