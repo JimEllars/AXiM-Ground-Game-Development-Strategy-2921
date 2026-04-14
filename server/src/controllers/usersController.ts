@@ -225,10 +225,15 @@ export const updateUser = catchAsync(
     }
 
     updates.push(`updated_at = CURRENT_TIMESTAMP`);
+
+    const userIdParamIndex = paramIndex++;
     params.push(userId);
 
+    const orgIdParamIndex = paramIndex++;
+    params.push(currentUser.organization_id);
+
     const result = await pool.query(
-      `UPDATE users SET ${updates.join(", ")} WHERE id = $${paramIndex} RETURNING *`,
+      `UPDATE users SET ${updates.join(", ")} WHERE id = $${userIdParamIndex} AND organization_id = $${orgIdParamIndex} RETURNING *`,
       params,
     );
 
@@ -276,7 +281,7 @@ export const deleteUser = catchAsync(
     }
 
     // Delete user (this will cascade to territory_assignments due to foreign key constraint)
-    await pool.query("DELETE FROM users WHERE id = $1", [userId]);
+    await pool.query("DELETE FROM users WHERE id = $1 AND organization_id = $2", [userId, currentUser.organization_id]);
 
     res.json({ message: "User deleted successfully" });
   },

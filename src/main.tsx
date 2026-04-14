@@ -6,6 +6,18 @@ import { syncOfflineData } from './syncEngine';
 import './index.css';
 import { AuthProvider } from './contexts/AuthContext';
 import { QueryClient, QueryClientProvider } from 'react-query';
+import { registerSW } from 'virtual:pwa-register';
+
+const updateSW = registerSW({
+  onNeedRefresh() {
+    if (confirm('New content available. Reload?')) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log('App is ready to work offline');
+  },
+});
 
 const queryClient = new QueryClient();
 syncOfflineData(); // Initial sync check
