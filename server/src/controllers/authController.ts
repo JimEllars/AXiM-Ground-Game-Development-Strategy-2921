@@ -1,3 +1,4 @@
+import logger from '../utils/logger.js';
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -88,7 +89,7 @@ export const login = catchAsync(async (req: Request, res: Response, next: NextFu
     );
 
     if (result.rows.length === 0) {
-      if (DEBUG_AUTH) console.debug('[auth] login: user not found or inactive', { email });
+      if (DEBUG_AUTH) logger.debug('[auth] login: user not found or inactive', { email });
       // Perform a dummy comparison to equalize response times
       await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
       return next(new AppError('Invalid email or password', 401));
@@ -98,7 +99,7 @@ export const login = catchAsync(async (req: Request, res: Response, next: NextFu
 
     // Ensure there is a password hash stored
     if (!user.password_hash) {
-      if (DEBUG_AUTH) console.debug('[auth] login: missing password_hash for user', { userId: user.id });
+      if (DEBUG_AUTH) logger.debug('[auth] login: missing password_hash for user', { userId: user.id });
       // Perform a dummy comparison to equalize response times
       await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
       return next(new AppError('Invalid email or password', 401));
@@ -106,7 +107,7 @@ export const login = catchAsync(async (req: Request, res: Response, next: NextFu
 
     const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
-    if (DEBUG_AUTH) console.debug('[auth] login: bcrypt.compare result', { email, isValidPassword });
+    if (DEBUG_AUTH) logger.debug('[auth] login: bcrypt.compare result', { email, isValidPassword });
 
     if (!isValidPassword) {
       return next(new AppError('Invalid email or password', 401));

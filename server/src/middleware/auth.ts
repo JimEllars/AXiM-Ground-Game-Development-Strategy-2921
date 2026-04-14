@@ -1,3 +1,4 @@
+import logger from '../utils/logger.js';
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import AppError from '../utils/AppError.js';
@@ -22,7 +23,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
   }
 
   if (!JWT_SECRET) {
-    console.error('[auth] JWT_SECRET is not configured');
+    logger.error('[auth] JWT_SECRET is not configured');
     return next(new AppError('Internal server error', 500));
   }
 

@@ -1,3 +1,4 @@
+import logger from '../../utils/logger.js';
 import { jest } from '@jest/globals';
 
 const mockGet = jest.fn();
@@ -80,13 +81,13 @@ describe('geocoding service', () => {
     });
 
     it('should return null when an error occurs', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = jest.spyOn(logger, 'error').mockImplementation(() => {});
       mockGet.mockRejectedValueOnce(new Error('Network error'));
 
       const result = await geocodeAddress('Some Place');
 
       expect(result).toBeNull();
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalled();
       consoleErrorSpy.mockRestore();
     });
 
@@ -177,7 +178,7 @@ describe('geocoding service', () => {
           data: { features: [{ center: [3, 3], place_name: 'Place 3' }] }
         });
 
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleErrorSpy = jest.spyOn(logger, 'error').mockImplementation(() => {});
 
       const addresses = ['Address 1', 'Address 2', 'Address 3'];
       const result = await batchGeocode(addresses);
@@ -188,7 +189,7 @@ describe('geocoding service', () => {
       expect(result[2]).toEqual({ longitude: 3, latitude: 3, formatted_address: 'Place 3' });
 
       expect(mockGet).toHaveBeenCalledTimes(3);
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalled();
       consoleErrorSpy.mockRestore();
     });
   });

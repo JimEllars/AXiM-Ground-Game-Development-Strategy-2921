@@ -1,3 +1,4 @@
+import logger from '../utils/logger.js';
 import { Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import dotenv from 'dotenv';
@@ -12,7 +13,7 @@ export const leadImportQueue = new Queue('lead-import-queue', { connection });
 
 // Initialize connection
 connection.on('error', (error: Error) => {
-  console.error('Redis connection error:', error);
+  logger.error('Redis connection error:', error);
 });
 
 export { connection };

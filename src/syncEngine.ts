@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import { db } from './db';
 import { interactionsAPI } from './services/api';
 
@@ -22,9 +23,9 @@ export const syncOfflineData = async () => {
     const idsToUpdate = offlineInteractions.map(i => i.id!);
     await db.interactions.bulkUpdate(idsToUpdate.map(id => ({ key: id, changes: { synced: true } })));
 
-    console.log(`Successfully synced ${offlineInteractions.length} interactions.`);
+    logger.info(`Successfully synced ${offlineInteractions.length} interactions.`);
   } catch (error) {
-    console.error('Failed to sync offline interactions:', error);
+    logger.error('Failed to sync offline interactions:', error);
   }
 };
 

@@ -1,3 +1,4 @@
+import logger from '../utils/logger.js';
 import axios from 'axios';
 
 // Using a generic geocoding service - can be easily swapped
@@ -13,7 +14,7 @@ export interface GeocodeResult {
 export const geocodeAddress = async (address: string): Promise<GeocodeResult | null> => {
   try {
     if (!GEOCODING_API_KEY) {
-      console.warn('No geocoding API key provided, using mock coordinates');
+      logger.warn('No geocoding API key provided, using mock coordinates');
       // Return mock coordinates for development
       return {
         longitude: -122.4194 + (Math.random() - 0.5) * 0.1,
@@ -40,7 +41,7 @@ export const geocodeAddress = async (address: string): Promise<GeocodeResult | n
 
     return null;
   } catch (error) {
-    console.error('Geocoding error:', error);
+    logger.error('Geocoding error:', error);
     return null;
   }
 };

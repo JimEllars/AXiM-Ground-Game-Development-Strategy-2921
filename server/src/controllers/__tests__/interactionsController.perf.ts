@@ -43,10 +43,10 @@ describe('Interactions Controller - Performance Baseline', () => {
     const endTime = performance.now();
 
     const queryCount = (pool.query as any).mock.calls.length;
-    console.log(`\n--- BASELINE METRICS ---`);
-    console.log(`Execution Time: ${(endTime - startTime).toFixed(2)}ms`);
-    console.log(`Total queries executed: ${queryCount}`);
-    console.log(`Expected for 100 interactions (before opt): 100 INSERTS + 100 UPDATES = 200 queries`);
+    // console.log(`\n--- BASELINE METRICS ---`);
+    // console.log(`Execution Time: ${(endTime - startTime).toFixed(2)}ms`);
+    // console.log(`Total queries executed: ${queryCount}`);
+    // console.log(`Expected for 100 interactions (before opt): 100 INSERTS + 100 UPDATES = 200 queries`);
 
     // Verify it responds successfully
     expect(res.json).toHaveBeenCalled();
