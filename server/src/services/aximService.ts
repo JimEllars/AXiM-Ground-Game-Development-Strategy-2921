@@ -1,10 +1,11 @@
+import logger from '../utils/logger.js';
 import axios from 'axios';
 
 const aximCoreApiUrl = process.env.AXIM_CORE_API_URL || 'http://localhost:4000/api';
 const aximCoreApiKey = process.env.AXIM_CORE_API_KEY;
 
 if (!aximCoreApiKey) {
-  console.warn('AXiM Core API Key not found. AXiM Core service may not function correctly.');
+  logger.warn('AXiM Core API Key not found. AXiM Core service may not function correctly.');
 }
 
 const aximClient = axios.create({
@@ -40,7 +41,7 @@ export const syncLeadToCore = async (leadData: CoreLeadData) => {
     const response = await aximClient.post('/leads/sync', leadData);
     return response.data;
   } catch (error) {
-    console.error('Error syncing lead to AXiM Core:', error);
+    logger.error('Error syncing lead to AXiM Core:', error);
     throw error;
   }
 };
@@ -50,7 +51,7 @@ export const getOrganizationFromCore = async (orgId: string) => {
     const response = await aximClient.get(`/organizations/${orgId}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching organization from AXiM Core:', error);
+    logger.error('Error fetching organization from AXiM Core:', error);
     throw error;
   }
 };

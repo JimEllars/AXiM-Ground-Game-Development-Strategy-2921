@@ -1,3 +1,4 @@
+import logger from '../utils/logger.js';
 import { Worker, Job } from 'bullmq';
 import { connection } from '../config/queue.js';
 import Papa from 'papaparse';
@@ -227,9 +228,9 @@ export const leadImportWorker = new Worker<LeadImportJobData>(
 );
 
 leadImportWorker.on('completed', (job, returnvalue) => {
-  console.log(`Job ${job.id} completed with result:`, returnvalue);
+  logger.info(`Job ${job.id} completed with result:`, returnvalue);
 });
 
 leadImportWorker.on('failed', (job, error) => {
-  console.error(`Job ${job?.id} failed with error:`, error.message);
+  logger.error(`Job ${job?.id} failed with error:`, error.message);
 });

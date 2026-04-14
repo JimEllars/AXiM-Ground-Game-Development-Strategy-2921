@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import axios from 'axios';
 import { vi } from 'vitest';
 
@@ -48,7 +49,7 @@ describe('API Interceptors', () => {
   beforeEach(() => {
     Storage.prototype.getItem = vi.fn();
     Storage.prototype.removeItem = vi.fn();
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(logger, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -109,7 +110,7 @@ describe('API Interceptors', () => {
     };
 
     await expect(responseInterceptorError(mockError)).rejects.toBe(mockError);
-    expect(console.error).toHaveBeenCalledWith('Authentication Error: Redirecting to login.');
+    expect(logger.error).toHaveBeenCalledWith('Authentication Error: Redirecting to login.');
     expect(Storage.prototype.removeItem).toHaveBeenCalledWith('token');
   });
 

@@ -1,29 +1,36 @@
 import { jest } from '@jest/globals';
 
 const mockCreateClient = jest.fn();
+const mockLoggerWarn = jest.fn();
 
 jest.unstable_mockModule('@supabase/supabase-js', () => ({
   createClient: mockCreateClient,
 }));
 
+jest.unstable_mockModule('../../utils/logger.js', () => ({
+  default: {
+    warn: mockLoggerWarn,
+    info: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  },
+}));
+
 describe('supabaseService client initialization', () => {
   const originalEnv = process.env;
-  let originalConsoleWarn: any;
 
   beforeAll(() => {
-    originalConsoleWarn = console.warn;
-    console.warn = jest.fn();
+    process.env.NODE_ENV = 'test';
   });
 
   afterAll(() => {
-    console.warn = originalConsoleWarn;
     process.env = originalEnv;
   });
 
   beforeEach(() => {
     jest.resetModules();
     mockCreateClient.mockClear();
-    (console.warn as jest.Mock).mockClear();
+    mockLoggerWarn.mockClear();
     process.env = { ...originalEnv };
   });
 
@@ -41,7 +48,7 @@ describe('supabaseService client initialization', () => {
       'test-service-role-key'
     );
     expect(module.supabase).toEqual({ mockClient: 'service_role' });
-    expect(console.warn).not.toHaveBeenCalled();
+    expect(mockLoggerWarn).not.toHaveBeenCalled();
   });
 
   it('should initialize supabase client when SUPABASE_URL and SUPABASE_ANON_KEY are provided', async () => {
@@ -58,7 +65,7 @@ describe('supabaseService client initialization', () => {
       'test-anon-key'
     );
     expect(module.supabase).toEqual({ mockClient: 'anon' });
-    expect(console.warn).not.toHaveBeenCalled();
+    expect(mockLoggerWarn).not.toHaveBeenCalled();
   });
 
   it('should warn and export null when SUPABASE_URL is missing', async () => {
@@ -69,7 +76,7 @@ describe('supabaseService client initialization', () => {
 
     expect(mockCreateClient).not.toHaveBeenCalled();
     expect(module.supabase).toBeNull();
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
       'Supabase credentials not found. Supabase service will not be initialized.'
     );
   });
@@ -83,7 +90,7 @@ describe('supabaseService client initialization', () => {
 
     expect(mockCreateClient).not.toHaveBeenCalled();
     expect(module.supabase).toBeNull();
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
       'Supabase credentials not found. Supabase service will not be initialized.'
     );
   });
@@ -97,7 +104,7 @@ describe('supabaseService client initialization', () => {
 
     expect(mockCreateClient).not.toHaveBeenCalled();
     expect(module.supabase).toBeNull();
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
       'Supabase credentials not found. Supabase service will not be initialized.'
     );
   });
@@ -116,7 +123,7 @@ describe('supabaseService client initialization', () => {
       'test-anon-key'
     );
     expect(module.supabase).toEqual({ mockClient: 'anon' });
-    expect(console.warn).not.toHaveBeenCalled();
+    expect(mockLoggerWarn).not.toHaveBeenCalled();
   });
 
   it('should prefer SUPABASE_SERVICE_ROLE_KEY over SUPABASE_ANON_KEY when both are provided', async () => {
@@ -133,7 +140,7 @@ describe('supabaseService client initialization', () => {
       'test-service-role-key'
     );
     expect(module.supabase).toEqual({ mockClient: 'service_role' });
-    expect(console.warn).not.toHaveBeenCalled();
+    expect(mockLoggerWarn).not.toHaveBeenCalled();
   });
 
   it('should warn and export null when SUPABASE_URL is an empty string', async () => {
@@ -144,7 +151,7 @@ describe('supabaseService client initialization', () => {
 
     expect(mockCreateClient).not.toHaveBeenCalled();
     expect(module.supabase).toBeNull();
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
       'Supabase credentials not found. Supabase service will not be initialized.'
     );
   });
@@ -158,7 +165,7 @@ describe('supabaseService client initialization', () => {
 
     expect(mockCreateClient).not.toHaveBeenCalled();
     expect(module.supabase).toBeNull();
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
       'Supabase credentials not found. Supabase service will not be initialized.'
     );
   });

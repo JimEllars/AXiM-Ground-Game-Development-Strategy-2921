@@ -54,8 +54,8 @@ describe('Teams Controller - Performance Verification', () => {
     await updateTeam(req, res);
 
     const queryCount = mockQuery.mock.calls.length;
-    console.log(`\n--- OPTIMIZED METRICS ---`);
-    console.log(`Total queries executed: ${queryCount}`);
+    // console.log(`\n--- OPTIMIZED METRICS ---`);
+    // console.log(`Total queries executed: ${queryCount}`);
 
     expect(queryCount).toBe(1);
     expect(res.json).toHaveBeenCalled();

@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { Component, ErrorInfo, ReactNode } from 'react';
     import { Box, Typography, Button, Paper } from '@mui/material';
     import { FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
@@ -22,7 +23,7 @@ import React, { Component, ErrorInfo, ReactNode } from 'react';
       }
 
       public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        console.error('Uncaught error:', error, errorInfo);
+        logger.error('Uncaught error:', error, errorInfo);
       }
 
       private handleReset = () => {

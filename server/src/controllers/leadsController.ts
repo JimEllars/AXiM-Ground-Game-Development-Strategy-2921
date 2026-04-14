@@ -1,3 +1,4 @@
+import logger from '../utils/logger.js';
 import { Response } from "express";
 import { pool } from "../config/database.js";
 import { AuthRequest } from "../types/index.js";
@@ -255,7 +256,7 @@ export const updateLead = catchAsync(
       try {
         await syncLeadToCore(updatedLead);
       } catch (syncError) {
-        console.warn("Failed to sync updated lead to AXiM Core:", syncError);
+        logger.warn("Failed to sync updated lead to AXiM Core:", syncError);
         // We don't fail the request if sync fails, but we should log it
       }
 

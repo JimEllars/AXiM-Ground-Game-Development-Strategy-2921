@@ -62,7 +62,7 @@ describe('Interactions Controller', () => {
       .send(interactions);
     const duration = Date.now() - startTime;
 
-    console.log(`Baseline creation time for 100 interactions: ${duration}ms`);
+    // console.log(`Baseline creation time for 100 interactions: ${duration}ms`);
 
     expect(res.statusCode).toEqual(200);
     expect(res.body.count).toEqual(100);

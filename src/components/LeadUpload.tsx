@@ -1,3 +1,4 @@
+import logger from '@/utils/logger';
 import React, { useState } from 'react';
 import { leadsAPI } from '@/services/api';
 import { useQuery } from 'react-query';
@@ -64,7 +65,7 @@ const LeadUpload: React.FC<LeadUploadProps> = ({ onUploadComplete }) => {
 
   React.useEffect(() => {
     if (jobError) {
-      console.error("Error polling job status", jobError);
+      logger.error("Error polling job status", jobError);
     }
   }, [jobError]);
 
