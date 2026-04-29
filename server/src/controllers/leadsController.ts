@@ -4,7 +4,7 @@ import { pool } from "../config/database.js";
 import { AuthRequest } from "../types/index.js";
 import { leadSchema } from "../utils/validationSchemas.js";
 import { geocodeAddress, batchGeocode } from "../services/geocoding.js";
-import { syncLeadToCore } from "../services/aximService.js";
+import { syncLeadToCore, getLeadEnrichment } from "../services/aximService.js";
 import Papa from "papaparse";
 import multer from "multer";
 import catchAsync from '../utils/catchAsync.js';
@@ -224,8 +224,8 @@ export const updateLead = catchAsync(
          l.updated_at
        FROM leads l
        JOIN lead_pii pii ON l.id = pii.lead_id
-       WHERE l.id = $1`,
-        [id],
+       WHERE l.id = $1 AND l.organization_id = $2`,
+        [id, user.organization_id],
       );
 
       const row = updatedLeadResult.rows[0];
@@ -390,4 +390,28 @@ export const getLeads = catchAsync(async (req: AuthRequest, res: Response) => {
       pages: Math.ceil(Number(countResult.rows[0].count) / Number(limit)),
     },
   });
+});
+
+export const getLeadInsights = catchAsync(async (req: AuthRequest, res: Response) => {
+  const { id } = req.params;
+  const user = req.user!;
+
+  const result = await pool.query(
+    `SELECT pii.street_address, pii.city, pii.state, pii.zip
+     FROM leads l
+     JOIN lead_pii pii ON l.id = pii.lead_id
+     WHERE l.id = $1 AND l.organization_id = $2`,
+    [id, user.organization_id]
+  );
+
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: "Lead not found" });
+  }
+
+  const row = result.rows[0];
+  const fullAddress = [row.street_address, row.city, row.state, row.zip].filter(Boolean).join(", ");
+
+  const enrichmentData = await getLeadEnrichment(fullAddress);
+
+  res.status(200).json({ insights: enrichmentData });
 });

@@ -35,7 +35,18 @@ export const leadImportWorker = new Worker<LeadImportJobData>(
     const parseResult = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: (header) => header.toLowerCase().trim(),
+      transformHeader: (header) => {
+        let clean = header.toLowerCase().trim().replace(/[^a-z0-9_]/g, '');
+        if (['fname', 'firstname', 'first'].includes(clean)) return 'first_name';
+        if (['lname', 'lastname', 'last'].includes(clean)) return 'last_name';
+        if (['address', 'street', 'address1', 'streetaddress'].includes(clean)) return 'street_address';
+        if (['town'].includes(clean)) return 'city';
+        if (['province'].includes(clean)) return 'state';
+        if (['zipcode', 'postalcode', 'postal'].includes(clean)) return 'zip';
+        if (['phonenumber', 'cell', 'mobile'].includes(clean)) return 'phone';
+        if (['emailaddress'].includes(clean)) return 'email';
+        return clean;
+      },
     });
 
     if (parseResult.errors.length > 0) {
@@ -74,7 +85,8 @@ export const leadImportWorker = new Worker<LeadImportJobData>(
       return parts.join(', ');
     });
 
-    const geocodeResults = await batchGeocode(addresses);
+    const validAddresses = addresses.map(a => a.length > 10 ? a : '');
+    const geocodeResults = await batchGeocode(validAddresses);
 
     // 4. Prepare Leads for DB
     const leadsToProcess: ProcessedLead[] = validatedRows.map((row, index) => {

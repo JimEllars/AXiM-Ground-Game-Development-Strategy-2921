@@ -41,6 +41,10 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     }
 
     req.user = result.rows[0] as User;
+
+    if (!req.user.organization_id) {
+      return next(new AppError('User missing organization context', 403));
+    }
     next();
   } catch (error) {
     return next(new AppError('Invalid or expired token', 403));

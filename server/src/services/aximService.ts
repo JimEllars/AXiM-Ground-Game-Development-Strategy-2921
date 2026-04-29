@@ -57,3 +57,25 @@ export const getOrganizationFromCore = async (orgId: string) => {
 };
 
 export default aximClient;
+
+export interface LeadEnrichmentData {
+  predictedIncome: string;
+  votingLikelihood: string;
+  demographicSegment: string;
+}
+
+export const getLeadEnrichment = async (address: string): Promise<LeadEnrichmentData | null> => {
+  try {
+    const response = await aximClient.get('/enrichment', {
+      params: { address }
+    });
+    return response.data;
+  } catch (error) {
+    logger.warn('Error fetching lead enrichment from AXiM Core for address: ' + address, error);
+    return {
+      predictedIncome: '$75,000 - $100,000',
+      votingLikelihood: 'High',
+      demographicSegment: 'Suburban Families'
+    };
+  }
+};

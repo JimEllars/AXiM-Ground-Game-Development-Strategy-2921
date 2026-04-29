@@ -175,9 +175,9 @@ export const getUserTerritories = catchAsync(
          ta.assigned_at
        FROM territories t
        JOIN territory_assignments ta ON t.id = ta.territory_id
-       WHERE ta.user_id = $1
+       WHERE ta.user_id = $1 AND t.organization_id = $2
        ORDER BY ta.assigned_at DESC`,
-      [user.id],
+      [user.id, user.organization_id],
     );
 
     const territories = result.rows.map((row) => ({

@@ -48,7 +48,7 @@ export const geocodeAddress = async (address: string): Promise<GeocodeResult | n
 
 export const batchGeocode = async (addresses: string[]): Promise<(GeocodeResult | null)[]> => {
   // Process in batches to avoid rate limiting
-  const batchSize = 5;
+  const batchSize = 10;
   const batches: string[][] = [];
 
   for (let i = 0; i < addresses.length; i += batchSize) {
@@ -58,7 +58,7 @@ export const batchGeocode = async (addresses: string[]): Promise<(GeocodeResult 
   const batchPromises = batches.map(async (batch, index) => {
     // Small delay between batches, staggered by their index
     if (index > 0) {
-      await new Promise(resolve => setTimeout(resolve, index * 100));
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
     const promises = batch.map(address => geocodeAddress(address));
     return Promise.all(promises);

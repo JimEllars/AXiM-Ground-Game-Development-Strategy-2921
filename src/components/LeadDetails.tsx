@@ -17,7 +17,7 @@ import { FiMapPin, FiEdit2, FiSave, FiX, FiCalendar, FiPlus } from 'react-icons/
 import SafeIcon from '@/common/SafeIcon';
 import { leadsAPI } from '@/services/api';
 import AppointmentForm from './AppointmentForm';
-import { useQueryClient } from 'react-query';
+import { useQueryClient, useQuery } from 'react-query';
 import { Collapse } from '@mui/material';
 import { parseLeadLocation } from '@/common/locationUtils';
 
@@ -57,6 +57,16 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const { data: insightsData, isLoading: insightsLoading } = useQuery(
+    ['leadInsights', lead.id],
+    () => leadsAPI.getInsights(lead.id).then(res => res.data.insights),
+    {
+      enabled: !!lead.id,
+      retry: 1,
+    }
+  );
+
 
   // Backend returns { type: 'Point', coordinates: [lon, lat] } or sometimes
   // { x: ..., y: ... } depending on legacy code, but we know it's GeoJSON now.
@@ -306,6 +316,29 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
               <Typography variant="body1" gutterBottom>
                   <strong>Status:</strong> <Chip label={lead.status} size="small" />
               </Typography>
+
+              <Divider sx={{ my: 2 }} />
+              <Typography variant="h6" gutterBottom>
+                AXiM Insights
+              </Typography>
+              {insightsLoading ? (
+                <Typography variant="body2" color="text.secondary">Loading insights...</Typography>
+              ) : insightsData ? (
+                <Box sx={{ p: 1, bgcolor: 'primary.50', borderRadius: 1 }}>
+                  <Typography variant="body2">
+                    <strong>Predicted Income:</strong> {insightsData.predictedIncome}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Voting Likelihood:</strong> {insightsData.votingLikelihood}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Demographics:</strong> {insightsData.demographicSegment}
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">No insights available.</Typography>
+              )}
+
               {lead.notes && (
                   <Typography variant="body2" sx={{ mt: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
                       <strong>Notes:</strong> {lead.notes}
