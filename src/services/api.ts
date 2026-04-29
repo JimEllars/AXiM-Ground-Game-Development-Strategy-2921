@@ -112,6 +112,8 @@ export const leadsAPI = {
     api.put(`/leads/${id}`, data),
   deleteMany: (ids: string[]) =>
     api.post('/leads/delete-many', { ids }),
+  getInsights: (id: string) =>
+    api.get(`/leads/${id}/insights`),
 };
 
 // Reps API

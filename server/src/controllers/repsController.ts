@@ -50,9 +50,9 @@ export const getMyTurf = catchAsync(async (req: AuthRequest, res: Response) => {
          LIMIT 1
        ) i ON true
        
-       WHERE ta.user_id = $1
+       WHERE ta.user_id = $1 AND t.organization_id = $2
        ORDER BY t.name, lp.street_address`,
-    [user.id],
+    [user.id, user.organization_id],
   );
 
   // Group results by territory
