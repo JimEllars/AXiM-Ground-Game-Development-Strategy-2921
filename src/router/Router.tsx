@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from '@/pages/Login';
+import RegisterOrganization from '@/pages/RegisterOrganization';
 import Dashboard from '@/pages/Dashboard';
 import TerritoryManagement from '@/pages/TerritoryManagement';
 import LeadManagement from '@/pages/LeadManagement';
@@ -15,6 +16,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 const AppRouter: React.FC = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
+    <Route path="/register" element={<RegisterOrganization />} />
     <Route path="/" element={<ProtectedRoute />}>
       <Route index element={<Navigate to="/dashboard" replace />} />
       <Route path="/dashboard" element={<Dashboard />} />

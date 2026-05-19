@@ -18,6 +18,8 @@ export const syncOfflineData = async () => {
       surveyData: i.surveyData
     }));
 
+    logger.info(`Syncing interactions payload: ${JSON.stringify(payload)}`);
+    logger.info(`Survey data specifically: ${JSON.stringify(payload.map(p => p.surveyData))}`);
     await interactionsAPI.create(payload);
 
     const idsToUpdate = offlineInteractions.map(i => i.id!);

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
     import { Box, Paper, TextField, Button, Typography, Alert, Container, Avatar } from '@mui/material';
     import { FiUser, FiLock, FiLogIn } from 'react-icons/fi';
-    import { useNavigate } from 'react-router-dom';
+    import { useNavigate, Link } from 'react-router-dom';
     import SafeIcon from '@/common/SafeIcon';
     import { useAuth } from '@/contexts/AuthContext';
 
@@ -94,6 +94,14 @@ import React, { useState } from 'react';
                 >
                   {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
+                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                  <Typography variant="body2">
+                    Don't have an account?{' '}
+                    <Link to="/register" style={{ color: '#1976d2', textDecoration: 'none' }}>
+                      Register your organization
+                    </Link>
+                  </Typography>
+                </Box>
               </Box>
             </Paper>
           </Container>
