@@ -75,6 +75,84 @@ export const register = catchAsync(async (req: Request, res: Response, next: Nex
     });
 });
 
+
+export const registerOrganization = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    const { organizationName, email, password, firstName, lastName } = req.body;
+    const role = 'ADMIN';
+
+    // Validate required fields
+    if (!organizationName || !email || !password || !firstName || !lastName) {
+      return next(new AppError('Organization name, email, password, first name, and last name are required', 400));
+    }
+
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // Check if user already exists
+      const existingUser = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+      if (existingUser.rows.length > 0) {
+        throw new AppError('User with this email already exists', 400);
+      }
+
+      // Step A: Insert the new Organization
+      const orgResult = await client.query(
+        'INSERT INTO organizations (name) VALUES ($1) RETURNING id',
+        [organizationName]
+      );
+      const organizationId = orgResult.rows[0].id;
+
+      // Step B: Hash password
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(password, saltRounds);
+
+      // Step C: Insert the new user
+      const userResult = await client.query(
+        `INSERT INTO users (organization_id, email, password_hash, first_name, last_name, role)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING id, organization_id, email, first_name, last_name, role, created_at`,
+        [organizationId, email, passwordHash, firstName, lastName, role]
+      );
+      const user = userResult.rows[0];
+
+      await client.query('COMMIT');
+
+      if (!JWT_SECRET) {
+        return next(new AppError('JWT secret not configured', 500));
+      }
+
+      // Step D: Generate JWT token
+      const token = jwt.sign(
+        {
+          userId: user.id,
+          email: user.email,
+          role: user.role,
+          organizationId: user.organization_id,
+        },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+      );
+
+      res.status(201).json({
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          role: user.role,
+          organizationId: user.organization_id,
+        }
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      next(error);
+    } finally {
+      client.release();
+    }
+});
+
 export const login = catchAsync(async (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
 

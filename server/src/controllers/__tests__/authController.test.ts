@@ -19,10 +19,12 @@ describe('authController', () => {
   let res: any;
   let next: any;
   let getProfile: any;
+  let registerOrganization: any;
 
   beforeAll(async () => {
     const controller = await import('../authController.js');
     getProfile = controller.getProfile;
+    registerOrganization = controller.registerOrganization;
   });
 
   beforeEach(() => {
@@ -37,7 +39,59 @@ describe('authController', () => {
     jest.clearAllMocks();
   });
 
-  describe('getProfile', () => {
+
+    describe('registerOrganization', () => {
+        it('should require organizationName, email, password, firstName, lastName', async () => {
+            req.body = {};
+            await registerOrganization(req, res, next);
+            expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 400 }));
+            expect(next.mock.calls[0][0].message).toContain('required');
+        });
+
+        it('should successfully create organization and admin user', async () => {
+            req.body = {
+              organizationName: 'Test Org',
+              email: 'admin@test.com',
+              password: 'password123',
+              firstName: 'Test',
+              lastName: 'Admin'
+            };
+
+            const mockClient = {
+              query: jest.fn(),
+              release: jest.fn()
+            };
+
+            mockPool.connect.mockResolvedValueOnce(mockClient);
+            mockClient.query.mockImplementation((query) => {
+  if (query.includes("SELECT id FROM users")) return Promise.resolve({ rows: [] });
+  if (query.includes("INSERT INTO organizations")) return Promise.resolve({ rows: [{ id: "org123" }] });
+  if (query.includes("INSERT INTO users")) return Promise.resolve({ rows: [{ id: "user123", email: "admin@test.com", role: "ADMIN", organization_id: "org123" }] });
+  return Promise.resolve();
+});
+
+
+
+            await registerOrganization(req, res, next);
+
+            expect(mockClient.query).toHaveBeenCalledWith('BEGIN');
+            expect(mockClient.query).toHaveBeenCalledWith('COMMIT');
+            expect(mockClient.release).toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(201);
+            expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+              token: expect.any(String),
+              user: expect.objectContaining({
+                email: 'admin@test.com',
+                role: 'ADMIN',
+                organizationId: 'org123'
+              })
+            }));
+        });
+
+    });
+
+
+    describe('getProfile', () => {
     it('should return user profile when authenticated and user exists', async () => {
       const mockUser = {
         id: 'user123',
