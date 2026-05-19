@@ -154,17 +154,32 @@ import React, { useState } from 'react';
                      {q.type === 'text' && (
                        <TextField
                          fullWidth
-                         label={q.question}
+                         label={q.text}
                          required={q.required}
                          value={surveyAnswers[q.id] || ''}
                          onChange={e => setSurveyAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
                        />
                      )}
-                     {q.type === 'choice' && (
+
+                     {q.type === 'boolean' && (
                        <FormControl fullWidth required={q.required}>
-                         <InputLabel>{q.question}</InputLabel>
+                         <InputLabel>{q.text}</InputLabel>
                          <Select
-                           label={q.question}
+                           label={q.text}
+                           value={surveyAnswers[q.id] !== undefined ? String(surveyAnswers[q.id]) : ''}
+                           onChange={e => setSurveyAnswers(prev => ({ ...prev, [q.id]: e.target.value === 'true' }))}
+                         >
+                           <MenuItem value="true">Yes</MenuItem>
+                           <MenuItem value="false">No</MenuItem>
+                         </Select>
+                       </FormControl>
+                     )}
+
+                     {q.type === 'multiple_choice' && (
+                       <FormControl fullWidth required={q.required}>
+                         <InputLabel>{q.text}</InputLabel>
+                         <Select
+                           label={q.text}
                            value={surveyAnswers[q.id] || ''}
                            onChange={e => setSurveyAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
                          >
