@@ -53,6 +53,13 @@ export const authAPI = {
     role?: string;
   }) => 
     api.post('/auth/register', data),
+  registerOrg: (data: {
+    organizationName: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+  }) => api.post('/auth/register-organization', data),
   getProfile: () => 
     api.get('/auth/profile'),
 };
@@ -197,6 +204,8 @@ export const teamsAPI = {
 // Settings API
 export const settingsAPI = {
   getSettings: () => api.get('/settings'),
+  createSurvey: (data: any) => api.post('/settings/surveys', data),
+  getSurveys: () => api.get('/settings/surveys'),
   updateSettings: (data: { surveys?: any[], dispositions?: any[] }) => api.put('/settings', data),
 };
 
