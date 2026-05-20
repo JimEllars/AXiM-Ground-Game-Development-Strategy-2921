@@ -36,7 +36,7 @@ import { useQuery } from 'react-query';
     } from 'recharts';
     import SafeIcon from '@/common/SafeIcon';
     import StatCard from '@/components/StatCard';
-    import { territoriesAPI, leadsAPI, interactionsAPI } from '@/services/api';
+    import { analyticsAPI } from '@/services/api';
     import { TabPanel } from './TabPanel';
 
     const COLORS = ['#1976d2', '#388e3c', '#f57c00', '#d32f2f', '#7b1fa2'];
@@ -78,95 +78,20 @@ import { useQuery } from 'react-query';
             startDate.setDate(startDate.getDate() - 7);
         }
 
-        const [territoriesData, leadsData, interactionsData] = await Promise.all([
-          territoriesAPI.getAll(),
-          leadsAPI.getAll({ limit: 1000 }),
-          interactionsAPI.getAll({ startDate: startDate.toISOString(), endDate: endDate.toISOString() }),
-        ]);
-
-        return {
-          territories: territoriesData.data || [],
-          leads: leadsData.data?.leads || [],
-          interactions: interactionsData.data?.interactions || [],
-          summary: {
-            totalTerritories: territoriesData.data?.length || 0,
-            totalLeads: leadsData.data?.pagination?.total || 0,
-            totalInteractions: interactionsData.data?.pagination?.total || 0,
-            completionRate: calculateCompletionRate(leadsData.data?.leads),
-          },
-          trends: processTrendsData(interactionsData.data?.interactions),
-          outcomes: processOutcomesData(interactionsData.data?.interactions),
-          topPerformers: processTopPerformers(interactionsData.data?.interactions),
-        };
+        const { data } = await analyticsAPI.getAnalytics({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString()
+        });
+        return data;
       };
 
-      const { data: analytics = initialAnalyticsState, isLoading: loading, error: queryError } = useQuery(['analytics', dateRange, tabValue], fetchAnalytics, {
+      const { data: analytics = initialAnalyticsState, isLoading: loading, error: queryError } = useQuery(['analytics', dateRange], fetchAnalytics, {
           keepPreviousData: true
       });
       const [errorMsg, setErrorMsg] = useState('');
       const error = (queryError as any)?.response?.data?.error || errorMsg;
       const setError = setErrorMsg;
 
-
-      const calculateCompletionRate = (leads: any[] = []) => {
-        if (!leads || leads.length === 0) return 0;
-        const completedLeads = leads.reduce(
-          (count: number, lead: any) => count + (lead && (lead.status === 'Completed' || lead.status === 'Sold') ? 1 : 0),
-          0
-        );
-        return Math.round((completedLeads / leads.length) * 100);
-      };
-
-      const processTrendsData = (interactions: any[] = []) => {
-        if (!interactions) return [];
-        const dailyData = interactions.reduce((acc: any, interaction) => {
-          if (!interaction || !interaction.interactionDate || !interaction.lead) return acc;
-          const date = new Date(interaction.interactionDate).toLocaleDateString();
-          if (!acc[date]) {
-            acc[date] = { date, interactions: 0, uniqueLeads: new Set() };
-          }
-          acc[date].interactions++;
-          acc[date].uniqueLeads.add(interaction.lead.id);
-          return acc;
-        }, {});
-        return Object.values(dailyData).map((item: any) => ({ ...item, uniqueLeads: item.uniqueLeads.size }));
-      };
-
-      const processOutcomesData = (interactions: any[] = []) => {
-        if (!interactions) return [];
-        const outcomes = interactions.reduce((acc: any, interaction) => {
-          if (!interaction || !interaction.outcome) return acc;
-          const outcome = interaction.outcome;
-          acc[outcome] = (acc[outcome] || 0) + 1;
-          return acc;
-        }, {});
-        return Object.entries(outcomes).map(([name, value]) => ({ name, value }));
-      };
-
-      const processTopPerformers = (interactions: any[] = []) => {
-        if (!interactions) return [];
-        const performers = interactions.reduce((acc: any, interaction) => {
-          if (!interaction || !interaction.user || !interaction.lead) return acc;
-          const userId = interaction.user.id;
-          if (!userId) return acc;
-
-          if (!acc[userId]) {
-            acc[userId] = {
-              id: userId,
-              name: `${interaction.user.firstName || 'Unknown'} ${interaction.user.lastName || 'User'}`,
-              interactions: 0,
-              uniqueLeads: new Set(),
-            };
-          }
-          acc[userId].interactions++;
-          acc[userId].uniqueLeads.add(interaction.lead.id);
-          return acc;
-        }, {});
-        return Object.values(performers)
-          .map((performer: any) => ({ ...performer, uniqueLeads: performer.uniqueLeads.size }))
-          .sort((a: any, b: any) => b.interactions - a.interactions)
-          .slice(0, 10);
-      };
 
       const handleExportData = () => {
         const dataStr = JSON.stringify(analytics, null, 2);

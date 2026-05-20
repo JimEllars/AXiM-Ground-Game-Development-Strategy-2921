@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import { FiSave, FiDownload, FiUpload, FiPlus, FiTrash2 } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
-import { settingsAPI } from '@/services/api';
+import { settingsAPI, leadsAPI } from '@/services/api';
 
 const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState({
@@ -70,6 +70,21 @@ const SettingsPage: React.FC = () => {
       setError(error.response?.data?.error || 'Failed to save settings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportCampaignData = async () => {
+    try {
+      const response = await leadsAPI.export();
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'axim_export.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to export campaign data');
     }
   };
 
@@ -376,6 +391,14 @@ const SettingsPage: React.FC = () => {
                   onClick={handleExportData}
                 >
                   Export Settings
+                </Button>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  startIcon={<SafeIcon icon={FiDownload} />}
+                  onClick={handleExportCampaignData}
+                >
+                  Export Campaign Data
                 </Button>
                 <Button variant="outlined" component="label" startIcon={<SafeIcon icon={FiUpload} />}>
                   Import Settings

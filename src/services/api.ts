@@ -121,6 +121,8 @@ export const leadsAPI = {
     api.post('/leads/delete-many', { ids }),
   getInsights: (id: string) =>
     api.get(`/leads/${id}/insights`),
+  export: () =>
+    api.get('/leads/export', { responseType: 'blob' }),
 };
 
 // Reps API

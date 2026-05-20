@@ -7,10 +7,11 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 // 1. Mock aximService BEFORE importing modules that use it
 jest.unstable_mockModule('../../services/aximService.js', () => ({
   syncLeadToCore: jest.fn(),
+  getLeadEnrichment: jest.fn(),
 }));
 
 // 2. Import modules dynamically AFTER mocking
-const { syncLeadToCore } = await import('../../services/aximService.js');
+const { syncLeadToCore, getLeadEnrichment } = await import('../../services/aximService.js');
 const { default: app } = await import('../../app.js');
 const { pool } = await import('../../config/database.js');
 
