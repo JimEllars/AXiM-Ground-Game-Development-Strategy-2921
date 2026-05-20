@@ -95,7 +95,7 @@ describe('Reps Controller', () => {
 
       expect(mockQuery).toHaveBeenCalledTimes(1);
       expect(mockQuery.mock.calls[0][0]).toContain('FROM territories t');
-      expect(mockQuery.mock.calls[0][1]).toEqual(['user1']);
+      expect(mockQuery.mock.calls[0][1]).toEqual(['user1', 'org1']);
 
       const responseData = res.json.mock.calls[0][0];
 

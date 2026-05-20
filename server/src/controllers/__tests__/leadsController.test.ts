@@ -21,6 +21,7 @@ jest.unstable_mockModule('../../services/geocoding.js', () => ({
 
 jest.unstable_mockModule('../../services/aximService.js', () => ({
   syncLeadToCore: jest.fn(),
+  getLeadEnrichment: jest.fn(),
 }));
 
 const { getLeads } = await import('../leadsController.js');

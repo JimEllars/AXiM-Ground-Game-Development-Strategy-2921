@@ -415,3 +415,73 @@ export const getLeadInsights = catchAsync(async (req: AuthRequest, res: Response
 
   res.status(200).json({ insights: enrichmentData });
 });
+
+import { Parser } from 'json2csv';
+
+export const exportLeads = catchAsync(async (req: AuthRequest, res: Response) => {
+  const user = req.user!;
+
+  const query = `
+    SELECT
+      l.id,
+      pii.first_name as "First Name",
+      pii.last_name as "Last Name",
+      pii.street_address as "Street Address",
+      pii.city as "City",
+      pii.state as "State",
+      pii.zip as "Zip",
+      pii.phone as "Phone",
+      pii.email as "Email",
+      l.status as "Status",
+      l.notes as "Notes",
+      ST_X(l.location) as "Longitude",
+      ST_Y(l.location) as "Latitude",
+      l.created_at as "Created At",
+      l.updated_at as "Updated At",
+      i.outcome as "Latest Outcome",
+      i.notes as "Latest Interaction Notes",
+      i.interaction_date as "Latest Interaction Date",
+      i.survey_data as "Survey Data"
+    FROM leads l
+    LEFT JOIN lead_pii pii ON l.id = pii.lead_id
+    LEFT JOIN LATERAL (
+      SELECT outcome, notes, interaction_date, survey_data
+      FROM interactions
+      WHERE lead_id = l.id
+      ORDER BY interaction_date DESC
+      LIMIT 1
+    ) i ON true
+    WHERE l.organization_id = $1
+    ORDER BY l.created_at DESC
+  `;
+
+  const result = await pool.query(query, [user.organization_id]);
+
+  // Flatten survey_data if present, otherwise just convert to string
+  const processedRows = result.rows.map(row => {
+    let flatRow = { ...row };
+    if (flatRow["Survey Data"]) {
+      try {
+        const surveyData = typeof flatRow["Survey Data"] === 'string' ? JSON.parse(flatRow["Survey Data"]) : flatRow["Survey Data"];
+        flatRow["Survey Data"] = JSON.stringify(surveyData); // Basic flattening, can be improved to top-level columns if needed
+      } catch (e) {
+        // keep as is
+      }
+    }
+    return flatRow;
+  });
+
+  const fields = [
+    'id', 'First Name', 'Last Name', 'Street Address', 'City', 'State', 'Zip',
+    'Phone', 'Email', 'Status', 'Notes', 'Longitude', 'Latitude',
+    'Created At', 'Updated At', 'Latest Outcome', 'Latest Interaction Notes',
+    'Latest Interaction Date', 'Survey Data'
+  ];
+
+  const json2csvParser = new Parser({ fields });
+  const csv = json2csvParser.parse(processedRows);
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="axim_export.csv"');
+  res.status(200).send(csv);
+});
