@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
     import { Box, Typography, Alert, CircularProgress } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
     import TerritoryMap from '@/components/TerritoryMap';
@@ -42,7 +42,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
         (id: string) => territoriesAPI.delete(id),
         {
           onSuccess: (_, id) => {
-            const territoryToDelete = territories.find(t => t.id === id);
+            const territoryToDelete = territories.find((t: any) => t.id === id);
             setSuccess(`Territory "${territoryToDelete?.name || 'Unknown'}" deleted successfully!`);
             setError('');
             queryClient.invalidateQueries('territories');
@@ -59,8 +59,8 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
         ({ territoryId, userId }: { territoryId: string; userId: string }) => territoriesAPI.assign(territoryId, userId),
         {
           onSuccess: (_, { territoryId, userId }) => {
-            const territory = territories.find(t => t.id === territoryId);
-            const rep = availableReps.find(r => r.id === userId);
+            const territory = territories.find((t: any) => t.id === territoryId);
+            const rep = availableReps.find((r: any) => r.id === userId);
             setSuccess(`Territory "${territory?.name}" assigned to ${rep?.firstName} ${rep?.lastName} successfully!`);
             setError('');
             queryClient.invalidateQueries('territories');
@@ -78,7 +78,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
       };
 
       const handleDeleteTerritory = (id: string) => {
-        const territoryToDelete = territories.find(t => t.id === id);
+        const territoryToDelete = territories.find((t: any) => t.id === id);
         if (!territoryToDelete) return;
 
         if (!window.confirm(`Are you sure you want to delete the territory "${territoryToDelete.name}"? This action will NOT delete the leads within the territory.`)) {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
     import {
       Box,
       Button,
@@ -8,7 +8,7 @@ import React, { useState } from 'react';
       MenuItem,
       FormControl,
       InputLabel,
-      Chip,
+
       Alert,
     } from '@mui/material';
     import { FiSave, FiX } from 'react-icons/fi';
@@ -60,7 +60,7 @@ import React, { useState } from 'react';
       });
 
       const outcomes = settingsData?.dispositions?.length > 0
-        ? settingsData.dispositions.map((d: any) => d.name)
+        ? settingsData?.dispositions?.map((d: any) => d.name)
         : fallbackOutcomes;
 
       const surveys = settingsData?.surveys || [];
@@ -128,7 +128,7 @@ import React, { useState } from 'react';
             <FormControl fullWidth sx={{ mb: 2 }}>
               <InputLabel>Outcome</InputLabel>
               <Select value={outcome} onChange={(e) => setOutcome(e.target.value)} label="Outcome" required>
-                {outcomes.map((outcomeOption) => (
+                {outcomes.map((outcomeOption: any) => (
                   <MenuItem key={outcomeOption} value={outcomeOption}>
                     {outcomeOption}
                   </MenuItem>

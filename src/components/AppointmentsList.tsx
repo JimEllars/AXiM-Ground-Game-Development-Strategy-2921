@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -16,7 +16,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import { FiCalendar, FiClock, FiTrash2, FiMapPin } from 'react-icons/fi';
+import { FiCalendar,  FiTrash2, FiMapPin } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { appointmentsAPI } from '@/services/api';

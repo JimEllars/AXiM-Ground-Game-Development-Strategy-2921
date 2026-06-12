@@ -1,5 +1,4 @@
 import logger from '@/utils/logger';
-import axios from 'axios';
 import { vi } from 'vitest';
 
 vi.mock('../../config', () => ({
@@ -84,7 +83,7 @@ describe('API Interceptors', () => {
   });
 
   it('response interceptor should handle 401 error and redirect', async () => {
-    const originalLocation = window.location;
+
     // Replace window object for this test using Object.defineProperty to set location to our mock object
     // Wait, let's just use vi.spyOn if possible on a different approach:
     // We can spy on window.location.assign if it's already there
@@ -115,7 +114,7 @@ describe('API Interceptors', () => {
   });
 
   it('response interceptor should not redirect on 401 if already on /login', async () => {
-    const originalLocation = window.location;
+
 
     const assignMock = vi.fn();
 

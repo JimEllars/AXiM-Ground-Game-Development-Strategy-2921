@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
     import {
       Box,
       Typography,
@@ -90,7 +90,7 @@ import { useQuery, useQueryClient } from 'react-query';
             </Paper>
           ) : (
             <Box>
-              {territories.map((territory) => (
+              {territories.map((territory: any) => (
                 <Box key={territory.id} sx={{ mb: 3 }}>
                   <TerritoryStats territory={territory} />
                   <Paper sx={{ p: 3, mb: 2 }}>

@@ -1,9 +1,8 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from 'react-query';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import LeadInteractionForm from '../LeadInteractionForm';
-import { settingsAPI, interactionsAPI } from '@/services/api';
+import { settingsAPI } from '@/services/api';
 
 vi.mock('@/services/api', () => ({
   settingsAPI: {

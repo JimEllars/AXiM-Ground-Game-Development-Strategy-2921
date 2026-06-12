@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from 'react-query';
     import {
       Box,
@@ -17,10 +17,10 @@ import { useQuery } from 'react-query';
       Alert,
       CircularProgress,
     } from '@mui/material';
-    import { FiTrendingUp, FiUsers, FiTarget, FiClock, FiActivity, FiAward } from 'react-icons/fi';
+    import { FiTrendingUp,  FiTarget, FiClock, FiActivity, FiAward } from 'react-icons/fi';
     import {
-      LineChart,
-      Line,
+
+
       XAxis,
       YAxis,
       CartesianGrid,

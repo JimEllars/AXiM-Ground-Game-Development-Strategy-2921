@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from 'react-query';
     import {
       Box,
@@ -85,12 +85,12 @@ import { useQuery } from 'react-query';
         return data;
       };
 
-      const { data: analytics = initialAnalyticsState, isLoading: loading, error: queryError } = useQuery(['analytics', dateRange], fetchAnalytics, {
+      const { data: analytics = initialAnalyticsState, isLoading: loading, error: queryErrorState } = useQuery(['analytics', dateRange], fetchAnalytics, {
           keepPreviousData: true
       });
-      const [errorMsg, setErrorMsg] = useState('');
-      const error = (queryError as any)?.response?.data?.error || errorMsg;
-      const setError = setErrorMsg;
+      const errorMsg = '';
+      const error = (queryErrorState as any)?.response?.data?.error || errorMsg;
+
 
 
       const handleExportData = () => {
@@ -119,7 +119,7 @@ import { useQuery } from 'react-query';
             <Box sx={{ display: 'flex', gap: 2 }}>
               <FormControl size="small" sx={{ minWidth: 120 }}>
                 <InputLabel>Date Range</InputLabel>
-                <Select value={dateRange} onChange={(e) => setDateRange(e.target.value)} label="Date Range">
+                <Select value={dateRange} onChange={(e: any) => setDateRange(e.target.value)} label="Date Range">
                   <MenuItem value="7days">Last 7 Days</MenuItem>
                   <MenuItem value="30days">Last 30 Days</MenuItem>
                   <MenuItem value="90days">Last 90 Days</MenuItem>
@@ -132,7 +132,7 @@ import { useQuery } from 'react-query';
           </Box>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+            <Alert severity="error" sx={{ mb: 2 }} >
               {error}
             </Alert>
           )}
@@ -171,7 +171,7 @@ import { useQuery } from 'react-query';
 
           {/* Analytics Tabs */}
           <Paper sx={{ width: '100%' }}>
-            <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+            <Tabs value={tabValue} onChange={(_e, newValue) => setTabValue(newValue)}>
               <Tab label="Trends" />
               <Tab label="Outcomes" />
               <Tab label="Top Performers" />

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
     import {
       Grid,
       Paper,
@@ -147,7 +147,7 @@ import AppointmentsList from '@/components/AppointmentsList';
                 </Typography>
                 {territories.length > 0 ? (
                   <List>
-                    {territories.map((territory) => {
+                    {territories.map((territory: any) => {
                       const totalLeads = territory.leads.length;
                       const completedLeads = territory.leads.reduce(
                         (count: number, l: any) => count + (l.lastInteraction ? 1 : 0),
