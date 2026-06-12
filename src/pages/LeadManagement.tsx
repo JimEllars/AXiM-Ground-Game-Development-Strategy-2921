@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
     import {
       Box,
       Typography,
@@ -57,7 +57,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
   const [orderBy, setOrderBy] = useState('createdAt');
   const [isDeleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-      const { data: leadsData, isLoading: loading, error: queryError } = useQuery(
+      const { data: leadsData, isLoading: loading, error: _queryError } = useQuery(
         ['leads', pagination.page, pagination.rowsPerPage, searchTerm, statusFilter, orderBy, order],
         () => leadsAPI.getAll({
           page: pagination.page,
@@ -108,16 +108,16 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
         }
       };
 
-      const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+      const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
       };
 
-      const handlePageChange = (event: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
+      const handlePageChange = (_: React.MouseEvent<HTMLButtonElement> | null, newPage: number) => {
         setPagination(prev => ({ ...prev, page: newPage + 1 }));
       };
 
       const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setPagination(prev => ({ ...prev, rowsPerPage: parseInt(event.target.value, 10), page: 1 }));
+        setPagination(prev => ({ ...prev, rowsPerPage: parseInt((event.target as any).value, 10), page: 1 }));
       };
 
       const handleOpenDetails = (lead: Lead) => {
@@ -337,7 +337,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
                           </TableCell>
                         </TableRow>
                       ) : (
-                        leads.map((lead) => {
+                        leads.map((lead: any) => {
                           const isSelected = selectedSet.has(lead.id);
                           const parsedLocation = parseLeadLocation(lead.location);
                           return (

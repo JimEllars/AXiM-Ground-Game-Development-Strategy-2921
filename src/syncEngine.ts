@@ -6,7 +6,7 @@ export const syncOfflineData = async () => {
   if (!navigator.onLine) return;
 
   try {
-    const offlineInteractions = await db.interactions.where('synced').equals(false).toArray();
+    const offlineInteractions = await db.interactions.where('synced').equals(0 as any).toArray();
 
     if (offlineInteractions.length === 0) return;
 
@@ -23,7 +23,7 @@ export const syncOfflineData = async () => {
     await interactionsAPI.create(payload);
 
     const idsToUpdate = offlineInteractions.map(i => i.id!);
-    await db.interactions.bulkUpdate(idsToUpdate.map(id => ({ key: id, changes: { synced: true } })));
+    await db.interactions.bulkUpdate(idsToUpdate.map(id => ({ key: id, changes: { synced: 1 as any } })));
 
     logger.info(`Successfully synced ${offlineInteractions.length} interactions.`);
   } catch (error) {

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useState } from 'react';
 import {
   Box,
   Card,
@@ -276,16 +277,16 @@ const TeamManagement: React.FC = () => {
   const handleAssignTeamSubmit = async () => {
     if (!selectedUserForTeam || !selectedTeamId) return;
     try {
-      setLoading(true);
+
       await teamsAPI.assignUser(selectedTeamId, selectedUserForTeam.id);
       setSuccess('User assigned to team successfully');
       setAssignTeamDialogOpen(false);
-      loadData();
+
       setTimeout(() => setSuccess(''), 3000);
     } catch (error: any) {
       setError(error.response?.data?.error || 'Failed to assign user to team');
     } finally {
-      setLoading(false);
+
     }
   };
 
@@ -299,7 +300,7 @@ const TeamManagement: React.FC = () => {
   };
 
   const getRoleStats = () => {
-    const stats = users.reduce((acc, user) => {
+    const stats = users.reduce((acc: any, user: any) => {
       acc[user.role] = (acc[user.role] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -430,7 +431,7 @@ const TeamManagement: React.FC = () => {
                   <TableCell>
                     {user.teamId ? (
                         <Chip
-                          label={teams.find(t => t.id === user.teamId)?.name || 'Unknown Team'}
+                          label={teams.find((t: any) => t.id === user.teamId)?.name || 'Unknown Team'}
                           size="small"
                           icon={<SafeIcon icon={FiBriefcase} />}
                           onClick={() => handleAssignTeamClick(user)}
@@ -485,7 +486,7 @@ const TeamManagement: React.FC = () => {
         </Box>
 
         <Grid container spacing={3}>
-            {teams.map(team => (
+            {teams.map((team: any) => (
                 <Grid item xs={12} md={6} lg={4} key={team.id}>
                     <Card>
                         <CardContent>
@@ -637,7 +638,7 @@ const TeamManagement: React.FC = () => {
                     label="Select Team"
                     onChange={(e) => setSelectedTeamId(e.target.value)}
                   >
-                      {teams.map(team => (
+                      {teams.map((team: any) => (
                           <MenuItem key={team.id} value={team.id}>{team.name}</MenuItem>
                       ))}
                   </Select>

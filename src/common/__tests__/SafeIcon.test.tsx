@@ -1,5 +1,4 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import SafeIcon from '../SafeIcon';
 import { FiHome } from 'react-icons/fi';
 

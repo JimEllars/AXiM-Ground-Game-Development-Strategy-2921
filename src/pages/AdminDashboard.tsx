@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from 'react-query';
 import { Box, Typography, Tabs, Tab, Alert, Grid, Card, CircularProgress, Chip } from '@mui/material';
 import { FiBarChart2, FiUsers, FiTarget, FiTrendingUp, FiMap } from 'react-icons/fi';
@@ -35,16 +35,16 @@ const AdminDashboard: React.FC = () => {
   };
 
   const { data, isLoading: loading, error: queryError } = useQuery('adminDashboard', fetchAdminData);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setQueryErrorMsg] = useState('');
 
   const systemStats = data?.systemStats;
   const allLeads = data?.allLeads || [];
   const territories = data?.territories || [];
   const error = (queryError as any)?.response?.data?.error || errorMsg;
-  const setError = setErrorMsg;
+  const setQueryError = setQueryErrorMsg;
 
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
@@ -59,7 +59,7 @@ const AdminDashboard: React.FC = () => {
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+      <Alert severity="error" sx={{ mb: 2 }} onClose={() => setQueryError('')}>
         {error}
       </Alert>
     );
@@ -159,7 +159,7 @@ const AdminDashboard: React.FC = () => {
               mapStyle="mapbox://styles/mapbox/streets-v11"
               mapboxAccessToken={MAPBOX_TOKEN}
             >
-              {territories.map((territory) => (
+              {territories.map((territory: any) => (
                 <Source key={territory.id} id={`territory-${territory.id}`} type="geojson" data={territory.boundary}>
                   <Layer
                     id={`territory-layer-${territory.id}`}
@@ -179,7 +179,7 @@ const AdminDashboard: React.FC = () => {
                   />
                 </Source>
               ))}
-              {allLeads.map((lead) => {
+              {allLeads.map((lead: any) => {
                 const parsedLocation = parseLeadLocation(lead.location);
                 return parsedLocation && (
                   <Marker
@@ -204,10 +204,10 @@ const AdminDashboard: React.FC = () => {
                   >
                   <div>
                     <Typography variant="subtitle2">
-                      {selectedLead.firstName} {selectedLead.lastName}
+                      {selectedLead!.firstName} {selectedLead!.lastName}
                     </Typography>
-                    <Typography variant="body2">{selectedLead.streetAddress}</Typography>
-                    <Chip label={selectedLead.status} size="small" />
+                    <Typography variant="body2">{selectedLead!.streetAddress}</Typography>
+                    <Chip label={selectedLead!.status} size="small" />
                   </div>
                 </Popup>
                 );

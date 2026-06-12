@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -221,7 +221,7 @@ const SettingsPage: React.FC = () => {
               )}
 
               <Typography variant="subtitle1" gutterBottom>Create New Survey</Typography>
-              {newSurveyQuestions.map((q, index) => (
+              {newSurveyQuestions.map((q, _index) => (
                 <Paper key={q.id} variant="outlined" sx={{ p: 2, mb: 2 }}>
                   <Grid container spacing={2} alignItems="center">
                     <Grid item xs={12} sm={6}>

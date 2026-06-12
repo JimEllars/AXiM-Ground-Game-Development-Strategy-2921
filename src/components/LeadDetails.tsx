@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import Map, { Marker } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { FiMapPin, FiEdit2, FiSave, FiX, FiCalendar, FiPlus } from 'react-icons/fi';
+import { FiMapPin, FiEdit2, FiSave, FiX, FiCalendar } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import { leadsAPI } from '@/services/api';
 import AppointmentForm from './AppointmentForm';
@@ -72,8 +72,8 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
   // { x: ..., y: ... } depending on legacy code, but we know it's GeoJSON now.
   // We use the centralized parseLeadLocation utility to handle both robustly.
   const parsedLocation = parseLeadLocation(lead?.location);
-  const longitude = parsedLocation?.longitude ?? null;
-  const latitude = parsedLocation?.latitude ?? null;
+  const longitude = parsedLocation?.longitude ?? undefined;
+  const latitude = parsedLocation?.latitude ?? undefined;
   const hasLocation = !!parsedLocation;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -361,9 +361,9 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
               mapStyle="mapbox://styles/mapbox/streets-v11"
               mapboxAccessToken={MAPBOX_TOKEN}
             >
-              <Marker longitude={longitude} latitude={latitude}>
+              {longitude !== undefined && latitude !== undefined && <Marker longitude={longitude} latitude={latitude}>
                 <SafeIcon icon={FiMapPin} style={{ fontSize: 24, color: '#f57c00' }} />
-              </Marker>
+              </Marker>}
             </Map>
           </Box>
         ) : (

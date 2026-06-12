@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Map, { Marker, Popup, Source, Layer } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
     import {
@@ -29,7 +29,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
     const Dashboard: React.FC = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
-  const { data: userResponse, isLoading: isLoadingUser, error: userError } = useQuery(
+  const { data: userResponse, isLoading: isLoadingUser, error: queryErrorState } = useQuery(
     'profile',
     () => authAPI.getProfile().then(res => res.data)
   );
@@ -54,7 +54,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
   const recentActivity = allLeads.slice(0, 5);
 
   const loading = isLoadingUser || (isManagerOrAdmin && (isLoadingTerritories || isLoadingLeads));
-  const error = userError ? (userError as any).response?.data?.error || 'Failed to load dashboard data' : '';
+  const error = queryErrorState ? (queryErrorState as any).response?.data?.error || 'Failed to load dashboard data' : '';
   const lastUpdated = new Date();
 
 
@@ -76,7 +76,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
             mapStyle="mapbox://styles/mapbox/streets-v11"
             mapboxAccessToken={MAPBOX_TOKEN}
           >
-            {territories.map((territory) => (
+            {territories.map((territory: any) => (
               <Source key={territory.id} id={`territory-${territory.id}`} type="geojson" data={territory.boundary}>
                 <Layer
                   id={`territory-layer-${territory.id}`}
@@ -96,7 +96,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
                 />
               </Source>
             ))}
-            {allLeads.map((lead) => {
+            {allLeads.map((lead: any) => {
               const parsedLocation = parseLeadLocation(lead.location);
               return parsedLocation && (
                 <Marker
@@ -121,10 +121,10 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
                 >
                 <div>
                   <Typography variant="subtitle2">
-                    {selectedLead.firstName} {selectedLead.lastName}
+                    {selectedLead!.firstName} {selectedLead!.lastName}
                   </Typography>
-                  <Typography variant="body2">{selectedLead.streetAddress}</Typography>
-                  <Chip label={selectedLead.status} size="small" />
+                  <Typography variant="body2">{selectedLead!.streetAddress}</Typography>
+                  <Chip label={selectedLead!.status} size="small" />
                 </div>
               </Popup>
               );
@@ -154,7 +154,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
               </Typography>
               {territories.length > 0 ? (
                 <List>
-                  {territories.map((territory) => (
+                  {territories.map((territory: any) => (
                     <ListItem key={territory.id} divider>
                       <ListItemIcon>
                         <SafeIcon icon={FiMapPin} />
@@ -182,7 +182,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
               </Typography>
               {recentActivity.length > 0 ? (
                 <List dense>
-                  {recentActivity.map((lead) => (
+                  {recentActivity.map((lead: any) => (
                     <ListItem key={lead.id}>
                       <ListItemText
                         primary={`${lead.firstName} ${lead.lastName}`.trim() || 'Unnamed Lead'}
@@ -220,7 +220,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
       return (
         <Box>
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+            <Alert severity="error" sx={{ mb: 2 }} >
               {error}
             </Alert>
           )}

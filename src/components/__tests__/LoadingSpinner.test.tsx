@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import LoadingSpinner from '../LoadingSpinner';
 
@@ -17,7 +16,7 @@ describe('LoadingSpinner', () => {
   });
 
   it('renders with custom size', () => {
-    const { container } = render(<LoadingSpinner size={60} />);
+    render(<LoadingSpinner size={60} />);
     // CircularProgress uses a div with role="progressbar" and inline style for width/height
     const progressbar = screen.getByRole('progressbar');
     expect(progressbar).toBeInTheDocument();

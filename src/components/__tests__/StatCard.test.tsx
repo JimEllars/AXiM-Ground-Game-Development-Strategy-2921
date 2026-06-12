@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import StatCard from '../StatCard';
 import { FiUsers } from 'react-icons/fi';
