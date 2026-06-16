@@ -6,12 +6,14 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
 
 # Build frontend
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}
 RUN npm run build
 
 # Nginx setup

@@ -34,8 +34,12 @@ services:
       - DB_NAME=axim_ground_game
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - JWT_SECRET=your-secret-key
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key}
       - NODE_ENV=production
+      - USE_AXIM_CORE_STORAGE=${USE_AXIM_CORE_STORAGE:-false}
+      - AXIM_CORE_API_URL=${AXIM_CORE_API_URL:-http://host.docker.internal:4000/api}
+      - AXIM_CORE_API_KEY=${AXIM_CORE_API_KEY:-}
+      - WEBHOOK_SECRET_KEY=${WEBHOOK_SECRET_KEY:-12345678901234567890123456789012}
     depends_on:
       - db
       - redis
@@ -44,6 +48,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}
     ports:
       - "80:80"
     depends_on:
