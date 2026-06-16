@@ -1,3 +1,6 @@
+import { createInteractions as repoCreateInteractions, getInteractions as repoGetInteractions } from "../repositories/InteractionRepository.js";
+import { dispatchLeadConversion } from "../services/aximService.js";
+import logger from "../utils/logger.js";
 import { Response } from "express";
 import { pool } from "../config/database.js";
 import { AuthRequest } from "../types/index.js";
@@ -5,7 +8,7 @@ import catchAsync from "../utils/catchAsync.js";
 
 export const createInteractions = catchAsync(
   async (req: AuthRequest, res: Response) => {
-    const user = req.user!;
+const user = req.user!;
     const interactions = req.body;
 
     if (!Array.isArray(interactions) || interactions.length === 0) {
@@ -41,109 +44,36 @@ export const createInteractions = catchAsync(
       }
     }
 
-    // Batch insert interactions using UNNEST for optimal performance
-    const len = validInteractions.length;
-    const leadIdsArr: string[] = new Array(len);
-    const userIdsArr: string[] = new Array(len);
-    const outcomesArr: string[] = new Array(len);
-    const notesArr: (string | null)[] = new Array(len);
-    const datesArr: Date[] = new Array(len);
-    const lonsArr: (number | null)[] = new Array(len);
-    const latsArr: (number | null)[] = new Array(len);
-    const surveysArr: (any | null)[] = new Array(len);
+    const result = await repoCreateInteractions(validInteractions, user);
 
-    for (let i = 0; i < len; i++) {
-      const interaction = validInteractions[i];
-      leadIdsArr[i] = interaction.leadId;
-      userIdsArr[i] = user.id;
-      outcomesArr[i] = interaction.outcome;
-      notesArr[i] = interaction.notes || null;
-      datesArr[i] = interaction.interactionDate || new Date();
-      lonsArr[i] = interaction.location ? interaction.location.longitude : null;
-      latsArr[i] = interaction.location ? interaction.location.latitude : null;
-      surveysArr[i] = interaction.surveyData ? JSON.stringify(interaction.surveyData) : null;
+    if (result.asyncMode) {
+      return res.status(202).json({
+        message: "Interactions sync accepted and processing in the background."
+      });
     }
 
-    const results = await pool.query(
-      `INSERT INTO interactions
-       (lead_id, user_id, outcome, notes, interaction_date, location, synced_at, survey_data)
-       SELECT
-         t.lead_id, t.user_id, t.outcome, t.notes, t.interaction_date,
-         CASE WHEN t.lon IS NOT NULL AND t.lat IS NOT NULL THEN ST_SetSRID(ST_MakePoint(t.lon, t.lat), 4326) ELSE NULL END,
-         CURRENT_TIMESTAMP,
-         t.survey_data::jsonb
-       FROM unnest(
-         $1::uuid[],
-         $2::uuid[],
-         $3::varchar[],
-         $4::text[],
-         $5::timestamp[],
-         $6::float8[],
-         $7::float8[],
-         $8::text[]
-       ) AS t(lead_id, user_id, outcome, notes, interaction_date, lon, lat, survey_data)
-       RETURNING id, interaction_date`,
-      [
-        leadIdsArr,
-        userIdsArr,
-        outcomesArr,
-        notesArr,
-        datesArr,
-        lonsArr,
-        latsArr,
-        surveysArr,
-      ],
-    );
+    // Dispatch webhook for high value dispositions
+    for (const interaction of validInteractions) {
+      const outcome = interaction.outcome.toLowerCase();
+      if (outcome === 'appointment set' || outcome === 'sale' || outcome === 'sold' || outcome === 'completed') {
+        // Find lead details locally for webhook
+        const leadRes = await pool.query(`
+          SELECT pii.first_name, pii.last_name, pii.email, pii.phone, pii.street_address, pii.city, pii.state, pii.zip
+          FROM leads l JOIN lead_pii pii ON l.id = pii.lead_id WHERE l.id = $1`, [interaction.leadId]);
 
-    // Update lead status based on interaction outcome
-    const updateValues: string[] = new Array(len);
-    const updateParams: any[] = new Array(len * 2);
-
-    for (let i = 0; i < len; i++) {
-      const interaction = validInteractions[i];
-      let newStatus = "Contacted";
-
-      // Map outcomes to statuses
-      switch (interaction.outcome.toLowerCase()) {
-        case "interested":
-        case "follow-up required":
-          newStatus = "Hot Lead";
-          break;
-        case "not interested":
-          newStatus = "Not Interested";
-          break;
-        case "not home":
-          newStatus = "Not Home";
-          break;
-        case "completed":
-        case "sold":
-          newStatus = "Completed";
-          break;
-        default:
-          newStatus = "Contacted";
+        if (leadRes.rows.length > 0) {
+          const leadData = leadRes.rows[0];
+          dispatchLeadConversion(leadData, interaction).catch((err: any) => {
+            logger.error('Failed to dispatch webhook:', err);
+          });
+        }
       }
-
-      const paramCount = i * 2 + 1;
-      updateValues[i] = `($${paramCount}::uuid, $${paramCount + 1}::varchar)`;
-      updateParams[paramCount - 1] = interaction.leadId;
-      updateParams[paramCount] = newStatus;
-    }
-
-    if (len > 0) {
-      const updateParamsWithOrg = [...updateParams, user.organization_id];
-      await pool.query(
-        `UPDATE leads
-         SET status = v.status, updated_at = CURRENT_TIMESTAMP
-         FROM (VALUES ${updateValues.join(", ")}) AS v(id, status)
-         WHERE leads.id = v.id AND leads.organization_id = $${updateParams.length + 1}`,
-        updateParamsWithOrg,
-      );
     }
 
     res.json({
       message: "Interactions created successfully",
-      count: results.rows.length,
-      interactions: results.rows.map((row) => ({
+      count: result.rows?.length || 0,
+      interactions: (result.rows || []).map((row: any) => ({
         id: row.id,
         interactionDate: row.interaction_date,
       })),
@@ -153,96 +83,13 @@ export const createInteractions = catchAsync(
 
 export const getInteractions = catchAsync(
   async (req: AuthRequest, res: Response) => {
-    const user = req.user!;
-    const { leadId, startDate, endDate, page = 1, limit = 50 } = req.query;
+const user = req.user!;
+    const result = await repoGetInteractions(req.query, user);
 
-    const conditions: string[] = ["i.user_id = $1", "l.organization_id = $2"];
-    const params: any[] = [user.id, user.organization_id];
-    let paramIndex = 3;
-
-    if (leadId) {
-      conditions.push(`i.lead_id = $${paramIndex}`);
-      params.push(leadId);
-      paramIndex++;
+    if (result.asyncMode) {
+      return res.status(202).json(result.data);
     }
 
-    if (startDate && endDate) {
-      conditions.push(
-        `i.interaction_date BETWEEN $${paramIndex} AND $${paramIndex + 1}`,
-      );
-      params.push(startDate, endDate);
-      paramIndex += 2;
-    }
-
-    const whereClause = `WHERE ${conditions.join(" AND ")}`;
-
-    const offset = (Number(page) - 1) * Number(limit);
-
-    const result = await pool.query(
-      `SELECT 
-         i.id,
-         i.outcome,
-         i.notes,
-         i.interaction_date,
-         ST_X(i.location) as longitude,
-         ST_Y(i.location) as latitude,
-         i.synced_at,
-         i.survey_data,
-         
-         -- Lead information
-         lp.first_name,
-         lp.last_name,
-         lp.street_address,
-         lp.city,
-         lp.state,
-         lp.zip
-         
-       FROM interactions i
-       JOIN leads l ON i.lead_id = l.id
-       LEFT JOIN lead_pii lp ON l.id = lp.lead_id
-       ${whereClause}
-       ORDER BY i.interaction_date DESC
-       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
-      [...params, Number(limit), offset],
-    );
-
-    const countResult = await pool.query(
-      `SELECT COUNT(*) FROM interactions i ${whereClause}`,
-      params,
-    );
-
-    const interactions = result.rows.map((row) => ({
-      id: row.id,
-      outcome: row.outcome,
-      notes: row.notes,
-      interactionDate: row.interaction_date,
-      location:
-        row.longitude && row.latitude
-          ? {
-              type: "Point" as const,
-              coordinates: [row.longitude, row.latitude],
-            }
-          : null,
-      syncedAt: row.synced_at,
-      surveyData: row.survey_data,
-      lead: {
-        firstName: row.first_name,
-        lastName: row.last_name,
-        streetAddress: row.street_address,
-        city: row.city,
-        state: row.state,
-        zip: row.zip,
-      },
-    }));
-
-    res.json({
-      interactions,
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total: Number(countResult.rows[0].count),
-        pages: Math.ceil(Number(countResult.rows[0].count) / Number(limit)),
-      },
-    });
+    res.json(result.data);
   },
 );

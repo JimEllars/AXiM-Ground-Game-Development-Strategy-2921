@@ -79,3 +79,36 @@ export const getLeadEnrichment = async (address: string): Promise<LeadEnrichment
     };
   }
 };
+
+
+import crypto from 'crypto';
+
+const webhookKey = process.env.WEBHOOK_SECRET_KEY || '12345678901234567890123456789012'; // 32 bytes
+
+export const dispatchLeadConversion = async (leadData: any, interactionData: any) => {
+  try {
+    const payload = JSON.stringify({ lead: leadData, interaction: interactionData, timestamp: new Date().toISOString() });
+
+    // AES-256-GCM encryption
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(webhookKey), iv);
+
+    let encrypted = cipher.update(payload, 'utf8', 'base64');
+    encrypted += cipher.final('base64');
+
+    const authTag = cipher.getAuthTag().toString('base64');
+
+    const securePayload = {
+      iv: iv.toString('base64'),
+      encryptedData: encrypted,
+      authTag: authTag
+    };
+
+    // Dispatch webhook to AXiM Core (which then forwards to Albato/Deskera)
+    await aximClient.post('/webhook/universal-dispatcher', securePayload);
+    logger.info(`Webhook dispatched for lead: ${leadData.id || 'unknown'}`);
+  } catch (error) {
+    logger.error('Error dispatching lead conversion webhook:', error);
+    throw error;
+  }
+};
