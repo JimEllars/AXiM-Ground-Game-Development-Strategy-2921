@@ -1,3 +1,4 @@
+import { getLeads as repoGetLeads } from "../repositories/LeadRepository.js";
 import logger from '../utils/logger.js';
 import { Response } from "express";
 import { pool } from "../config/database.js";
