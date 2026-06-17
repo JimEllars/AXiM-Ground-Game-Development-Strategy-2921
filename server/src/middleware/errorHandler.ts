@@ -1,4 +1,4 @@
-import aximClient from '../services/aximService.js';
+import axios from 'axios';
 import { Request, Response, NextFunction } from 'express';
 import AppError from '../utils/AppError.js';
 import logger from '../utils/logger.js';
@@ -29,7 +29,7 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
   // Telemetry pipeline: Catch non-operational errors and send to Core for diagnostics
   if (!error.isOperational) {
     const reqUser = (req as any).user;
-    aximClient.post('/telemetry/rca_trigger', {
+    axios.post((process.env.AXIM_CORE_API_URL || 'http://localhost:4000/api') + '/telemetry/rca_trigger', {
       rep_id: reqUser?.id || null,
       error: {
         message: err.message,

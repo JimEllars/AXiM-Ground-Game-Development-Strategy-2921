@@ -45,9 +45,13 @@ describe('Logger utility', () => {
     logger.warn('test warn');
     logger.error('test error');
 
-    expect(logSpy).toHaveBeenCalledWith('test info');
-    expect(warnSpy).toHaveBeenCalledWith('test warn');
-    expect(errorSpy).toHaveBeenCalledWith('test error');
+    expect(logSpy).toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
+
+    expect(logSpy.mock.calls[0][1]).toBe('test info');
+    expect(warnSpy.mock.calls[0][1]).toBe('test warn');
+    expect(errorSpy.mock.calls[0][1]).toBe('test error');
   });
 
   it('should log debug when NODE_ENV is development', () => {
@@ -55,7 +59,8 @@ describe('Logger utility', () => {
 
     logger.debug('test debug');
 
-    expect(debugSpy).toHaveBeenCalledWith('test debug');
+    expect(debugSpy).toHaveBeenCalled();
+    expect(debugSpy.mock.calls[0][1]).toBe('test debug');
   });
 
   it('should NOT log debug when NODE_ENV is production', () => {
@@ -73,8 +78,20 @@ describe('Logger utility', () => {
     logger.warn('test warn');
     logger.error('test error');
 
-    expect(logSpy).toHaveBeenCalledWith('test info');
-    expect(warnSpy).toHaveBeenCalledWith('test warn');
-    expect(errorSpy).toHaveBeenCalledWith('test error');
+    expect(logSpy).toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
+
+    const infoLog = JSON.parse(logSpy.mock.calls[0][0]);
+    expect(infoLog.message).toBe('test info');
+    expect(infoLog.level).toBe('INFO');
+
+    const warnLog = JSON.parse(warnSpy.mock.calls[0][0]);
+    expect(warnLog.message).toBe('test warn');
+    expect(warnLog.level).toBe('WARN');
+
+    const errorLog = JSON.parse(errorSpy.mock.calls[0][0]);
+    expect(errorLog.message).toBe('test error');
+    expect(errorLog.level).toBe('ERROR');
   });
 });
