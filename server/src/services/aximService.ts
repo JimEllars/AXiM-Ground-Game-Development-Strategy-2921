@@ -1,3 +1,4 @@
+import { mapToDeskera } from '../types/deskera_payload_schema.js';
 import logger from '../utils/logger.js';
 import axios from 'axios';
 
@@ -87,7 +88,8 @@ const webhookKey = process.env.WEBHOOK_SECRET_KEY || '12345678901234567890123456
 
 export const dispatchLeadConversion = async (leadData: any, interactionData: any) => {
   try {
-    const payload = JSON.stringify({ lead: leadData, interaction: interactionData, timestamp: new Date().toISOString() });
+    const deskeraPayload = mapToDeskera(leadData, interactionData);
+    const payload = JSON.stringify(deskeraPayload);
 
     // AES-256-GCM encryption
     const iv = crypto.randomBytes(12);
