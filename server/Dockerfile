@@ -24,7 +24,7 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/package*.json ./
 
 # Install production dependencies
-RUN npm install --production
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Expose ports
 EXPOSE 3001
