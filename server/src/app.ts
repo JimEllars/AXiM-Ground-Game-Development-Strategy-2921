@@ -1,3 +1,4 @@
+import { traceMiddleware } from './middleware/trace.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -18,7 +19,18 @@ import appointmentRoutes from './routes/appointments.js';
 const app = express();
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  noSniff: true,
+  frameguard: {
+    action: 'deny'
+  }
+}));
+app.use(traceMiddleware);
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true

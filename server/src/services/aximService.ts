@@ -1,6 +1,8 @@
 import { mapToDeskera } from '../types/deskera_payload_schema.js';
 import logger from '../utils/logger.js';
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
+import crypto from 'crypto';
 
 const aximCoreApiUrl = process.env.AXIM_CORE_API_URL || 'http://localhost:4000/api';
 const aximCoreApiKey = process.env.AXIM_CORE_API_KEY;
@@ -13,8 +15,26 @@ const aximClient = axios.create({
   baseURL: aximCoreApiUrl,
   headers: {
     'Content-Type': 'application/json',
-    'x-api-key': aximCoreApiKey,
+    'x-api-key': aximCoreApiKey || '',
   },
+});
+
+// Implement exponential backoff for aximClient
+// 3 retries at 1s, 3s, and 9s intervals
+axiosRetry(aximClient, {
+  retries: 3,
+  retryDelay: (retryCount) => {
+    // 1st retry: 3^0 * 1000 = 1000ms
+    // 2nd retry: 3^1 * 1000 = 3000ms
+    // 3rd retry: 3^2 * 1000 = 9000ms
+    const delay = Math.pow(3, retryCount - 1) * 1000;
+    logger.info(`Retrying request to AXiM Core API (attempt ${retryCount}) in ${delay}ms`);
+    return delay;
+  },
+  retryCondition: (error) => {
+    // Retry on network errors or 5xx status codes
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 429;
+  }
 });
 
 export interface CoreLeadData {
@@ -80,9 +100,6 @@ export const getLeadEnrichment = async (address: string): Promise<LeadEnrichment
     };
   }
 };
-
-
-import crypto from 'crypto';
 
 const webhookKey = process.env.WEBHOOK_SECRET_KEY || '12345678901234567890123456789012'; // 32 bytes
 
