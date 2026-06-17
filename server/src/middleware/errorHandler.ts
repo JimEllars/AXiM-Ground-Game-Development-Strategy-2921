@@ -28,7 +28,9 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
 
   // Telemetry pipeline: Catch non-operational errors and send to Core for diagnostics
   if (!error.isOperational) {
+    const reqUser = (req as any).user;
     aximClient.post('/telemetry/rca_trigger', {
+      rep_id: reqUser?.id || null,
       error: {
         message: err.message,
         stack: err.stack,

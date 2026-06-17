@@ -94,6 +94,42 @@ describe('aximService', () => {
     });
   });
 
+  describe('dispatchLeadConversion', () => {
+    let dispatchLeadConversion;
+    beforeAll(async () => {
+      const module = await import('../aximService.js');
+      dispatchLeadConversion = module.dispatchLeadConversion;
+    });
+
+    it('should map to Deskera schema and dispatch encrypted webhook', async () => {
+      const mockLead = {
+        id: '123',
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+        phone: '123-456-7890',
+        streetAddress: '123 Main St',
+        location: { type: 'Point', coordinates: [-111.891, 40.760] }
+      };
+
+      const mockInteraction = {
+        outcome: 'Interested',
+        notes: 'Needs follow up'
+      };
+
+      const mockResponse = { data: { success: true } };
+      mockPost.mockResolvedValue(mockResponse);
+
+      await dispatchLeadConversion(mockLead, mockInteraction);
+
+      expect(mockPost).toHaveBeenCalledWith('/webhook/universal-dispatcher', expect.any(Object));
+      const callArg = mockPost.mock.calls[0][1];
+      expect(callArg.encryptedData).toBeDefined();
+      expect(callArg.iv).toBeDefined();
+      expect(callArg.authTag).toBeDefined();
+    });
+  });
+
   describe('getOrganizationFromCore', () => {
     const mockOrgId = 'org-123';
 
