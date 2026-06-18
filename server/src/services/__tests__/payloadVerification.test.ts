@@ -6,6 +6,12 @@ const testKey = '12345678901234567890123456789012';
 process.env.WEBHOOK_SECRET_KEY = testKey;
 
 // Mock Axios
+
+jest.unstable_mockModule('axios-retry', () => {
+  return {
+    default: jest.fn(),
+  };
+});
 jest.unstable_mockModule('axios', () => {
   return {
     default: {
@@ -68,10 +74,10 @@ describe('Universal Dispatcher Payload Verification', () => {
     const decryptedObj = JSON.parse(decrypted);
 
     // Verify Decrypted Content Contains Required Structure
-    expect(decryptedObj).toHaveProperty('lead');
-    expect(decryptedObj).toHaveProperty('interaction');
-    expect(decryptedObj).toHaveProperty('timestamp');
-    expect(decryptedObj.lead.id).toBe('lead-123');
-    expect(decryptedObj.interaction.outcome).toBe('Completed');
+    expect(decryptedObj).toHaveProperty('contact');
+    expect(decryptedObj).toHaveProperty('event_timestamp');
+    expect(decryptedObj).toHaveProperty('trigger_event');
+    expect(decryptedObj.contact.custom_fields.ground_game_lead_id).toBe('lead-123');
+    expect(decryptedObj.contact.custom_fields.last_interaction_outcome).toBe('Completed');
   });
 });

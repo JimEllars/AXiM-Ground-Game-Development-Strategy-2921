@@ -23,7 +23,7 @@ import { Component, ErrorInfo, ReactNode } from 'react';
       }
 
       public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        logger.error('Uncaught error:', error, errorInfo);
+        logger.error('Uncaught component error', { message: error.message, stack: error.stack, componentStack: errorInfo.componentStack });
       }
 
       private handleReset = () => {
@@ -33,7 +33,7 @@ import { Component, ErrorInfo, ReactNode } from 'react';
       public render() {
         if (this.state.hasError) {
           return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', p: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px', p: 2 }}>
               <Paper sx={{ p: 4, maxWidth: 500, textAlign: 'center' }}>
                 <SafeIcon icon={FiAlertTriangle} style={{ fontSize: 64, color: '#f57c00', marginBottom: 16 }} />
                 <Typography variant="h5" gutterBottom>
