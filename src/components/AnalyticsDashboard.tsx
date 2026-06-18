@@ -10,7 +10,6 @@ import { useQuery } from 'react-query';
       InputLabel,
       Button,
       Alert,
-      CircularProgress,
       Tabs,
       Tab,
       Table,
@@ -21,6 +20,7 @@ import { useQuery } from 'react-query';
       TableRow,
       Paper,
     } from '@mui/material';
+import SkeletonLoader from '@/components/SkeletonLoader';
     import { FiTrendingUp, FiUsers, FiTarget, FiActivity, FiDownload } from 'react-icons/fi';
     import {
       LineChart,
@@ -106,9 +106,7 @@ import { useQuery } from 'react-query';
 
       if (loading) {
         return (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-            <CircularProgress />
-          </Box>
+          <SkeletonLoader type="dashboard" />
         );
       }
 

@@ -11,7 +11,8 @@ import { LngLatBounds } from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
-import { Box, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
+import { Box, useMediaQuery, useTheme } from '@mui/material';
+import SkeletonLoader from '@/components/SkeletonLoader';
 import TerritoryPanel from './TerritoryPanel';
 import { useTerritoryPanelState } from '../hooks/useTerritoryPanelState';
 import { Territory, User } from '@/types';
@@ -159,7 +160,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
               zIndex: 1,
             }}
           >
-            <CircularProgress />
+            <SkeletonLoader type="dashboard" />
           </Box>
         )}
         <Map

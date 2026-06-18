@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from 'react-query';
-import { Box, Typography, Tabs, Tab, Alert, Grid, Card, CircularProgress, Chip } from '@mui/material';
+import { Box, Typography, Tabs, Tab, Alert, Grid, Card, Chip } from '@mui/material';
+import SkeletonLoader from '@/components/SkeletonLoader';
 import { FiBarChart2, FiUsers, FiTarget, FiTrendingUp, FiMap } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import StatCard from '@/components/StatCard';
@@ -51,9 +52,7 @@ const AdminDashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-        <CircularProgress />
-      </Box>
+      <SkeletonLoader type="dashboard" />
     );
   }
 

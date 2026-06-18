@@ -11,9 +11,9 @@ import { useState } from 'react';
       ListItemIcon,
       Button,
       Alert,
-      CircularProgress,
-    } from '@mui/material';
+      } from '@mui/material';
     import { FiMap, FiUsers, FiTarget, FiTrendingUp, FiMapPin, FiCheck } from 'react-icons/fi';
+import SkeletonLoader from '@/components/SkeletonLoader';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
     import SafeIcon from '@/common/SafeIcon';
     import StatCard from '@/components/StatCard';
@@ -99,12 +99,8 @@ import AppointmentsList from '@/components/AppointmentsList';
 
 
       if (loading) {
-        return (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-            <CircularProgress />
-          </Box>
-        );
-      }
+  return <SkeletonLoader type="dashboard" />;
+}
 
       return (
         <Box>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-    import { Box, Typography, Alert, CircularProgress } from '@mui/material';
+    import { Box, Typography, Alert, } from '@mui/material';
+import SkeletonLoader from '@/components/SkeletonLoader';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
     import TerritoryMap from '@/components/TerritoryMap';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -97,9 +98,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 
       if (loading) {
         return (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-            <CircularProgress />
-          </Box>
+          <SkeletonLoader type="dashboard" />
         );
       }
 

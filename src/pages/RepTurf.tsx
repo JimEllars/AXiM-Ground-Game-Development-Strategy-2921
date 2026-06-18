@@ -10,7 +10,6 @@ import { useState } from 'react';
       Chip,
       Button,
       Alert,
-      CircularProgress,
       Collapse,
     } from '@mui/material';
     import { FiMapPin, FiPlus } from 'react-icons/fi';
@@ -21,6 +20,7 @@ import { useQuery, useQueryClient } from 'react-query';
     import RepTerritoryMap from '@/components/RepTerritoryMap';
 import ErrorBoundary from '@/components/ErrorBoundary';
     import { repsAPI } from '@/services/api';
+import SkeletonLoader from '@/components/SkeletonLoader';
 
     const RepTurf: React.FC = () => {
       const queryClient = useQueryClient();
@@ -59,12 +59,15 @@ import ErrorBoundary from '@/components/ErrorBoundary';
       };
 
       if (loading) {
-        return (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-            <CircularProgress />
-          </Box>
-        );
-      }
+  return (
+    <Box>
+      <Typography variant="h4" gutterBottom>
+        My Turf
+      </Typography>
+      <SkeletonLoader type="dashboard" />
+    </Box>
+  );
+}
 
       return (
         <Box>
