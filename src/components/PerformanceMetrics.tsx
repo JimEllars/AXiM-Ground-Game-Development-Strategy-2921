@@ -15,8 +15,8 @@ import { useQuery } from 'react-query';
       TableRow,
       Chip,
       Alert,
-      CircularProgress,
-    } from '@mui/material';
+      } from '@mui/material';
+import SkeletonLoader from '@/components/SkeletonLoader';
     import { FiTrendingUp,  FiTarget, FiClock, FiActivity, FiAward } from 'react-icons/fi';
     import {
 
@@ -128,9 +128,7 @@ import { useQuery } from 'react-query';
 
       if (loading) {
         return (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-            <CircularProgress />
-          </Box>
+          <SkeletonLoader type="dashboard" />
         );
       }
 

@@ -1,4 +1,5 @@
 import logger from '@/utils/logger';
+import { analyticsAPI } from '@/services/api';
 import { Component, ErrorInfo, ReactNode } from 'react';
     import { Box, Typography, Button, Paper } from '@mui/material';
     import { FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
@@ -23,7 +24,15 @@ import { Component, ErrorInfo, ReactNode } from 'react';
       }
 
       public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        logger.error('Uncaught component error', { message: error.message, stack: error.stack, componentStack: errorInfo.componentStack });
+        const errorData = { message: error.message, stack: error.stack, componentStack: errorInfo.componentStack };
+        logger.error('Uncaught component error', errorData);
+        // Sync telemetry to backend
+        analyticsAPI.reportTelemetry({
+          type: 'frontend_crash',
+          ...errorData
+        }).catch(err => {
+          console.error('Failed to report telemetry', err);
+        });
       }
 
       private handleReset = () => {

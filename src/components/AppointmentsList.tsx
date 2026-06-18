@@ -10,12 +10,12 @@ import {
   Chip,
   Button,
   Alert,
-  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
 } from '@mui/material';
+import SkeletonLoader from '@/components/SkeletonLoader';
 import { FiCalendar,  FiTrash2, FiMapPin } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
@@ -44,9 +44,7 @@ const AppointmentsList: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
-      </Box>
+      <SkeletonLoader type="dashboard" />
     );
   }
 

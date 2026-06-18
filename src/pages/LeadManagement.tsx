@@ -16,7 +16,6 @@ import { useState, useMemo } from 'react';
       InputAdornment,
       TablePagination,
       Alert,
-      CircularProgress,
       Button,
       Dialog,
       DialogTitle,
@@ -31,6 +30,7 @@ import { useState, useMemo } from 'react';
   CardContent,
   CardHeader,
     } from '@mui/material';
+import SkeletonLoader from '@/components/SkeletonLoader';
 import { FiSearch, FiEye, FiTrash } from 'react-icons/fi';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
     import SafeIcon from '@/common/SafeIcon';
@@ -326,9 +326,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
                     <TableBody>
                       {loading ? (
                         <TableRow>
-                          <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
-                            <CircularProgress />
-                          </TableCell>
+                          <TableCell colSpan={8} sx={{ py: 4 }}><SkeletonLoader type="list" /></TableCell>
                         </TableRow>
                       ) : leads.length === 0 ? (
                         <TableRow>

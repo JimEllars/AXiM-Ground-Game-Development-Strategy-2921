@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { pool } from '../config/database.js';
 import { AuthRequest } from '../types/index.js';
 import catchAsync from '../utils/catchAsync.js';
+import logger from '../utils/logger.js';
 
 export const getAnalytics = catchAsync(async (req: AuthRequest, res: Response) => {
   const user = req.user!;
@@ -302,4 +303,27 @@ export const getPerformanceMetrics = catchAsync(async (req: AuthRequest, res: Re
         : 0
     }
   });
+});
+
+
+export const reportTelemetry = catchAsync(async (req: AuthRequest, res: Response) => {
+  const user = req.user!;
+  const telemetryData = req.body;
+
+  // Sanitize the data
+  const sanitizedData = {
+    userId: user.id,
+    organizationId: user.organization_id,
+    role: user.role,
+    type: telemetryData.type || 'unknown',
+    message: telemetryData.message,
+    stack: telemetryData.stack ? telemetryData.stack.split('\n').slice(0, 5).join('\n') : undefined,
+    componentStack: telemetryData.componentStack,
+    timestamp: new Date().toISOString()
+  };
+
+  // Ingest frontend error format identically to backend JSON logs
+  logger.error('Frontend Telemetry Event', sanitizedData);
+
+  res.status(202).json({ status: 'Accepted' });
 });

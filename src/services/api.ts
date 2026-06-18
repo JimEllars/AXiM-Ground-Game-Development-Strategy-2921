@@ -159,6 +159,8 @@ export const analyticsAPI = {
     api.get('/analytics', { params }),
   getPerformance: (params?: { startDate?: string; endDate?: string }) =>
     api.get('/analytics/performance', { params }),
+  reportTelemetry: (data: any) =>
+    api.post('/analytics/telemetry', data),
 };
 
 // Users API

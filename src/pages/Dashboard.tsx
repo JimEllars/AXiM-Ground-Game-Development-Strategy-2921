@@ -12,8 +12,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
       ListItemText,
       ListItemIcon,
       Alert,
-      CircularProgress,
-    } from '@mui/material';
+      } from '@mui/material';
+import SkeletonLoader from '@/components/SkeletonLoader';
 import { FiMap, FiUsers, FiMapPin } from 'react-icons/fi';
 import { useQuery } from 'react-query';
     import SafeIcon from '@/common/SafeIcon';
@@ -202,9 +202,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
       if (loading) {
         return (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-            <CircularProgress />
-          </Box>
+          <SkeletonLoader type="dashboard" />
         );
       }
 
