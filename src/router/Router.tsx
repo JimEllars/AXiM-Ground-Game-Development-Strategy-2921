@@ -17,18 +17,30 @@ const AppRouter: React.FC = () => (
   <Routes>
     <Route path="/login" element={<Login />} />
     <Route path="/register" element={<RegisterOrganization />} />
-    <Route path="/" element={<ProtectedRoute />}>
-      <Route index element={<Navigate to="/dashboard" replace />} />
+
+    {/* Admin/Manager Routes */}
+    <Route element={<ProtectedRoute roles={['ADMIN', 'MANAGER']} />}>
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/territories" element={<TerritoryManagement />} />
       <Route path="/leads" element={<LeadManagement />} />
-      <Route path="/turf" element={<RepTurf />} />
       <Route path="/analytics" element={<AnalyticsPage />} />
       <Route path="/team" element={<TeamManagementPage />} />
       <Route path="/performance" element={<PerformancePage />} />
       <Route path="/settings" element={<SettingsPage />} />
+    </Route>
+
+    {/* Rep Routes */}
+    <Route element={<ProtectedRoute roles={['REP']} />}>
+      <Route path="/" element={<Navigate to="/turf" replace />} />
+      <Route path="/turf" element={<RepTurf />} />
+    </Route>
+
+    {/* Shared Routes */}
+    <Route element={<ProtectedRoute />}>
       <Route path="/profile" element={<UserProfile />} />
     </Route>
+
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
 );

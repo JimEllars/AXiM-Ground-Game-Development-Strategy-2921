@@ -35,6 +35,17 @@ export const getLeads = async (
     paramIndex++;
   }
 
+    if (user.role === 'REP') {
+    conditions.push(`EXISTS (
+      SELECT 1 FROM territories t
+      JOIN territory_assignments ta ON t.id = ta.territory_id
+      WHERE ta.user_id = ${paramIndex}
+      AND ST_Contains(t.boundary, l.location)
+    )`);
+    params.push(user.id);
+    paramIndex++;
+  }
+
   const whereClause = `WHERE ${conditions.join(" AND ")}`;
   const orderDirection = String(order).toUpperCase() === "ASC" ? "ASC" : "DESC";
 

@@ -19,6 +19,7 @@ import { useQuery, useQueryClient } from 'react-query';
     import LeadInteractionForm from '@/components/LeadInteractionForm';
     import TerritoryStats from '@/components/TerritoryStats';
     import RepTerritoryMap from '@/components/RepTerritoryMap';
+import ErrorBoundary from '@/components/ErrorBoundary';
     import { repsAPI } from '@/services/api';
 
     const RepTurf: React.FC = () => {
@@ -94,7 +95,7 @@ import { useQuery, useQueryClient } from 'react-query';
                 <Box key={territory.id} sx={{ mb: 3 }}>
                   <TerritoryStats territory={territory} />
                   <Paper sx={{ p: 3, mb: 2 }}>
-                    <RepTerritoryMap boundary={territory.boundary} leads={territory.leads} />
+                    <ErrorBoundary><RepTerritoryMap boundary={territory.boundary} leads={territory.leads} /></ErrorBoundary>
                   </Paper>
                   <Paper sx={{ p: 3 }}>
                     <Typography variant="h6" gutterBottom>

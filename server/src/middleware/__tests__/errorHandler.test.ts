@@ -2,6 +2,11 @@ import { jest } from '@jest/globals';
 import { Request, Response, NextFunction } from 'express';
 
 const mockPost = jest.fn().mockResolvedValue({ data: 'ok' });
+jest.unstable_mockModule('axios', () => ({
+  default: {
+    post: mockPost
+  }
+}));
 jest.unstable_mockModule('../../services/aximService.js', () => ({
   default: {
     post: mockPost
@@ -52,7 +57,7 @@ describe('errorHandler middleware', () => {
 
     errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
 
-    expect(mockPost).toHaveBeenCalledWith('/telemetry/rca_trigger', expect.objectContaining({
+    expect(mockPost).toHaveBeenCalledWith('http://localhost:4000/api/telemetry/rca_trigger', expect.objectContaining({
       rep_id: 'rep-123',
       error: expect.objectContaining({
         message: 'Super secret DB crash'

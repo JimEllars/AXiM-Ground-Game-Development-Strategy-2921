@@ -1,22 +1,22 @@
 export const logger = {
   info: (message: string, ...args: any[]) => {
     if (process.env.NODE_ENV !== 'test') {
-      console.info(message, ...args);
+      console.info(JSON.stringify({ level: 'info', message, args, timestamp: new Date().toISOString() }));
     }
   },
   warn: (message: string, ...args: any[]) => {
     if (process.env.NODE_ENV !== 'test') {
-      console.warn(message, ...args);
+      console.warn(JSON.stringify({ level: 'warn', message, args, timestamp: new Date().toISOString() }));
     }
   },
   error: (message: string, ...args: any[]) => {
     if (process.env.NODE_ENV !== 'test') {
-      console.error(message, ...args);
+      console.error(JSON.stringify({ level: 'error', message, args, timestamp: new Date().toISOString() }));
     }
   },
   debug: (message: string, ...args: any[]) => {
     if (import.meta.env?.DEV) {
-      console.debug(message, ...args);
+      console.debug(JSON.stringify({ level: 'debug', message, args, timestamp: new Date().toISOString() }));
     }
   }
 };

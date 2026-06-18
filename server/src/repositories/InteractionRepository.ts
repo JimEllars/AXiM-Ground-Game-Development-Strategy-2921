@@ -132,9 +132,15 @@ export const getInteractions = async (
 
   const { leadId, startDate, endDate, page = 1, limit = 50 } = queryOptions;
 
-  const conditions: string[] = ["i.user_id = $1", "l.organization_id = $2"];
-  const params: any[] = [user.id, user.organization_id];
-  let paramIndex = 3;
+  const conditions: string[] = ["l.organization_id = $1"];
+  const params: any[] = [user.organization_id];
+  let paramIndex = 2;
+
+  if (user.role === 'REP') {
+    conditions.push(`i.user_id = ${paramIndex}`);
+    params.push(user.id);
+    paramIndex++;
+  }
 
   if (leadId) {
     conditions.push(`i.lead_id = $${paramIndex}`);

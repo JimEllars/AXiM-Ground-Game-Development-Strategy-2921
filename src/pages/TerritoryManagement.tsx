@@ -2,6 +2,7 @@ import { useState } from 'react';
     import { Box, Typography, Alert, CircularProgress } from '@mui/material';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
     import TerritoryMap from '@/components/TerritoryMap';
+import ErrorBoundary from '@/components/ErrorBoundary';
     import { territoriesAPI } from '@/services/api';
 
     const TerritoryManagement: React.FC = () => {
@@ -122,13 +123,13 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
             </Alert>
           )}
           {!loading && territories && availableReps && (
-            <TerritoryMap
+            <ErrorBoundary><TerritoryMap
               territories={territories}
               availableReps={availableReps}
               onSaveTerritory={handleSaveTerritory}
               onDeleteTerritory={handleDeleteTerritory}
               onAssignTerritory={handleAssignTerritory}
-            />
+            /></ErrorBoundary>
           )}
         </Box>
       );
