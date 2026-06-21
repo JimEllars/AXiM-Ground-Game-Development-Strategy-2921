@@ -1,6 +1,6 @@
 import logger from '@/utils/logger';
 import { db } from './db';
-import { interactionsAPI } from './services/api';
+import { interactionsAPI, analyticsAPI } from './services/api';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -91,4 +91,34 @@ export const pruneSyncedData = async () => {
   }
 };
 
-window.addEventListener('online', syncOfflineData);
+
+export const syncTelemetryQueue = async () => {
+  if (!navigator.onLine || isSyncPaused) return;
+
+  try {
+    const queuedLogs = await db.telemetryQueue.toArray();
+    if (queuedLogs.length === 0) return;
+
+    logger.info(`Syncing ${queuedLogs.length} queued telemetry logs.`);
+
+    for (const log of queuedLogs) {
+      if (isSyncPaused) break;
+
+      try {
+        await analyticsAPI.reportClientError(log.payload);
+        if (log.id !== undefined) {
+           await db.telemetryQueue.delete(log.id);
+        }
+      } catch (err) {
+        logger.error('Failed to sync specific telemetry log:', err);
+      }
+    }
+  } catch (error) {
+    logger.error('Failed to sync telemetry queue:', error);
+  }
+};
+
+window.addEventListener('online', () => {
+  syncOfflineData();
+  syncTelemetryQueue();
+});

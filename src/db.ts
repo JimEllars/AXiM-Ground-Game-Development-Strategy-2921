@@ -18,6 +18,12 @@ export interface OfflineTerritory {
   leads: Lead[];
 }
 
+export interface OfflineTelemetry {
+  id?: number;
+  payload: any;
+  timestamp: number;
+}
+
 export interface OfflineSetting {
   id: string; // e.g. "surveys" or "dispositions"
   data: any;
@@ -27,10 +33,12 @@ export class AppDB extends Dexie {
   interactions!: Table<OfflineInteraction, number>;
   territories!: Table<OfflineTerritory, string>;
   settings!: Table<OfflineSetting, string>;
+  telemetryQueue!: Table<OfflineTelemetry, number>;
 
   constructor() {
     super('AximGroundGameDB');
-    this.version(2).stores({
+    this.version(3).stores({
+      telemetryQueue: '++id',
       interactions: '++id, leadId, synced',
       territories: 'id, name',
       settings: 'id'
