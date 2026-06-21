@@ -346,3 +346,25 @@ export const getHealthMetrics = catchAsync(async (req: AuthRequest, res: Respons
     status: 'healthy'
   });
 });
+
+
+export const reportClientError = catchAsync(async (req: AuthRequest, res: Response) => {
+  const user = req.user!;
+  const errorData = req.body;
+
+  // Sanitize the data
+  const sanitizedData = {
+    userId: user.id,
+    organizationId: user.organization_id,
+    role: user.role,
+    type: 'client_error',
+    message: errorData.message,
+    stack: errorData.stack ? errorData.stack.split('\n').slice(0, 5).join('\n') : undefined,
+    componentStack: errorData.componentStack,
+    timestamp: new Date().toISOString()
+  };
+
+  logger.error('Frontend Client Error Crash', sanitizedData);
+
+  res.status(202).json({ status: 'Accepted' });
+});

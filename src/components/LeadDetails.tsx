@@ -322,10 +322,18 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
               </Typography>
               <Divider sx={{ my: 2 }} />
               <Typography variant="body1">
-                <strong>Contact:</strong> {lead.phone || 'N/A'}
+                <strong>Contact:</strong> {lead.phone ? (
+                  <a href={`tel:${lead.phone.replace(/[^\d+]/g, '')}`} style={{ color: '#1E3A8A', textDecoration: 'none', fontWeight: 'bold' }}>
+                    {lead.phone}
+                  </a>
+                ) : 'N/A'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {lead.email || 'No email'}
+                {lead.email ? (
+                  <a href={`mailto:${lead.email}`} style={{ color: '#1E3A8A', textDecoration: 'none' }}>
+                    {lead.email}
+                  </a>
+                ) : 'No email'}
               </Typography>
               <Divider sx={{ my: 2 }} />
               <Typography variant="body1" gutterBottom>

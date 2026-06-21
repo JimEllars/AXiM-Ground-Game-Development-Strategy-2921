@@ -100,7 +100,8 @@ const TerritoryDetails: React.FC<TerritoryDetailsProps> = ({
             ))}
           </List>
           <TablePagination
-            component="div"
+                    sx={{ '.MuiTablePagination-actions button': { minWidth: 44, minHeight: 44 } }}
+                    component="div"
             count={leads.length}
             page={page}
             onPageChange={handleChangePage}

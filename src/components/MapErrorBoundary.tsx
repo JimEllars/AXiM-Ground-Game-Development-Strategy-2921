@@ -29,8 +29,20 @@ class MapErrorBoundary extends Component<MapErrorBoundaryProps, MapErrorBoundary
     const errorData = { message: error.message, stack: error.stack, componentStack: errorInfo.componentStack };
     logger.error('Map component crashed', errorData);
     // Sync telemetry to backend
-    analyticsAPI.reportTelemetry({
+    // Include active user info locally, though backend extracts from token
+    const userJson = localStorage.getItem('user');
+    let userId;
+    if (userJson) {
+      try {
+        const user = JSON.parse(userJson);
+        userId = user.id;
+      } catch(e) {}
+    }
+
+    analyticsAPI.reportClientError({
       type: 'map_crash',
+      userId,
+
       ...errorData
     }).catch(err => {
       console.error('Failed to report telemetry', err);
