@@ -363,7 +363,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
               mapboxAccessToken={MAPBOX_TOKEN}
             >
               {longitude !== undefined && latitude !== undefined && <Marker longitude={longitude} latitude={latitude}>
-                <SafeIcon icon={FiMapPin} style={{ fontSize: 24, color: '#f57c00' }} />
+                <SafeIcon icon={FiMapPin} style={{ fontSize: 24, color: getPinColor(lead.status) }} />
               </Marker>}
             </Map>
           </Box>

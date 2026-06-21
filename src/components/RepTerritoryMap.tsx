@@ -40,7 +40,19 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
     source: 'leads',
     paint: {
         'circle-radius': 6,
-        'circle-color': '#B42222'
+        'circle-color': [
+          'match',
+          ['get', 'status'],
+          'New', '#1E3A8A', // AXiM Primary
+          'Uncontacted', '#1E3A8A', // AXiM Primary
+          'Contacted', '#F59E0B', // Accent Warning
+          'Follow-up', '#F59E0B', // Accent Warning
+          'Sold', '#10B981', // Accent Success
+          'Completed', '#10B981', // Accent Success
+          'Not Interested', '#EF4444', // Accent Danger
+          'Not Home', '#EF4444', // Accent Danger
+          '#1E3A8A' // Default
+        ]
     }
   };
 

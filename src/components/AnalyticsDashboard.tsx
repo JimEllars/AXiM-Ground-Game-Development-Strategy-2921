@@ -39,7 +39,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
     import { analyticsAPI } from '@/services/api';
     import { TabPanel } from './TabPanel';
 
-    const COLORS = ['#1976d2', '#388e3c', '#f57c00', '#d32f2f', '#7b1fa2'];
+    const COLORS = ['#1E3A8A', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 
     const initialAnalyticsState = {
       territories: [],
@@ -63,6 +63,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
     const AnalyticsDashboard: React.FC = () => {
       const [tabValue, setTabValue] = useState(0);
       const [dateRange, setDateRange] = useState('7days');
+  const [healthData, setHealthData] = useState<any>(null);
 
       const fetchAnalytics = async () => {
         // Calculate date range
@@ -89,7 +90,12 @@ import SkeletonLoader from '@/components/SkeletonLoader';
         return data;
       };
 
-      const { data: analytics = initialAnalyticsState, isLoading: loading, error: queryErrorState } = useQuery(['analytics', dateRange], fetchAnalytics, {
+      const fetchHealth = async () => {
+    const { data } = await analyticsAPI.getHealthMetrics();
+    return data;
+  };
+  const { data: healthMetrics } = useQuery('healthMetrics', fetchHealth, { refetchInterval: 30000 });
+  const { data: analytics = initialAnalyticsState, isLoading: loading, error: queryErrorState } = useQuery(['analytics', dateRange], fetchAnalytics, {
           keepPreviousData: true
       });
       const errorMsg = '';
@@ -164,19 +170,19 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                 title="Total Territories"
                 value={analytics.summary.totalTerritories}
                 icon={FiTarget}
-                color="#1976d2"
+                color="#1E3A8A"
                 subtitle="Active"
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <StatCard title="Total Leads" value={analytics.summary.totalLeads} icon={FiUsers} color="#388e3c" />
+              <StatCard title="Total Leads" value={analytics.summary.totalLeads} icon={FiUsers} color="#10B981" />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Total Interactions"
                 value={analytics.summary.totalInteractions}
                 icon={FiActivity}
-                color="#f57c00"
+                color="#F59E0B"
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
@@ -184,7 +190,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                 title="Completion Rate"
                 value={`${analytics.summary.completionRate}%`}
                 icon={FiTrendingUp}
-                color="#7b1fa2"
+                color="#8B5CF6"
               />
             </Grid>
           </Grid>
@@ -195,6 +201,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
               <Tab label="Trends" />
               <Tab label="Outcomes" />
               <Tab label="Top Performers" />
+              <Tab label="System Health" />
             </Tabs>
             <TabPanel value={tabValue} index={0}>
               <Typography variant="h6" gutterBottom>
@@ -207,8 +214,8 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                     <XAxis dataKey="date" />
                     <YAxis />
                     <Tooltip />
-                    <Line type="monotone" dataKey="interactions" stroke="#1976d2" strokeWidth={2} />
-                    <Line type="monotone" dataKey="uniqueLeads" stroke="#388e3c" strokeWidth={2} />
+                    <Line type="monotone" dataKey="interactions" stroke="#1E3A8A" strokeWidth={2} />
+                    <Line type="monotone" dataKey="uniqueLeads" stroke="#10B981" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
@@ -285,6 +292,27 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                 <Typography sx={{ textAlign: 'center', py: 4 }}>No performer data available for this period.</Typography>
               )}
             </TabPanel>
+
+            <TabPanel value={tabValue} index={3}>
+              <Typography variant="h6" gutterBottom>
+                System Health & Telemetry
+              </Typography>
+              <Grid container spacing={3}>
+                <Grid item xs={12} sm={6}>
+                  <Paper sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary">Average API Latency</Typography>
+                    <Typography variant="h4" color="primary">{healthMetrics?.apiLatencyMs || 0} ms</Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Paper sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" color="text.secondary">Successful Egress Webhooks</Typography>
+                    <Typography variant="h4" color="success.main">{healthMetrics?.successfulWebhooks || 0}</Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
+            </TabPanel>
+
           </Paper>
         </Box>
       );

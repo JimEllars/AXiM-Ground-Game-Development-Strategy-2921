@@ -116,7 +116,7 @@ import AppointmentsList from '@/components/AppointmentsList';
                 title="Total Interactions"
                 value={stats.totalInteractions || 0}
                 icon={FiTarget}
-                color="#1976d2"
+                color="#1E3A8A"
                 subtitle="All-time"
               />
             </Grid>
@@ -125,14 +125,14 @@ import AppointmentsList from '@/components/AppointmentsList';
                 title="Unique Contacts"
                 value={stats.uniqueLeadsContacted || 0}
                 icon={FiUsers}
-                color="#388e3c"
+                color="#10B981"
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <StatCard title="Active Days" value={stats.activeDays || 0} icon={FiTrendingUp} color="#f57c00" />
+              <StatCard title="Active Days" value={stats.activeDays || 0} icon={FiTrendingUp} color="#F59E0B" />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <StatCard title="Territories" value={territories.length} icon={FiMap} color="#7b1fa2" />
+              <StatCard title="Territories" value={territories.length} icon={FiMap} color="#8B5CF6" />
             </Grid>
 
             {/* Territories and Leads */}

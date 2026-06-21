@@ -9,7 +9,8 @@ import {
   FiHome,
   FiBarChart2,
   FiSettings,
-  FiRefreshCw,
+  FiCloudUpload,
+  FiCloudUpload,
 } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import SafeIcon from '@/common/SafeIcon';
@@ -20,6 +21,7 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const [isSyncing, setIsSyncing] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleProfileClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -95,12 +97,16 @@ const Navbar: React.FC = () => {
               variant="outlined"
               size="small"
               onClick={async () => {
+                setIsSyncing(true);
                 try {
                   await syncOfflineData();
                 } catch (e) {
                   console.error(e);
+                } finally {
+                  setIsSyncing(false);
                 }
               }}
+              disabled={isSyncing}
               startIcon={<SafeIcon icon={FiRefreshCw} />}
               sx={{ borderColor: 'rgba(255, 255, 255, 0.5)' }}
             >

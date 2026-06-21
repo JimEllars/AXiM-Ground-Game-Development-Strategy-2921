@@ -160,7 +160,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                 title="Total Interactions"
                 value={performance.totalInteractions}
                 icon={FiActivity}
-                color="#1976d2"
+                color="#1E3A8A"
                 subtitle="This month"
               />
             </Grid>
@@ -169,7 +169,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                 title="Daily Average"
                 value={performance.averagePerDay}
                 icon={FiTrendingUp}
-                color="#388e3c"
+                color="#10B981"
                 subtitle="Per rep"
               />
             </Grid>
@@ -178,7 +178,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                 title="Completion Rate"
                 value={`${performance.completionRate}%`}
                 icon={FiTarget}
-                color="#f57c00"
+                color="#F59E0B"
                 subtitle="Leads completed"
                 progress={performance.completionRate}
               />
@@ -188,7 +188,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                 title="Active Days"
                 value={performance.activeDays}
                 icon={FiClock}
-                color="#7b1fa2"
+                color="#8B5CF6"
                 subtitle="Days worked this month"
               />
             </Grid>
@@ -208,7 +208,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                       <XAxis dataKey="date" />
                       <YAxis />
                       <Tooltip />
-                      <Bar dataKey="interactions" fill="#1976d2" />
+                      <Bar dataKey="interactions" fill="#1E3A8A" />
                       <Bar dataKey="goal" fill="#e0e0e0" />
                     </BarChart>
                   </ResponsiveContainer>
