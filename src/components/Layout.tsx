@@ -66,7 +66,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </Box>
       <Snackbar open={syncCount !== null} autoHideDuration={6000} onClose={handleClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert onClose={handleClose} severity="success" sx={{ width: '100%' }}>
-          Offline Sync Complete: {syncCount} interactions synced.
+          All local changes synced to server.
         </Alert>
       </Snackbar>
     </Box>

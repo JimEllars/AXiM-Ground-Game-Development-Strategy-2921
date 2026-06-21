@@ -4,8 +4,14 @@ import { interactionsAPI } from './services/api';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
+let isSyncPaused = false;
+
+window.addEventListener('auth-unauthorized', () => {
+  isSyncPaused = true;
+});
+
 export const syncOfflineData = async () => {
-  if (!navigator.onLine) return;
+  if (!navigator.onLine || isSyncPaused) return;
 
   try {
     const offlineInteractions = await db.interactions.where('synced').equals(0 as any).toArray();
@@ -15,6 +21,11 @@ export const syncOfflineData = async () => {
     const batchSize = 20;
 
     for (let i = 0; i < offlineInteractions.length; i += batchSize) {
+      if (isSyncPaused) {
+        logger.warn('Sync paused due to unauthorized status.');
+        break;
+      }
+
       const batch = offlineInteractions.slice(i, i + batchSize);
 
       const payload = batch.map(item => ({
@@ -36,12 +47,14 @@ export const syncOfflineData = async () => {
       }
     }
 
-    logger.info(`Successfully synced ${offlineInteractions.length} interactions in total.`);
+    if (!isSyncPaused) {
+      logger.info(`Successfully synced ${offlineInteractions.length} interactions in total.`);
 
-    // Dispatch an event so the UI can listen and show a single toast notification
-    window.dispatchEvent(new CustomEvent('offline-sync-complete', {
-      detail: { count: offlineInteractions.length }
-    }));
+      // Dispatch an event so the UI can listen and show a single toast notification
+      window.dispatchEvent(new CustomEvent('offline-sync-complete', {
+        detail: { count: offlineInteractions.length }
+      }));
+    }
   } catch (error) {
     logger.error('Failed to sync offline interactions:', error);
   }

@@ -30,6 +30,8 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       logger.error('Authentication Error: Redirecting to login.');
       localStorage.removeItem('token');
+      // Dispatch event to clear auth state and stop sync
+      window.dispatchEvent(new CustomEvent('auth-unauthorized'));
       // Use location.assign for a cleaner redirect
       if (window.location.pathname !== '/login') {
         window.location.assign('/login');
