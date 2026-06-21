@@ -17,6 +17,7 @@ import { FiMapPin, FiEdit2, FiSave, FiX, FiCalendar } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import { leadsAPI } from '@/services/api';
 import AppointmentForm from './AppointmentForm';
+import SkeletonLoader from '@/components/SkeletonLoader';
 import { useQueryClient, useQuery } from 'react-query';
 import { Collapse } from '@mui/material';
 import { parseLeadLocation } from '@/common/locationUtils';
@@ -322,7 +323,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
                 AXiM Insights
               </Typography>
               {insightsLoading ? (
-                <Typography variant="body2" color="text.secondary">Loading insights...</Typography>
+                <SkeletonLoader type="list" count={1} />
               ) : insightsData ? (
                 <Box sx={{ p: 1, bgcolor: 'primary.50', borderRadius: 1 }}>
                   <Typography variant="body2">
