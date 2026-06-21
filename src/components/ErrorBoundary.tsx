@@ -1,5 +1,6 @@
 import logger from '@/utils/logger';
 import { analyticsAPI } from '@/services/api';
+import { db } from '@/db';
 import { Component, ErrorInfo, ReactNode } from 'react';
     import { Box, Typography, Button, Paper } from '@mui/material';
     import { FiAlertTriangle, FiRefreshCw } from 'react-icons/fi';
@@ -40,10 +41,21 @@ import { Component, ErrorInfo, ReactNode } from 'react';
         analyticsAPI.reportClientError({
           type: 'frontend_crash',
           userId,
-
           ...errorData
-        }).catch(err => {
-          console.error('Failed to report telemetry', err);
+        }).catch(async (err) => {
+          console.error('Failed to report telemetry via API, queueing locally', err);
+          try {
+            await db.telemetryQueue.add({
+              payload: {
+                type: 'frontend_crash',
+                userId,
+                ...errorData
+              },
+              timestamp: Date.now()
+            });
+          } catch (dbErr) {
+            console.error('Failed to save telemetry to indexedDB', dbErr);
+          }
         });
       }
 

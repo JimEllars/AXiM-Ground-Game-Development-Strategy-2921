@@ -1,27 +1,28 @@
-# Phase 14 Review: 90/10 Consolidation & Hardening
+# Phase 15 Review
+This review documents the completions for Phase 15.
 
-**Development Allocation:** 90% Reinforcement / 10% New Features
+## 1. Complete Interaction History Merging
+**Context:** Reps previously could only view local pending offline interactions for a lead. They need full historical context.
+**Fix:**
+- Updated `LeadDetails.tsx` to utilize `react-query` to pull the full interaction history via `interactionsAPI.getAll({ leadId })`.
+- Merged the pending offline local items (`synced === 0`) with the fetched server data.
+- The unified list is sorted chronologically descending by date so reps see the most recent activity first.
 
-## 1. Automated Local Data Pruning (Reinforcement - 30%)
-- **Implementation:** Added `pruneSyncedData()` to `src/syncEngine.ts`.
-- **Functionality:** Queries the local IndexedDB (`db.interactions`) for records that have successfully synced (`synced === 1`) and where the `interactionDate` is strictly older than 7 days.
-- **Execution:** This pruning automatically triggers at the end of every successful batch sync cycle, keeping the canvasser's device lean without losing recent context.
+## 2. Resilient Crash Telemetry
+**Context:** When offline, crash logs from `ErrorBoundary` were previously lost because the POST request to the server failed.
+**Fix:**
+- Implemented an `OfflineTelemetry` interface in `db.ts` and created a `telemetryQueue` IndexedDB table.
+- Handled the `reportClientError` API promise failure within `ErrorBoundary.tsx` to cache the error payload in the local queue.
+- Re-architected `syncEngine.ts` to sync the pending telemetryQueue logs and remove the records once successfully received.
 
-## 2. Frontend Telemetry Egress (Telemetry - 30%)
-- **Implementation:** Created the new `POST /api/analytics/client-error` endpoint in the backend (`analyticsController.ts`).
-- **Functionality:** Both `ErrorBoundary` and `MapErrorBoundary` now catch uncaught React exceptions and execute asynchronous POST requests to the new endpoint via `analyticsAPI.reportClientError`.
-- **Payload:** Transmits the crash type, React error message, component stack trace, and the active `userId` directly to the central telemetry logs for immediate HITL investigation.
+## 3. Touch-Target Enforcement
+**Context:** Field reps require easy, reliable interface targets when moving, wearing gloves, or under bright light.
+**Fix:**
+- Verified and enforced explicit minimum widths and heights of 44 pixels (`minWidth: '44px', minHeight: '44px'`) for the Quick Action buttons in `RepTerritoryMap.tsx` map popups in alignment with mobile standards.
 
-## 3. Touch Target & Accessibility Audit (UI Modernization - 30%)
-- **Implementation:** Enforced Apple/Google minimum mobile accessibility standards.
-- **Adjustments:**
-  - **Quick Dispositions (`RepTerritoryMap.tsx`):** Buttons inside Mapbox popups now feature `minWidth: 44, minHeight: 44`.
-  - **Pagination (`Pagination`/MUI TablePagination):** Overrode styles globally via `sx` to ensure all previous/next and page number buttons are at least 44x44 pixels.
-  - **Mobile Navigation (`Navbar.tsx`):** Ensured the hamburger menu and action items maintain 44x44 touch thresholds.
+## 4. Tap-to-Navigate Feature
+**Context:** Reps need seamless access to directions.
+**Fix:**
+- Modified `LeadDetails.tsx` to encode a full address and wrap it in a Google Maps URI scheme (`https://maps.google.com/?q={address}`) allowing the browser or phone OS to correctly handle navigation requests.
 
-## 4. "Tap-to-Connect" Deep Links (New Feature - 10%)
-- **Implementation:** Updated the `LeadDetails` presentation view.
-- **Functionality:**
-  - Phone numbers are wrapped in `<a href="tel:...">` natively stripping out visual formats for standard dialing protocols.
-  - Emails are wrapped in `<a href="mailto:...">`.
-- **Styling:** Applied cleanly styled, bolded `AXiM Primary` blue (`#1E3A8A`) to emphasize actionability to reps in the field.
+All code has been validated via testing and builds cleanly.

@@ -16,7 +16,7 @@ import Map, { Marker } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { FiMapPin, FiEdit2, FiSave, FiX, FiCalendar } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
-import { leadsAPI } from '@/services/api';
+import { leadsAPI, interactionsAPI } from '@/services/api';
 import AppointmentForm from './AppointmentForm';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { useQueryClient, useQuery } from 'react-query';
@@ -44,6 +44,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const queryClient = useQueryClient();
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+
   const [offlineInteractions, setOfflineInteractions] = useState<any[]>([]);
 
   useEffect(() => {
@@ -56,6 +57,19 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
         .then(setOfflineInteractions);
     }
   }, [lead?.id]);
+
+  const { data: serverInteractions = [], isLoading: historyLoading } = useQuery(
+    ['leadInteractions', lead?.id],
+    () => interactionsAPI.getAll({ leadId: lead.id }).then(res => res.data),
+    {
+      enabled: !!lead?.id,
+    }
+  );
+
+  const mergedInteractions = [...offlineInteractions.map(i => ({...i, isPendingSync: true})), ...serverInteractions].sort((a, b) => {
+    return new Date(b.interactionDate).getTime() - new Date(a.interactionDate).getTime();
+  });
+
 
 
   const [formData, setFormData] = useState({
@@ -314,9 +328,19 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
             </Grid>
           ) : (
             <>
+
               <Typography variant="body1" sx={{ mt: 1 }}>
-                <strong>Address:</strong> {lead.streetAddress}
+                <strong>Address:</strong>
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent([lead.streetAddress, lead.city, lead.state, lead.zip].filter(Boolean).join(', '))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: '#1E3A8A', textDecoration: 'none', marginLeft: '4px' }}
+                >
+                  {lead.streetAddress}
+                </a>
               </Typography>
+
               <Typography variant="body2" color="text.secondary">
                 {[lead.city, lead.state, lead.zip].filter(Boolean).join(', ')}
               </Typography>
@@ -408,10 +432,13 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
 
       <Grid item xs={12}>
         <Paper sx={{ p: 2 }}>
+
           <Typography variant="h6" gutterBottom>Interaction History</Typography>
-          {offlineInteractions.length > 0 ? (
+          {historyLoading ? (
+             <SkeletonLoader type="list" count={2} />
+          ) : mergedInteractions.length > 0 ? (
             <Box>
-              {offlineInteractions.map((interaction, idx) => (
+              {mergedInteractions.map((interaction, idx) => (
                 <Box key={idx} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, position: 'relative' }}>
                   <Typography variant="body2" color="text.secondary">
                     {new Date(interaction.interactionDate).toLocaleString()}
@@ -424,18 +451,21 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
                       <strong>Notes:</strong> {interaction.notes}
                     </Typography>
                   )}
-                  <Chip
-                    label="Pending Sync"
-                    size="small"
-                    color="warning"
-                    sx={{ position: 'absolute', top: 8, right: 8 }}
-                  />
+                  {interaction.isPendingSync && (
+                    <Chip
+                      label="Pending Sync"
+                      size="small"
+                      color="warning"
+                      sx={{ position: 'absolute', top: 8, right: 8 }}
+                    />
+                  )}
                 </Box>
               ))}
             </Box>
           ) : (
-            <Typography variant="body2" color="text.secondary">No recent offline interactions.</Typography>
+            <Typography variant="body2" color="text.secondary">No interaction history found.</Typography>
           )}
+
         </Paper>
       </Grid>
     </Box>
