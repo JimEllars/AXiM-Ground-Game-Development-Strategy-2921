@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { db } from '@/db';
 import {
   Box,
   Typography,
@@ -43,6 +44,19 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const queryClient = useQueryClient();
   const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const [offlineInteractions, setOfflineInteractions] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (lead?.id) {
+      db.interactions
+        .where('leadId')
+        .equals(lead.id)
+        .and(i => (i.synced as any) === 0 || !i.synced)
+        .toArray()
+        .then(setOfflineInteractions);
+    }
+  }, [lead?.id]);
+
 
   const [formData, setFormData] = useState({
     firstName: lead.firstName || '',
@@ -363,7 +377,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
               mapboxAccessToken={MAPBOX_TOKEN}
             >
               {longitude !== undefined && latitude !== undefined && <Marker longitude={longitude} latitude={latitude}>
-                <SafeIcon icon={FiMapPin} style={{ fontSize: 24, color: getPinColor(lead.status) }} />
+                <SafeIcon icon={FiMapPin} style={{ fontSize: 24, color: lead.status === 'Completed' ? 'green' : lead.status === 'New' ? 'blue' : 'orange' }} />
               </Marker>}
             </Map>
           </Box>
@@ -383,6 +397,39 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
         )}
       </Grid>
     </Grid>
+
+      <Grid item xs={12}>
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>Interaction History</Typography>
+          {offlineInteractions.length > 0 ? (
+            <Box>
+              {offlineInteractions.map((interaction, idx) => (
+                <Box key={idx} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, position: 'relative' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {new Date(interaction.interactionDate).toLocaleString()}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>Outcome:</strong> {interaction.outcome}
+                  </Typography>
+                  {interaction.notes && (
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      <strong>Notes:</strong> {interaction.notes}
+                    </Typography>
+                  )}
+                  <Chip
+                    label="Pending Sync"
+                    size="small"
+                    color="warning"
+                    sx={{ position: 'absolute', top: 8, right: 8 }}
+                  />
+                </Box>
+              ))}
+            </Box>
+          ) : (
+            <Typography variant="body2" color="text.secondary">No recent offline interactions.</Typography>
+          )}
+        </Paper>
+      </Grid>
     </Box>
   );
 };

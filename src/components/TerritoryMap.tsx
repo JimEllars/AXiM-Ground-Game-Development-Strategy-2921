@@ -1,3 +1,4 @@
+import MapErrorBoundary from '@/components/MapErrorBoundary';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Map, { Source, Layer, NavigationControl, useControl } from 'react-map-gl';
 import { LngLatBounds } from 'mapbox-gl';
@@ -163,6 +164,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
             <SkeletonLoader type="dashboard" />
           </Box>
         )}
+        <MapErrorBoundary>
         <Map
           ref={mapRef}
           {...viewState}
@@ -218,6 +220,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
             />
           </Source>
         </Map>
+        </MapErrorBoundary>
       </Box>
 
       <TerritoryPanel
