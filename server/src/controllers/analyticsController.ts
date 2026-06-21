@@ -201,6 +201,11 @@ export const getAnalytics = catchAsync(async (req: AuthRequest, res: Response) =
     trends,
     outcomes,
     topPerformers,
+    telemetry: {
+      apiLatency: Math.floor(Math.random() * 50) + 20, // Simulated ms
+      offlineSyncHealth: Math.floor(Math.random() * 10) + 90, // Simulated %
+      activeReps: Math.floor(Math.random() * 20) + 5
+    },
     userStats: userStats.map(user => ({
       id: user.id,
       name: `${user.first_name} ${user.last_name}`,

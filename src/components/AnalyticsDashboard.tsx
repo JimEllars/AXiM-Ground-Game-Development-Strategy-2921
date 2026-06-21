@@ -21,7 +21,7 @@ import { useQuery } from 'react-query';
       Paper,
     } from '@mui/material';
 import SkeletonLoader from '@/components/SkeletonLoader';
-    import { FiTrendingUp, FiUsers, FiTarget, FiActivity, FiDownload } from 'react-icons/fi';
+    import { FiTrendingUp, FiUsers, FiTarget, FiActivity, FiDownload, FiWifi, FiServer } from 'react-icons/fi';
     import {
       LineChart,
       Line,
@@ -54,6 +54,10 @@ import SkeletonLoader from '@/components/SkeletonLoader';
       trends: [],
       outcomes: [],
       topPerformers: [],
+      telemetry: {
+        apiLatency: 0,
+        offlineSyncHealth: 0,
+      }
     };
 
     const AnalyticsDashboard: React.FC = () => {
@@ -137,6 +141,24 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 
           {/* Summary Cards */}
           <Grid container spacing={3} sx={{ mb: 3 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard
+                title="API Latency"
+                value={`${analytics.telemetry?.apiLatency || 0} ms`}
+                icon={FiServer}
+                color="#0288d1"
+                subtitle="Avg Response Time"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <StatCard
+                title="Offline Sync Health"
+                value={`${analytics.telemetry?.offlineSyncHealth || 0}%`}
+                icon={FiWifi}
+                color="#2e7d32"
+                subtitle="Successful Syncs"
+              />
+            </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Total Territories"

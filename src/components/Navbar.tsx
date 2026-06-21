@@ -9,10 +9,12 @@ import {
   FiHome,
   FiBarChart2,
   FiSettings,
+  FiRefreshCw,
 } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import SafeIcon from '@/common/SafeIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { syncOfflineData } from '@/syncEngine';
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
@@ -88,6 +90,22 @@ const Navbar: React.FC = () => {
         {/* User Profile */}
         {user ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              color="inherit"
+              variant="outlined"
+              size="small"
+              onClick={async () => {
+                try {
+                  await syncOfflineData();
+                } catch (e) {
+                  console.error(e);
+                }
+              }}
+              startIcon={<SafeIcon icon={FiRefreshCw} />}
+              sx={{ borderColor: 'rgba(255, 255, 255, 0.5)' }}
+            >
+              Force Sync
+            </Button>
             <Chip
               label={user.role}
               size="small"
