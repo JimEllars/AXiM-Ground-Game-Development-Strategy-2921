@@ -145,7 +145,7 @@ const RegisterOrganization: React.FC = () => {
             <Box sx={{ textAlign: 'center' }}>
               <Typography variant="body2">
                 Already have an account?{' '}
-                <Link to="/login" style={{ color: '#1976d2', textDecoration: 'none' }}>
+                <Link to="/login" style={{ color: '#1E3A8A', textDecoration: 'none' }}>
                   Sign in here
                 </Link>
               </Typography>

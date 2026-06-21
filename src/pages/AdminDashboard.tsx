@@ -81,7 +81,7 @@ const AdminDashboard: React.FC = () => {
               title="Total Users"
               value={systemStats.totalUsers || 0}
               icon={FiUsers}
-              color="#1976d2"
+              color="#1E3A8A"
               subtitle="Active accounts"
             />
           </Grid>
@@ -90,7 +90,7 @@ const AdminDashboard: React.FC = () => {
               title="Territories"
               value={systemStats.totalTerritories || 0}
               icon={FiTarget}
-              color="#388e3c"
+              color="#10B981"
               subtitle="Defined areas"
             />
           </Grid>
@@ -99,7 +99,7 @@ const AdminDashboard: React.FC = () => {
               title="Total Leads"
               value={systemStats.totalLeads || 0}
               icon={FiBarChart2}
-              color="#f57c00"
+              color="#F59E0B"
               subtitle="All territories"
             />
           </Grid>
@@ -108,7 +108,7 @@ const AdminDashboard: React.FC = () => {
               title="Interactions"
               value={systemStats.totalInteractions || 0}
               icon={FiTrendingUp}
-              color="#7b1fa2"
+              color="#8B5CF6"
               subtitle="Completed activities"
             />
           </Grid>

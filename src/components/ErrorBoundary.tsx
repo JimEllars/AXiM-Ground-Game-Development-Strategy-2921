@@ -44,7 +44,7 @@ import { Component, ErrorInfo, ReactNode } from 'react';
           return (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px', p: 2 }}>
               <Paper sx={{ p: 4, maxWidth: 500, textAlign: 'center' }}>
-                <SafeIcon icon={FiAlertTriangle} style={{ fontSize: 64, color: '#f57c00', marginBottom: 16 }} />
+                <SafeIcon icon={FiAlertTriangle} style={{ fontSize: 64, color: '#F59E0B', marginBottom: 16 }} />
                 <Typography variant="h5" gutterBottom>
                   Something went wrong
                 </Typography>

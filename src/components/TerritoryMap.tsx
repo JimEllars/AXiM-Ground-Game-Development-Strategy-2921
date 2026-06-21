@@ -205,8 +205,8 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
                   'match',
                   ['get', 'id'],
                   selectedTerritoryId || '',
-                  '#f57c00', // Selected color
-                  '#1976d2', // Default color
+                  '#F59E0B', // Selected color
+                  '#1E3A8A', // Default color
                 ],
                 'fill-opacity': 0.4,
               }}

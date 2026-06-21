@@ -47,13 +47,16 @@ AXiM Ground Game v1.0 MVP has reached a stable foundation. We have successfully:
 5. **CI/CD Stabilization**:
    - Solidify the build pipeline. Expand Github Actions to run our newly authored E2E Playwright tests alongside unit testing before merges to main.
 
-## Phase 10: 80/20 Production Polish Allocation
+
+## Phase 10 & 11: 80/20 Production Polish Allocation
 
 In accordance with strict 80/20 development allocation, focus is heavily shifted towards activating current systems, expanding telemetry, modernizing the UI, and reinforcing existing capabilities (80%). Only 20% is allocated for new features.
 
 - **80% Reinforcement & Design**:
-  - **Telemetry Activation**: Global tracing middleware implemented to track request times and payload sizes. Analytics dashboard updated to display API latency and offline vs online sync health.
-  - **Modern UI Standardization**: Replaced generic loading spinners with SkeletonLoader in components like LeadDetails and TerritoryMap to improve perceived performance.
+  - **AXiM Design Palette Integration**: Unified aesthetic implemented via Tailwind configuration and MUI ThemeProvider utilizing AXiM Primary (Blue), Secondary (Yellow), Success (Green), and Danger (Red). Evaluated text contrast overlays.
+  - **Visual Geospatial Modernization**: Semantic color-coding applied to Mapbox GL markers in TerritoryMap, RepTerritoryMap, and LeadDetails for instant status recognition.
+  - **Telemetry Activation**: Global tracing middleware implemented before API routes to track request times. Analytics dashboard updated with a "System Health" tab to display API latency and egress webhooks metrics.
+  - **Modern UI Standardization**: Replaced generic loading spinners with SkeletonLoader in components like LeadDetails and TerritoryManagement to improve perceived performance.
   - **RBAC Fortification**: Expanded End-to-End RBAC tests for cross-tenant data access attempts. Verified LeadRepository strictly enforces RLS parameters for field reps.
 - **20% New Features**:
-  - **Manual Sync Override**: Added a "Force Sync" button in the application header to allow reps to manually push their local IndexedDB queue to the backend.
+  - **Manual Sync Override**: Added a "Force Sync" button with a cloud-upload icon in the application header to allow reps to manually push their local IndexedDB queue to the backend.

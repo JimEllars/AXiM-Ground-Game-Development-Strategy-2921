@@ -6,10 +6,20 @@ import AppRouter from '@/router/Router';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
+      main: '#1E3A8A', // AXiM Primary (Blue/Brand)
     },
     secondary: {
-      main: '#dc004e',
+      main: '#F59E0B', // AXiM Secondary (Accent Warning Yellow/Gold)
+    },
+    success: {
+      main: '#10B981', // Accent Success (Green)
+    },
+    error: {
+      main: '#EF4444', // Accent Danger (Red)
+    },
+    background: {
+      default: '#F8FAFC',
+      paper: '#FFFFFF',
     },
   },
   typography: {

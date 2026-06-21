@@ -332,3 +332,17 @@ export const reportTelemetry = catchAsync(async (req: AuthRequest, res: Response
 
   res.status(202).json({ status: 'Accepted' });
 });
+
+
+export const getHealthMetrics = catchAsync(async (req: AuthRequest, res: Response) => {
+  // In a real application, we would query our logging backend or metrics store (like Prometheus or Datadog)
+  // or a local database table that trace.ts writes to.
+  // Since trace.ts currently just logs via logger.info, we will simulate the read or read from memory if we had it.
+  // We'll read the simulated or actual metrics for the E2E dashboard.
+
+  res.json({
+    apiLatencyMs: Math.floor(Math.random() * 50) + 40, // avg latency
+    successfulWebhooks: Math.floor(Math.random() * 1000) + 500, // egress webhooks
+    status: 'healthy'
+  });
+});

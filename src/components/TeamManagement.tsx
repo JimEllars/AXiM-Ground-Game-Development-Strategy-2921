@@ -305,9 +305,9 @@ const TeamManagement: React.FC = () => {
       return acc;
     }, {} as Record<string, number>);
     return [
-      { role: 'Admin', count: stats.ADMIN || 0, color: '#d32f2f' },
-      { role: 'Manager', count: stats.MANAGER || 0, color: '#f57c00' },
-      { role: 'Rep', count: stats.REP || 0, color: '#1976d2' },
+      { role: 'Admin', count: stats.ADMIN || 0, color: '#EF4444' },
+      { role: 'Manager', count: stats.MANAGER || 0, color: '#F59E0B' },
+      { role: 'Rep', count: stats.REP || 0, color: '#1E3A8A' },
     ];
   };
 

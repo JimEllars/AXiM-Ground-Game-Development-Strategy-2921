@@ -135,14 +135,14 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
           {/* Stats Cards */}
           <Grid item xs={12} sm={6} md={3}>
-            <StatCard title="Territories" value={territories.length} icon={FiMap} color="#1976d2" />
+            <StatCard title="Territories" value={territories.length} icon={FiMap} color="#1E3A8A" />
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
           title="Total Leads"
           value={allLeads.length}
               icon={FiUsers}
-              color="#388e3c"
+              color="#10B981"
             />
           </Grid>
 

@@ -97,7 +97,7 @@ import React, { useState } from 'react';
                 <Box sx={{ textAlign: 'center', mt: 2 }}>
                   <Typography variant="body2">
                     Don't have an account?{' '}
-                    <Link to="/register" style={{ color: '#1976d2', textDecoration: 'none' }}>
+                    <Link to="/register" style={{ color: '#1E3A8A', textDecoration: 'none' }}>
                       Register your organization
                     </Link>
                   </Typography>

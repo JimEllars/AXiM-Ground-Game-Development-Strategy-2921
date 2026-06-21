@@ -155,6 +155,7 @@ export const interactionsAPI = {
 
 // Analytics API
 export const analyticsAPI = {
+  getHealthMetrics: () => api.get('/analytics/health'),
   getAnalytics: (params?: { startDate?: string; endDate?: string }) =>
     api.get('/analytics', { params }),
   getPerformance: (params?: { startDate?: string; endDate?: string }) =>
