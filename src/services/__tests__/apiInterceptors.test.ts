@@ -102,13 +102,11 @@ describe('API Interceptors', () => {
         // If it throws, we can safely ignore since the previous ones threw in the object declaration
     }
 
-    const mockError = {
-      response: {
-        status: 401
-      }
-    };
+    const mockError = { response: { status: 401 } };
+    const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent');
 
     await expect(responseInterceptorError(mockError)).rejects.toBe(mockError);
+    expect(dispatchEventSpy).toHaveBeenCalled();
     expect(logger.error).toHaveBeenCalledWith('Authentication Error: Redirecting to login.');
     expect(Storage.prototype.removeItem).toHaveBeenCalledWith('token');
   });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -8,6 +8,10 @@ import {
   FormControl,
   InputLabel,
   Divider,
+  List,
+  ListItem,
+  ListItemText,
+  TablePagination
 } from '@mui/material';
 import { FiTrash2, FiUserPlus } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
@@ -29,6 +33,21 @@ const TerritoryDetails: React.FC<TerritoryDetailsProps> = ({
   onAssignRep,
   onDeleteTerritory,
 }) => {
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
+  const leads = selectedTerritory.leads || [];
+  const paginatedLeads = leads.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
   return (
     <>
       <Typography variant="h6">{selectedTerritory.name}</Typography>
@@ -63,6 +82,35 @@ const TerritoryDetails: React.FC<TerritoryDetailsProps> = ({
           Assign
         </Button>
       </Box>
+
+      {leads.length > 0 && (
+        <>
+          <Divider sx={{ my: 2 }} />
+          <Typography variant="subtitle1" gutterBottom>
+            Leads in Territory
+          </Typography>
+          <List dense>
+            {paginatedLeads.map((lead: any) => (
+              <ListItem key={lead.id}>
+                <ListItemText
+                  primary={`${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed Lead'}
+                  secondary={lead.streetAddress}
+                />
+              </ListItem>
+            ))}
+          </List>
+          <TablePagination
+            component="div"
+            count={leads.length}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[10, 25]}
+          />
+        </>
+      )}
+
       <Divider sx={{ my: 2 }} />
       <Button
         fullWidth

@@ -1,10 +1,13 @@
 import MapErrorBoundary from '@/components/MapErrorBoundary';
 
-import React from 'react';
-import Map, { Source, Layer } from 'react-map-gl';
+import React, { useState } from 'react';
+import Map, { Source, Layer, Popup } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Territory, Lead } from '@/types';
 import { parseLeadLocation } from '@/common/locationUtils';
+import { Box, Typography, Button } from '@mui/material';
+import { db } from '@/db';
+import { syncOfflineData } from '@/syncEngine';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -14,6 +17,8 @@ interface RepTerritoryMapProps {
 }
 
 const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) => {
+  const [popupInfo, setPopupInfo] = useState<any>(null);
+
   if (!boundary) {
     return <div>No boundary data available.</div>;
   }
@@ -71,11 +76,49 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
           properties: {
             id: lead.id,
             status: lead.status,
+            name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed Lead',
           },
         });
       }
       return acc;
     }, []),
+  };
+
+  const handleMapClick = (event: any) => {
+    const feature = event.features && event.features[0];
+    if (feature && feature.layer.id === 'leads-points') {
+      const coordinates = feature.geometry.coordinates.slice();
+      setPopupInfo({
+        lngLat: [coordinates[0], coordinates[1]],
+        feature: feature.properties
+      });
+    } else {
+      setPopupInfo(null);
+    }
+  };
+
+  const handleQuickDisposition = async (outcome: string) => {
+    if (!popupInfo) return;
+
+    const interactionData = {
+      leadId: popupInfo.feature.id,
+      outcome: outcome,
+      notes: 'Quick Disposition',
+      interactionDate: new Date(),
+      synced: 0 as any, // 0 for false
+    };
+
+    try {
+      await db.interactions.add(interactionData);
+      setPopupInfo(null);
+
+      // Trigger sync
+      if (navigator.onLine) {
+        syncOfflineData();
+      }
+    } catch (err) {
+      console.error('Error saving quick disposition', err);
+    }
   };
 
   return (
@@ -85,6 +128,8 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
       style={{ width: '100%', height: 400 }}
       mapStyle="mapbox://styles/mapbox/streets-v9"
       mapboxAccessToken={MAPBOX_TOKEN}
+      interactiveLayerIds={['leads-points']}
+      onClick={handleMapClick}
     >
       <Source id="territory" type="geojson" data={boundary}>
         <Layer {...territoryLayer} />
@@ -92,6 +137,40 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
       <Source id="leads" type="geojson" data={leadsData}>
         <Layer {...(leadsLayer as any)} />
       </Source>
+
+      {popupInfo && (
+        <Popup
+          longitude={popupInfo.lngLat[0]}
+          latitude={popupInfo.lngLat[1]}
+          anchor="bottom"
+          onClose={() => setPopupInfo(null)}
+          closeOnClick={false}
+        >
+          <Box sx={{ p: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              {popupInfo.feature.name}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <Button
+                variant="outlined"
+                size="small"
+                color="error"
+                onClick={() => handleQuickDisposition('Not Home')}
+              >
+                Not Home
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                color="primary"
+                onClick={() => handleQuickDisposition('Left Flyer')}
+              >
+                Left Flyer
+              </Button>
+            </Box>
+          </Box>
+        </Popup>
+      )}
     </Map>
   </MapErrorBoundary>
   );

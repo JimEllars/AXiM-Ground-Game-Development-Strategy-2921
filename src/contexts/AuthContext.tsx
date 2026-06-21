@@ -26,6 +26,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+    };
+    window.addEventListener('auth-unauthorized', handleUnauthorized);
+
     const getUser = async () => {
       const token = localStorage.getItem('token');
       if (token) {
@@ -44,6 +49,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     getUser();
+
+    return () => {
+      window.removeEventListener('auth-unauthorized', handleUnauthorized);
+    };
   }, []);
 
   const login = async (email: string, password: string) => {

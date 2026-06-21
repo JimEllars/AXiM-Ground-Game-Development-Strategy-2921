@@ -412,6 +412,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
                   page={pagination.page - 1}
                   onPageChange={handlePageChange}
                   rowsPerPage={pagination.rowsPerPage}
+                  rowsPerPageOptions={[10, 25]}
                   onRowsPerPageChange={handleRowsPerPageChange}
                 />
               </Card>
