@@ -1,3 +1,4 @@
+import MapErrorBoundary from '@/components/MapErrorBoundary';
 
 import React from 'react';
 import Map, { Source, Layer } from 'react-map-gl';
@@ -78,6 +79,7 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
   };
 
   return (
+    <MapErrorBoundary fallbackLeads={leads}>
     <Map
       initialViewState={initialViewState}
       style={{ width: '100%', height: 400 }}
@@ -88,9 +90,10 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
         <Layer {...territoryLayer} />
       </Source>
       <Source id="leads" type="geojson" data={leadsData}>
-        <Layer {...leadsLayer} />
+        <Layer {...(leadsLayer as any)} />
       </Source>
     </Map>
+  </MapErrorBoundary>
   );
 };
 
