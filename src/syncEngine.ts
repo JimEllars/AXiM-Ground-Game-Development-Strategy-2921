@@ -51,12 +51,43 @@ export const syncOfflineData = async () => {
       logger.info(`Successfully synced ${offlineInteractions.length} interactions in total.`);
 
       // Dispatch an event so the UI can listen and show a single toast notification
+      // Trigger pruning of stale data after successful sync
+      await pruneSyncedData();
+
+      // Dispatch an event so the UI can listen and show a single toast notification
       window.dispatchEvent(new CustomEvent('offline-sync-complete', {
         detail: { count: offlineInteractions.length }
       }));
     }
   } catch (error) {
     logger.error('Failed to sync offline interactions:', error);
+  }
+};
+
+
+export const pruneSyncedData = async () => {
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    // We fetch and filter because interactionDate might be stored as string or Date
+    // and might not be indexed in a way to do a direct Date comparison via where().
+    const staleRecords = await db.interactions
+      .filter((interaction) => {
+        if (!interaction.synced) return false;
+        const interactionDate = new Date(interaction.interactionDate);
+        return interactionDate < sevenDaysAgo;
+      })
+      .toArray();
+
+    const idsToDelete = staleRecords.map(record => record.id!).filter(id => id !== undefined);
+
+    if (idsToDelete.length > 0) {
+      await db.interactions.bulkDelete(idsToDelete);
+      logger.info(`Successfully pruned ${idsToDelete.length} stale interactions.`);
+    }
+  } catch (error) {
+    logger.error('Failed to prune synced data:', error);
   }
 };
 

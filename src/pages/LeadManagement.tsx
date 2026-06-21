@@ -407,7 +407,8 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 
                 {/* Pagination */}
                   <TablePagination
-                  component="div"
+                    sx={{ '.MuiTablePagination-actions button': { minWidth: 44, minHeight: 44 } }}
+                    component="div"
                   count={total}
                   page={pagination.page - 1}
                   onPageChange={handlePageChange}

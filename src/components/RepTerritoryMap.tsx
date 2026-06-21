@@ -156,6 +156,7 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
                 size="small"
                 color="error"
                 onClick={() => handleQuickDisposition('Not Home')}
+                sx={{ minWidth: 44, minHeight: 44 }}
               >
                 Not Home
               </Button>
@@ -164,6 +165,7 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
                 size="small"
                 color="primary"
                 onClick={() => handleQuickDisposition('Left Flyer')}
+                sx={{ minWidth: 44, minHeight: 44 }}
               >
                 Left Flyer
               </Button>

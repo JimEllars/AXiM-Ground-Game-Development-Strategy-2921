@@ -164,6 +164,8 @@ export const analyticsAPI = {
     api.get('/analytics/performance', { params }),
   reportTelemetry: (data: any) =>
     api.post('/analytics/telemetry', data),
+  reportClientError: (data: any) =>
+    api.post('/analytics/client-error', data),
 };
 
 // Users API

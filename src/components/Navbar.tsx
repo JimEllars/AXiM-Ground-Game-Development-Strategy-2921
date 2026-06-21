@@ -85,7 +85,7 @@ const Navbar: React.FC = () => {
         {/* Navigation Links */}
         {isMobile ? (
           <Box sx={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-            <IconButton color="inherit" onClick={handleMobileMenuClick} edge="start" sx={{ mr: 2 }}>
+            <IconButton color="inherit" onClick={handleMobileMenuClick} edge="start" sx={{ mr: 2, minWidth: 44, minHeight: 44 }}>
               <SafeIcon icon={FiMenu} />
             </IconButton>
             <Menu
@@ -145,7 +145,7 @@ const Navbar: React.FC = () => {
                       }
                     }}
                     disabled={isSyncing}
-                    sx={{ border: '1px solid rgba(255, 255, 255, 0.5)' }}
+                    sx={{ border: '1px solid rgba(255, 255, 255, 0.5)', minWidth: 44, minHeight: 44 }}
                   >
                     <SafeIcon icon={FiRefreshCw} />
                   </IconButton>
@@ -185,7 +185,7 @@ const Navbar: React.FC = () => {
             <Button
               color="inherit"
               onClick={handleProfileClick}
-              sx={{ minWidth: isMobile ? 'auto' : undefined, px: isMobile ? 1 : 2 }}
+              sx={{ minWidth: isMobile ? 44 : undefined, minHeight: isMobile ? 44 : undefined, px: isMobile ? 1 : 2 }}
               startIcon={
                 <Avatar sx={{ width: 32, height: 32, bgcolor: 'rgba(255, 255, 255, 0.1)' }}>
                   <SafeIcon icon={FiUser} style={{ fontSize: 16 }} />
