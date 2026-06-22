@@ -49,21 +49,23 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
       'circle-color': [
         'step',
         ['get', 'point_count'],
-        '#51bbd6',
-        100,
-        '#f1f075',
-        750,
-        '#f28cb1'
+        '#1976d2', // MUI Primary Main
+        50,
+        '#9c27b0', // MUI Secondary Main
+        200,
+        '#d32f2f'  // MUI Error Main
       ],
       'circle-radius': [
         'step',
         ['get', 'point_count'],
         20,
-        100,
+        50,
         30,
-        750,
+        200,
         40
-      ]
+      ],
+      'circle-stroke-width': 3,
+      'circle-stroke-color': '#ffffff' // explicit counter rings
     }
   };
 
@@ -74,8 +76,11 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
     filter: ['has', 'point_count'],
     layout: {
       'text-field': '{point_count_abbreviated}',
-      'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-      'text-size': 12
+      'text-font': ['Roboto Regular', 'Arial Unicode MS Bold'], // Standard MUI typography font
+      'text-size': 14,
+    },
+    paint: {
+      'text-color': '#ffffff'
     }
   };
 
@@ -126,6 +131,22 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
 
   const handleMapClick = (event: any) => {
     const feature = event.features && event.features[0];
+    if (feature && feature.layer.id === 'clusters') {
+      const map = event.target;
+      const clusterId = feature.properties.cluster_id;
+      const clusterSource = map.getSource('leads');
+
+      clusterSource.getClusterExpansionZoom(clusterId, (err, zoom) => {
+        if (err) return;
+        map.easeTo({
+          center: feature.geometry.coordinates,
+          zoom: zoom,
+          duration: 500
+        });
+      });
+      return;
+    }
+
     if (feature && feature.layer.id === 'leads-points') {
       const coordinates = feature.geometry.coordinates.slice();
       setPopupInfo({
@@ -168,7 +189,7 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
       style={{ width: '100%', height: 400 }}
       mapStyle="mapbox://styles/mapbox/streets-v9"
       mapboxAccessToken={MAPBOX_TOKEN}
-      interactiveLayerIds={['leads-points']}
+      interactiveLayerIds={['leads-points', 'clusters']}
       onClick={handleMapClick}
     >
       <Source id="territory" type="geojson" data={boundary}>
