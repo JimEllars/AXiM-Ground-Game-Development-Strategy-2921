@@ -40,12 +40,52 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
     },
   };
 
+  const clusterLayer = {
+    id: 'clusters',
+    type: 'circle' as const,
+    source: 'leads',
+    filter: ['has', 'point_count'],
+    paint: {
+      'circle-color': [
+        'step',
+        ['get', 'point_count'],
+        '#51bbd6',
+        100,
+        '#f1f075',
+        750,
+        '#f28cb1'
+      ],
+      'circle-radius': [
+        'step',
+        ['get', 'point_count'],
+        20,
+        100,
+        30,
+        750,
+        40
+      ]
+    }
+  };
+
+  const clusterCountLayer = {
+    id: 'cluster-count',
+    type: 'symbol' as const,
+    source: 'leads',
+    filter: ['has', 'point_count'],
+    layout: {
+      'text-field': '{point_count_abbreviated}',
+      'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+      'text-size': 12
+    }
+  };
+
   const leadsLayer = {
     id: 'leads-points',
     type: 'circle' as const,
     source: 'leads',
+    filter: ['!', ['has', 'point_count']],
     paint: {
-        'circle-radius': 6,
+        'circle-radius': 22, // 44x44 pixels touch target => radius 22
         'circle-color': [
           'match',
           ['get', 'status'],
@@ -134,7 +174,9 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
       <Source id="territory" type="geojson" data={boundary}>
         <Layer {...territoryLayer} />
       </Source>
-      <Source id="leads" type="geojson" data={leadsData}>
+      <Source id="leads" type="geojson" data={leadsData} cluster={true} clusterMaxZoom={14} clusterRadius={50}>
+        <Layer {...(clusterLayer as any)} />
+        <Layer {...(clusterCountLayer as any)} />
         <Layer {...(leadsLayer as any)} />
       </Source>
 
