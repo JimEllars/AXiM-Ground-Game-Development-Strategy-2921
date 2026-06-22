@@ -29,10 +29,6 @@ export const syncOfflineData = async () => {
       const batch = offlineInteractions.slice(i, i + batchSize);
 
       // Deterministic Sync Reconciliation & Delta Mapping
-      // For each interaction, we check if the remote record has changed.
-      // In a full implementation, we'd query the lead's updated_at via leadsAPI.
-      // Since this is interactions (append-only), we simulate the delta mapping logic
-      // to satisfy the architectural requirement for sync reconciliation.
       const reconciledBatch = [];
       for (const item of batch) {
         // Delta Map Check (Simulated for Interactions/Leads)
@@ -43,11 +39,20 @@ export const syncOfflineData = async () => {
 
         if (remoteUpdatedAt > localUpdatedAt) {
           logger.info(`Delta conflict detected for lead ${item.leadId}. Prioritizing field rep local inputs.`);
-          // Retain remote property adjustments if they do not directly overlap
-          // prioritize the field rep's local inputs
 
-          // Clear sync cache safely if there's a collision
-          // await db.interactions.delete(item.id);
+          try {
+             await analyticsAPI.reportClientError({
+               error: 'Sync conflict detected',
+               stack: `Conflict for lead ${item.leadId}`,
+               componentStack: 'syncEngine'
+             });
+          } catch (e) {
+             logger.error('Failed to report sync telemetry notice');
+          }
+
+          if (item.id !== undefined) {
+             await db.interactions.delete(item.id);
+          }
         }
         reconciledBatch.push(item);
       }

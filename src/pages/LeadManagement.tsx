@@ -116,7 +116,43 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
         setPagination(prev => ({ ...prev, page: newPage + 1 }));
       };
 
-      const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const exportToCSV = () => {
+    const leads = leadsData?.leads || [];
+    if (leads.length === 0) {
+      setError('No leads available to export.');
+      return;
+    }
+
+    const headers = ['First Name', 'Last Name', 'Status', 'Phone', 'Email', 'Address', 'City', 'State', 'Zip'];
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+
+    for (const lead of leads) {
+      const row = [
+        lead.firstName || '',
+        lead.lastName || '',
+        lead.status || '',
+        lead.phone || '',
+        lead.email || '',
+        (lead.address?.street || '').replace(/,/g, ''),
+        (lead.address?.city || '').replace(/,/g, ''),
+        (lead.address?.state || '').replace(/,/g, ''),
+        (lead.address?.zip || '').replace(/,/g, '')
+      ];
+      csvRows.push(row.map(cell => `"${cell}"`).join(','));
+    }
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `territory-leads-backup-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setPagination(prev => ({ ...prev, rowsPerPage: parseInt((event.target as any).value, 10), page: 1 }));
       };
 
@@ -229,6 +265,9 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
                   subheader="Browse and manage your organization's leads"
                   action={
                     <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Button variant="outlined" color="primary" onClick={exportToCSV} sx={{ alignSelf: 'center' }}>
+                        Export Territory List
+                      </Button>
                       <TextField
                         placeholder="Search leads..."
                         value={searchTerm}
