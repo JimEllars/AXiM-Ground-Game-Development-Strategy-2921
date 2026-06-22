@@ -416,6 +416,48 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
                   rowsPerPageOptions={[10, 25]}
                   onRowsPerPageChange={handleRowsPerPageChange}
                 />
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Link
+                    component="button"
+                    variant="body2"
+                    onClick={() => {
+                      const escapeCSV = (str) => {
+                        if (str === null || str === undefined) return '';
+                        const s = String(str);
+                        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+                          return `"${s.replace(/"/g, '""')}"`;
+                        }
+                        return s;
+                      };
+
+                      const headers = ['First Name', 'Last Name', 'Street Address', 'City', 'State', 'Zip', 'Phone', 'Email', 'Status', 'Created At'];
+                      const rows = leads.map(lead => [
+                        escapeCSV(lead.firstName),
+                        escapeCSV(lead.lastName),
+                        escapeCSV(lead.streetAddress),
+                        escapeCSV(lead.city),
+                        escapeCSV(lead.state),
+                        escapeCSV(lead.zip),
+                        escapeCSV(lead.phone),
+                        escapeCSV(lead.email),
+                        escapeCSV(lead.status),
+                        escapeCSV(new Date(lead.createdAt).toLocaleDateString())
+                      ]);
+
+                      const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+                      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                      const url = URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.setAttribute('href', url);
+                      link.setAttribute('download', 'leads_export.csv');
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
+                  >
+                    Export List
+                  </Link>
+                </Box>
               </Card>
             </TabPanel>
           </Paper>

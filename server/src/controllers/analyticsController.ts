@@ -352,19 +352,52 @@ export const reportClientError = catchAsync(async (req: AuthRequest, res: Respon
   const user = req.user!;
   const errorData = req.body;
 
-  // Sanitize the data
-  const sanitizedData = {
-    userId: user.id,
-    organizationId: user.organization_id,
-    role: user.role,
-    type: 'client_error',
-    message: errorData.message,
-    stack: errorData.stack ? errorData.stack.split('\n').slice(0, 5).join('\n') : undefined,
-    componentStack: errorData.componentStack,
-    timestamp: new Date().toISOString()
-  };
+  try {
+    // Wrap processing strings in reliable parsing blocks to avoid system crashes if processing incomplete front-end traces.
+    let parsedStack = undefined;
+    if (errorData.stack && typeof errorData.stack === 'string') {
+      try {
+        parsedStack = errorData.stack.split('\n').slice(0, 5).join('\n');
+      } catch (parseError) {
+        logger.error('Error parsing front-end trace stack', parseError);
+        parsedStack = 'Unparseable stack trace';
+      }
+    }
 
-  logger.error('Frontend Client Error Crash', sanitizedData);
+    let parsedComponentStack = undefined;
+    if (errorData.componentStack && typeof errorData.componentStack === 'string') {
+        parsedComponentStack = errorData.componentStack;
+    } else if (errorData.componentStack) {
+        parsedComponentStack = String(errorData.componentStack);
+    }
+
+    // Sanitize the data
+    const sanitizedData = {
+      userId: user.id,
+      organizationId: user.organization_id,
+      role: user.role,
+      type: 'client_error',
+      message: errorData.message || 'Unknown error message',
+      stack: parsedStack,
+      componentStack: parsedComponentStack,
+      timestamp: new Date().toISOString()
+    };
+
+    logger.error('Frontend Client Error Crash', sanitizedData);
+
+    // Isolate incoming error metadata into a dedicated ingestion log system (logs/client-exceptions.log)
+    const logLine = `[${sanitizedData.timestamp}] [CLIENT_ERROR] User: ${sanitizedData.userId} Role: ${sanitizedData.role} Message: ${sanitizedData.message} Stack: ${sanitizedData.stack} ComponentStack: ${sanitizedData.componentStack}\n`;
+    const fs = require('fs');
+    const path = require('path');
+    const logDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    fs.appendFileSync(path.join(logDir, 'client-exceptions.log'), logLine);
+
+  } catch (err) {
+    logger.error('Failed to process client error report:', err);
+  }
 
   res.status(202).json({ status: 'Accepted' });
 });
