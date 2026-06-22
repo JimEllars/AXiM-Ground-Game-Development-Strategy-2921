@@ -83,7 +83,7 @@ class MapErrorBoundary extends Component<MapErrorBoundaryProps, MapErrorBoundary
                     </ListItemIcon>
                     <ListItemText
                       primary={lead.firstName || lead.lastName ? `${lead.firstName || ''} ${lead.lastName || ''}` : 'Unnamed Lead'}
-                      secondary={lead.streetAddress || 'No address'}
+                      secondary={lead.streetAddress ? <a href={`https://maps.google.com/?q=${encodeURIComponent([lead.streetAddress, lead.city, lead.state, lead.zip].filter(Boolean).join(', '))}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1E3A8A', textDecoration: 'none', pointerEvents: 'auto' }} onClick={(e) => e.stopPropagation()}>{lead.streetAddress}</a> : 'No address'}
                     />
                     <Chip label={lead.status || 'New'} size="small" />
                   </ListItem>
