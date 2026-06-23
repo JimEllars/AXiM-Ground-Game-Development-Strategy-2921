@@ -1,4 +1,19 @@
 import { AsyncLocalStorage } from 'async_hooks';
+import fs from 'fs';
+import path from 'path';
+
+// Setup client exceptions buffered stream
+const logDir = path.join(process.cwd(), 'logs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
+
+export const clientExceptionStream = fs.createWriteStream(
+  path.join(logDir, 'client-exceptions.log'),
+  { flags: 'a', encoding: 'utf8' }
+);
+
+
 
 export const loggerStorage = new AsyncLocalStorage<string>();
 
