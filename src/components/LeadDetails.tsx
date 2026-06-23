@@ -17,6 +17,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { FiMapPin, FiEdit2, FiSave, FiX, FiCalendar } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import { leadsAPI, interactionsAPI } from '@/services/api';
+import { syncOfflineData } from '@/syncEngine';
+
 import AppointmentForm from './AppointmentForm';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { useQueryClient, useQuery } from 'react-query';
@@ -126,6 +128,29 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
     }
   };
 
+  const handleQuickDisposition = async (outcome: string) => {
+    const interactionData = {
+      leadId: lead.id,
+      outcome: outcome,
+      notes: 'Quick Disposition',
+      interactionDate: new Date(),
+      synced: 0 as any,
+    };
+
+    try {
+      await db.interactions.add(interactionData);
+
+      // Update local state to reflect new interaction immediately
+      setOfflineInteractions(prev => [interactionData, ...prev]);
+
+      if (navigator.onLine) {
+        syncOfflineData();
+      }
+    } catch (err) {
+      console.error('Error saving quick disposition', err);
+    }
+  };
+
   const handleCancel = () => {
     setFormData({
       firstName: lead.firstName || '',
@@ -146,14 +171,35 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<SafeIcon icon={FiCalendar} />}
-          onClick={() => setShowAppointmentForm(!showAppointmentForm)}
-        >
-          {showAppointmentForm ? 'Cancel Scheduling' : 'Schedule Appointment'}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            color="error"
+            onClick={() => handleQuickDisposition('Not Home')}
+            sx={{ minWidth: '44px', minHeight: '44px' }}
+          >
+            Not Home
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            color="primary"
+            onClick={() => handleQuickDisposition('Left Flyer')}
+            sx={{ minWidth: '44px', minHeight: '44px' }}
+          >
+            Left Flyer
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<SafeIcon icon={FiCalendar} />}
+            onClick={() => setShowAppointmentForm(!showAppointmentForm)}
+            sx={{ minHeight: '44px' }}
+          >
+            {showAppointmentForm ? 'Cancel Scheduling' : 'Schedule Appointment'}
+          </Button>
+        </Box>
       </Box>
 
       <Collapse in={showAppointmentForm}>

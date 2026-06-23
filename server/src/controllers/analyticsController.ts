@@ -4,7 +4,7 @@ import { Response } from 'express';
 import { pool } from '../config/database.js';
 import { AuthRequest } from '../types/index.js';
 import catchAsync from '../utils/catchAsync.js';
-import logger from '../utils/logger.js';
+import logger, { clientExceptionStream } from '../utils/logger.js';
 
 export const getAnalytics = catchAsync(async (req: AuthRequest, res: Response) => {
   const user = req.user!;
@@ -412,13 +412,11 @@ export const reportClientError = catchAsync(async (req: AuthRequest, res: Respon
     const logLine = JSON.stringify(logObject) + '\n';
 
     try {
-      const logDir = path.join(process.cwd(), 'logs');
-      if (!fs.existsSync(logDir)) {
-        fs.mkdirSync(logDir, { recursive: true });
+      if (!clientExceptionStream.write(logLine)) {
+         clientExceptionStream.once('drain', () => {});
       }
-      fs.appendFileSync(path.join(logDir, 'client-exceptions.log'), logLine);
-    } catch (fsError) {
-      logger.error('Failed to write to client-exceptions.log', fsError);
+    } catch (streamError) {
+      logger.error('Failed to write to client-exceptions stream', streamError);
     }
 
   } catch (err) {
