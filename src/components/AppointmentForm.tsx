@@ -69,13 +69,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ leadId, onSubmit, onC
   };
 
   return (
-    <Box sx={{ p: 2, border: 1, borderColor: 'grey.300', borderRadius: 1, mb: 2 }}>
+    <Box sx={{ p: { xs: 2, sm: 3 }, border: 1, borderColor: 'grey.200', borderRadius: 2, mb: 2, boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}>
       <Typography variant="h6" gutterBottom>
         Schedule Appointment
       </Typography>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
           {error}
         </Alert>
       )}
@@ -121,12 +121,13 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ leadId, onSubmit, onC
           sx={{ mb: 2 }}
         />
 
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' }, mt: 3 }}>
           <Button
             type="submit"
             variant="contained"
             disabled={createMutation.isLoading}
             startIcon={<SafeIcon icon={FiSave} />}
+            sx={{ py: 1.5, flex: 1, fontSize: '1rem' }}
           >
             {createMutation.isLoading ? 'Saving...' : 'Schedule'}
           </Button>
@@ -134,6 +135,7 @@ const AppointmentForm: React.FC<AppointmentFormProps> = ({ leadId, onSubmit, onC
             variant="outlined"
             onClick={onCancel}
             startIcon={<SafeIcon icon={FiX} />}
+            sx={{ py: 1.5, flex: 1, fontSize: '1rem' }}
           >
             Cancel
           </Button>

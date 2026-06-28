@@ -27,49 +27,86 @@ export const syncOfflineData = async () => {
       }
 
       const batch = offlineInteractions.slice(i, i + batchSize);
-
-      // Deterministic Sync Reconciliation & Delta Mapping
       const reconciledBatch = [];
+      const poisonIds = [];
+
       for (const item of batch) {
-        // Delta Map Check (Simulated for Interactions/Leads)
-        const localUpdatedAt = new Date(item.interactionDate).getTime();
-        // Assuming we fetched remoteUpdatedAt from server:
-        // const remoteUpdatedAt = await fetchRemoteUpdatedAt(item.leadId);
-        const remoteUpdatedAt = localUpdatedAt; // Placeholder
+        try {
+          // Delta Map Check (Simulated for Interactions/Leads)
+          const localUpdatedAt = new Date(item.interactionDate).getTime();
+          // Assuming we fetched remoteUpdatedAt from server:
+          // const remoteUpdatedAt = await fetchRemoteUpdatedAt(item.leadId);
+          const remoteUpdatedAt = localUpdatedAt; // Placeholder
 
-        if (remoteUpdatedAt > localUpdatedAt) {
-          logger.info(`Delta conflict detected for lead ${item.leadId}. Prioritizing field rep local inputs.`);
+          if (remoteUpdatedAt > localUpdatedAt) {
+            logger.info(`Delta conflict detected for lead ${item.leadId}. Prioritizing field rep local inputs.`);
 
-          try {
-             await analyticsAPI.reportClientError({
-               error: 'Sync conflict detected',
-               stack: `Conflict for lead ${item.leadId}`,
-               componentStack: 'syncEngine'
-             });
-          } catch (e) {
-             logger.error('Failed to report sync telemetry notice');
+            try {
+               await analyticsAPI.reportClientError({
+                 error: 'Sync conflict detected',
+                 stack: `Conflict for lead ${item.leadId}`,
+                 componentStack: 'syncEngine'
+               });
+            } catch (e) {
+               logger.error('Failed to report sync telemetry notice');
+            }
+
+            if (item.id !== undefined) {
+               await db.interactions.delete(item.id);
+            }
           }
 
+          reconciledBatch.push({
+            id: item.id,
+            leadId: item.leadId,
+            outcome: item.outcome,
+            notes: item.notes,
+            interactionDate: new Date(item.interactionDate),
+            surveyData: item.surveyData
+          });
+        } catch (itemErr) {
+          logger.error(`Validation error parsing interaction payload for ID ${item.id}`, itemErr);
           if (item.id !== undefined) {
-             await db.interactions.delete(item.id);
+             poisonIds.push(item.id);
+             // Dispatch poison-pill entry
+             await db.telemetryQueue.add({
+               payload: {
+                 error: 'Poison Record Payload',
+                 stack: String(itemErr),
+                 componentStack: 'syncEngine.itemValidation',
+                 message: `Record ${item.id} corrupted`
+               }
+             });
           }
         }
-        reconciledBatch.push(item);
       }
 
-      const payload = reconciledBatch.map(item => ({
-        leadId: item.leadId,
-        outcome: item.outcome,
-        notes: item.notes,
-        interactionDate: new Date(item.interactionDate),
-        surveyData: item.surveyData
-      }));
+      if (reconciledBatch.length > 0) {
+        const payload = reconciledBatch.map(item => ({
+          leadId: item.leadId,
+          outcome: item.outcome,
+          notes: item.notes,
+          interactionDate: item.interactionDate,
+          surveyData: item.surveyData
+        }));
 
-      logger.info(`Syncing interactions batch ${Math.floor(i / batchSize) + 1} payload: ${JSON.stringify(payload)}`);
-      await interactionsAPI.create(payload);
+        logger.info(`Syncing interactions batch ${Math.floor(i / batchSize) + 1} payload: ${JSON.stringify(payload)}`);
+        try {
+          await interactionsAPI.create(payload);
+          const idsToUpdate = reconciledBatch.map(item => item.id!);
+          await db.interactions.bulkUpdate(idsToUpdate.map(id => ({ key: id, changes: { synced: 1 as any } })));
+        } catch (apiErr) {
+           logger.error('API batch sync failure', apiErr);
+           // Prevent halt on entire queue. The batch failed, we skip this batch and move on, or halt if severe?
+           // The instructions specify to wrap the block to prevent halting the entire sync queue.
+           // API failures shouldn't delete data, we just leave them synced=0.
+        }
+      }
 
-      const idsToUpdate = batch.map(item => item.id!);
-      await db.interactions.bulkUpdate(idsToUpdate.map(id => ({ key: id, changes: { synced: 1 as any } })));
+      if (poisonIds.length > 0) {
+         // Mark poison pills so they don't clog up the retry queue endlessly
+         await db.interactions.bulkUpdate(poisonIds.map(id => ({ key: id, changes: { synced: -1 as any } })));
+      }
 
       if (i + batchSize < offlineInteractions.length) {
         await delay(200);
@@ -77,9 +114,8 @@ export const syncOfflineData = async () => {
     }
 
     if (!isSyncPaused) {
-      logger.info(`Successfully synced ${offlineInteractions.length} interactions in total.`);
+      logger.info(`Successfully synced interactions in total.`);
 
-      // Dispatch an event so the UI can listen and show a single toast notification
       // Trigger pruning of stale data after successful sync
       await pruneSyncedData();
 
@@ -103,7 +139,7 @@ export const pruneSyncedData = async () => {
     // and might not be indexed in a way to do a direct Date comparison via where().
     const staleRecords = await db.interactions
       .filter((interaction) => {
-        if (!interaction.synced) return false;
+        if (!interaction.synced || interaction.synced === -1) return false;
         const interactionDate = new Date(interaction.interactionDate);
         return interactionDate < sevenDaysAgo;
       })

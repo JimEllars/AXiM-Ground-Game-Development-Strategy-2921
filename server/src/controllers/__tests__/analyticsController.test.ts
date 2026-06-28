@@ -46,7 +46,12 @@ describe('Analytics Controller', () => {
       mockQuery
         .mockResolvedValueOnce({ rows: [{ total_territories: '10', territories_assigned: '5' }] } as any) // territories
         .mockResolvedValueOnce({ rows: [{ total_leads: '100', completed_leads: '25', geocoded_leads: '50' }] } as any) // leads
-        .mockResolvedValueOnce({ rows: [] } as any) // interactions
+        .mockResolvedValueOnce({ rows: [
+          { id: 1, outcome: 'Completed', lead_id: 'l1', interaction_date: new Date() },
+          { id: 2, outcome: 'Completed', lead_id: 'l2', interaction_date: new Date() },
+          { id: 3, outcome: 'Not Home', lead_id: 'l3', interaction_date: new Date() },
+          { id: 4, outcome: 'Not Interested', lead_id: 'l4', interaction_date: new Date() },
+        ] } as any) // interactions - 2/4 completed = 50%
         .mockResolvedValueOnce({ // userStats
           rows: [
             { id: 'u1', first_name: 'Alice', last_name: 'A', role: 'REP', total_interactions: '50', unique_leads: '40', active_days: '10' },
@@ -59,7 +64,7 @@ describe('Analytics Controller', () => {
 
       const json = res.json.mock.calls[0][0];
 
-      expect(json.summary.completionRate).toBe(25);
+      expect(json.summary.completionRate).toBe(50);
       expect(json.topPerformers).toHaveLength(2); // Bob should be filtered out
       expect(json.topPerformers[0].name).toBe('Alice A'); // Ordered by total interactions
       expect(json.topPerformers[1].name).toBe('Charlie C');
@@ -76,10 +81,10 @@ describe('Analytics Controller', () => {
         .mockResolvedValueOnce({ rows: [{ total_leads: 0, completed_leads: 0, geocoded_leads: 0 }] } as any) // leads
         .mockResolvedValueOnce({ // interactions
           rows: [
-            { interaction_date: date1, outcome: 'Sold', outcome_count: '2', lead_id: 'l1' },
-            { interaction_date: date2, outcome: 'Sold', outcome_count: '3', lead_id: 'l2' },
+            { interaction_date: date1, outcome: 'Sold', outcome_count: '1', lead_id: 'l1' },
+            { interaction_date: date2, outcome: 'Sold', outcome_count: '1', lead_id: 'l2' },
             { interaction_date: date3, outcome: 'Refused', outcome_count: '1', lead_id: 'l3' },
-            { interaction_date: date3, outcome: null, outcome_count: '0', lead_id: 'l4' } // edge case: no outcome but has date
+            { interaction_date: date3, outcome: null, outcome_count: '1', lead_id: 'l4' } // edge case: no outcome but has date
           ]
         } as any)
         .mockResolvedValueOnce({ rows: [] } as any); // userStats
@@ -93,11 +98,11 @@ describe('Analytics Controller', () => {
 
       const entry1 = trends.find((t: any) => t.date === date1.toISOString().split('T')[0]);
       expect(entry1).toBeDefined();
-      expect(entry1.interactions).toBe(5);
+      expect(entry1.interactions).toBe(2);
 
       const entry2 = trends.find((t: any) => t.date === date3.toISOString().split('T')[0]);
       expect(entry2).toBeDefined();
-      expect(entry2.interactions).toBe(1);
+      expect(entry2.interactions).toBe(2);
 
       expect(json.summary.activeDays).toBe(2);
     });

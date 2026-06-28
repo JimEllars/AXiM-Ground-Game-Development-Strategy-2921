@@ -11,8 +11,9 @@ import { useState } from 'react';
       Button,
       Alert,
       Collapse,
+      LinearProgress
     } from '@mui/material';
-    import { FiMapPin, FiPlus } from 'react-icons/fi';
+    import { FiMapPin, FiPlus, FiTarget } from 'react-icons/fi';
 import { useQuery, useQueryClient } from 'react-query';
     import SafeIcon from '@/common/SafeIcon';
     import LeadInteractionForm from '@/components/LeadInteractionForm';
@@ -30,6 +31,14 @@ import SkeletonLoader from '@/components/SkeletonLoader';
       const { data: territoriesData, isLoading: loading, error: queryError } = useQuery(
         'repTurf',
         () => repsAPI.getMyTurf().then(res => res.data.territories)
+      );
+
+      const { data: repStatsData } = useQuery(
+        'repStats',
+        () => {
+           const today = new Date().toISOString().split('T')[0];
+           return repsAPI.getStats({ startDate: today, endDate: today }).then(res => res.data);
+        }
       );
 
       const territories = territoriesData || [];
@@ -58,6 +67,11 @@ import SkeletonLoader from '@/components/SkeletonLoader';
         }
       };
 
+      // Calculate totals for daily performance metric
+      const totalAssignedLeads = territories.reduce((acc: number, t: any) => acc + (t.leads?.length || 0), 0);
+      const todayInteractions = repStatsData?.summary?.totalInteractions || 0;
+      const todayCompletionRate = totalAssignedLeads > 0 ? Math.min(Math.round((todayInteractions / totalAssignedLeads) * 100), 100) : 0;
+
       if (loading) {
   return (
     <Box>
@@ -71,12 +85,34 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 
       return (
         <Box>
-          <Typography variant="h4" gutterBottom>
-            My Turf
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            Manage your assigned territories and track lead interactions.
-          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, mb: 3 }}>
+            <Box>
+              <Typography variant="h4" gutterBottom>
+                My Turf
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                Manage your assigned territories and track lead interactions.
+              </Typography>
+            </Box>
+
+            {/* Read-Only Rep Analytics View */}
+            <Paper sx={{ p: 2, mt: { xs: 2, md: 0 }, minWidth: '250px', bgcolor: 'primary.50' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
+                <SafeIcon icon={FiTarget} style={{ color: '#1E3A8A' }} />
+                <Typography variant="subtitle2" fontWeight="bold" color="primary.main">Today's Progress</Typography>
+              </Box>
+              <Typography variant="h5" sx={{ mb: 1 }}>
+                {todayInteractions} / {totalAssignedLeads} <Typography component="span" variant="body2" color="text.secondary">leads</Typography>
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ flex: 1 }}>
+                  <LinearProgress variant="determinate" value={todayCompletionRate} sx={{ height: 8, borderRadius: 4 }} />
+                </Box>
+                <Typography variant="body2" fontWeight="bold">{todayCompletionRate}%</Typography>
+              </Box>
+            </Paper>
+          </Box>
+
           {errorMsg && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {errorMsg}
@@ -154,6 +190,7 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                               }}
                               startIcon={<SafeIcon icon={FiPlus} />}
                               disabled={!!lead.lastInteraction}
+                              sx={{ minWidth: 44, minHeight: 44 }}
                             >
                               {lead.lastInteraction ? 'Completed' : 'Add Interaction'}
                             </Button>

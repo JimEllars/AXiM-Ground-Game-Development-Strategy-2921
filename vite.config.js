@@ -68,9 +68,10 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ['react', 'react-dom', 'react-router-dom'],
-          mui: ['@mui/material', '@mui/icons-material'],
+          mui: ['@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled'],
           map: ['react-map-gl', 'mapbox-gl'],
-          vendor: ['axios', 'papaparse', 'date-fns']
+          charts: ['recharts'],
+          vendor: ['axios', 'papaparse', 'dexie', 'react-query']
         }
       }
     }

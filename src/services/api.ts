@@ -16,12 +16,47 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Store start time for latency tracing
+  (config as any).metadata = { startTime: new Date() };
   return config;
 });
 
-// Response interceptor for error handling
+// Response interceptor for error handling and latency tracing
 api.interceptors.response.use(
   (response) => {
+    // Latency Tracing
+    const config = response.config as any;
+    if (config && config.metadata && config.metadata.startTime) {
+      const duration = new Date().getTime() - config.metadata.startTime.getTime();
+      if (duration > 5000) {
+        try {
+          // Redact PII (UUIDs or IDs) from path before telemetry
+          let path = config.url || 'unknown';
+          path = path.replace(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/g, ':id');
+          path = path.replace(/\/\d+/g, '/:id');
+
+          // Using a non-blocking background fetch so we don't interfere with the return loop
+          const token = localStorage.getItem('token');
+          if (token && path.indexOf('telemetry') === -1) {
+            fetch(`${API_BASE_URL}/analytics/telemetry`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                type: 'latency_warning',
+                message: `Request to ${path} took ${duration}ms`,
+                componentStack: 'api_interceptor',
+                duration
+              })
+            }).catch(() => {}); // fire and forget
+          }
+        } catch (e) {
+          // Silently fail telemetry errors
+        }
+      }
+    }
     // Pass through successful responses
     return response;
   },

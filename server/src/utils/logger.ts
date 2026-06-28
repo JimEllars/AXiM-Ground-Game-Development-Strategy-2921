@@ -13,8 +13,6 @@ export const clientExceptionStream = fs.createWriteStream(
   { flags: 'a', encoding: 'utf8' }
 );
 
-
-
 export const loggerStorage = new AsyncLocalStorage<string>();
 
 function getCallerContext() {
@@ -30,10 +28,29 @@ function getCallerContext() {
   return 'Unknown';
 }
 
+function sanitizeArgs(args: any[]) {
+  const cache = new Set();
+  const stringified = JSON.stringify(args, (key, value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (cache.has(value)) {
+        return '[Circular]';
+      }
+      cache.add(value);
+    }
+    return value;
+  });
+  return stringified && stringified.length > 50000 ? stringified.substring(0, 50000) + '...[TRUNCATED]' : stringified;
+}
+
 function formatLog(level: string, message: any, args: any[]) {
   const timestamp = new Date().toISOString();
   const context = getCallerContext();
   const traceId = loggerStorage.getStore() || 'N/A';
+
+  let safeMessage = typeof message === 'string' ? message : JSON.stringify(message);
+  if (safeMessage && safeMessage.length > 50000) {
+    safeMessage = safeMessage.substring(0, 50000) + '...[TRUNCATED]';
+  }
 
   if (process.env.NODE_ENV === 'production') {
     const logObj = {
@@ -41,10 +58,17 @@ function formatLog(level: string, message: any, args: any[]) {
       level,
       context,
       traceId,
-      message: typeof message === 'string' ? message : JSON.stringify(message),
-      args: args.length > 0 ? args : undefined,
+      message: safeMessage,
+      args: args.length > 0 ? sanitizeArgs(args) : undefined,
     };
-    return JSON.stringify(logObj);
+
+    const stringified = JSON.stringify(logObj);
+    if (stringified.length > 100000) {
+        return JSON.stringify({
+            timestamp, level, context, traceId, message: 'Payload exceeded 100kb limit', args: '[TRUNCATED]'
+        });
+    }
+    return stringified;
   } else {
     const prefix = `[${timestamp}] [${level}] [${context}] [Trace: ${traceId}]`;
     return [prefix, message, ...args];
