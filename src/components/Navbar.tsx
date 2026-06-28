@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem, Chip, IconButton, useMediaQuery, useTheme, Tooltip } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem, Chip, IconButton, useMediaQuery, useTheme, Tooltip, Snackbar, Alert } from '@mui/material';
 import {
   FiMap,
   FiUsers,
@@ -15,7 +15,8 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import SafeIcon from '@/common/SafeIcon';
 import { useAuth } from '@/contexts/AuthContext';
-import { syncOfflineData } from '@/syncEngine';
+import { syncOfflineData, syncTelemetryQueue } from '@/syncEngine';
+import { db } from '@/db';
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
@@ -24,8 +25,68 @@ const Navbar: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [mobileMenuAnchorEl, setMobileMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'offline' | 'syncing' | 'error'>('synced');
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+
+  useEffect(() => {
+    const checkSyncStatus = async () => {
+      if (!navigator.onLine) {
+        setSyncStatus('offline');
+        return;
+      }
+      try {
+        const offlineCount = await db.interactions.where('synced').equals(0 as any).count();
+        const poisonCount = await db.interactions.where('synced').equals(-1 as any).count();
+
+        if (poisonCount > 0) {
+          setSyncStatus('error');
+        } else if (offlineCount > 0) {
+          // It's online but has offline count, which means it might be syncing or just hasn't synced yet
+          setSyncStatus(isSyncing ? 'syncing' : 'offline');
+        } else {
+          setSyncStatus(isSyncing ? 'syncing' : 'synced');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    checkSyncStatus();
+    const interval = setInterval(checkSyncStatus, 5000);
+
+    const handleOnline = () => checkSyncStatus();
+    const handleOffline = () => setSyncStatus('offline');
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [isSyncing]);
+
+  const handleSyncDotDoubleClick = async () => {
+    try {
+      await syncTelemetryQueue();
+      setSnackbarOpen(true);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const getSyncDotColor = () => {
+    switch (syncStatus) {
+      case 'synced': return '#10B981'; // Green
+      case 'offline': return '#F59E0B'; // Amber
+      case 'syncing': return '#3B82F6'; // Blue
+      case 'error': return '#EF4444'; // Red
+      default: return '#10B981';
+    }
+  };
 
   const handleMobileMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     setMobileMenuAnchorEl(event.currentTarget);
@@ -126,7 +187,30 @@ const Navbar: React.FC = () => {
           </Box>
         )}
 
+
+        {/* Sync Health Indicator */}
+        <Tooltip title={`Sync Status: ${syncStatus}`}>
+          <Box
+            onDoubleClick={handleSyncDotDoubleClick}
+            sx={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              backgroundColor: getSyncDotColor(),
+              mr: 2,
+              cursor: 'pointer',
+              animation: syncStatus === 'syncing' ? 'pulse 1.5s infinite' : 'none',
+              '@keyframes pulse': {
+                '0%': { opacity: 1 },
+                '50%': { opacity: 0.5 },
+                '100%': { opacity: 1 },
+              }
+            }}
+          />
+        </Tooltip>
+
         {/* User Profile */}
+
         {user ? (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {isMobile ? (
@@ -226,6 +310,12 @@ const Navbar: React.FC = () => {
           </Button>
         )}
       </Toolbar>
+
+      <Snackbar open={snackbarOpen} autoHideDuration={3000} onClose={() => setSnackbarOpen(false)}>
+        <Alert onClose={() => setSnackbarOpen(false)} severity="success" sx={{ width: '100%' }}>
+          Diagnostics Sent.
+        </Alert>
+      </Snackbar>
     </AppBar>
   );
 };
