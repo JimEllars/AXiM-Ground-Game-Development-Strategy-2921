@@ -1,10 +1,8 @@
-import fs from 'fs';
-import path from 'path';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { pool } from '../config/database.js';
+import logger, { clientExceptionStream } from '../utils/logger.js';
 import { AuthRequest } from '../types/index.js';
 import catchAsync from '../utils/catchAsync.js';
-import logger, { clientExceptionStream } from '../utils/logger.js';
 
 export const getAnalytics = catchAsync(async (req: AuthRequest, res: Response) => {
   const user = req.user!;
@@ -20,57 +18,34 @@ export const getAnalytics = catchAsync(async (req: AuthRequest, res: Response) =
     paramIndex += 2;
   }
 
-  // Get comprehensive analytics data
-  const [
-    territoriesResult,
-    leadsResult,
-    interactionsResult,
-    userStatsResult
-  ] = await Promise.all([
-    // Territory statistics
+  // Optimize by fetching related data in parallel where possible
+  const [territoriesResult, leadsResult, interactionsResult, userStatsResult] = await Promise.all([
     pool.query(
       `SELECT
         COUNT(*) as total_territories,
-        COUNT(DISTINCT ta.user_id) as territories_assigned
-      FROM territories t
-      LEFT JOIN territory_assignments ta ON t.id = ta.territory_id
-      WHERE t.organization_id = $1`,
+        COUNT(CASE WHEN user_id IS NOT NULL THEN 1 END) as territories_assigned
+       FROM territories WHERE organization_id = $1`,
       [user.organization_id]
     ),
-
-    // Lead statistics
     pool.query(
       `SELECT
         COUNT(*) as total_leads,
-        COUNT(CASE WHEN status = 'Completed' OR status = 'Sold' THEN 1 END) as completed_leads,
+        COUNT(CASE WHEN status = 'Completed' THEN 1 END) as completed_leads,
         COUNT(CASE WHEN location IS NOT NULL THEN 1 END) as geocoded_leads
-      FROM leads
-      WHERE organization_id = $1`,
+       FROM leads WHERE organization_id = $1`,
       [user.organization_id]
     ),
-
-    // Interaction statistics
     pool.query(
       `SELECT
-        COUNT(*) as total_interactions,
-        COUNT(DISTINCT i.lead_id) as unique_leads_contacted,
-        COUNT(DISTINCT DATE(i.interaction_date)) as active_days,
+        i.id,
         i.outcome,
-        COUNT(*) as outcome_count,
-        DATE(i.interaction_date) as interaction_date,
-        u.id as user_id,
-        u.first_name,
-        u.last_name
-      FROM interactions i
-      JOIN leads l ON i.lead_id = l.id
-      JOIN users u ON i.user_id = u.id
-      WHERE ${conditions.join(' AND ')} -- parameterization prevents SQL injection
-      GROUP BY ROLLUP(i.outcome, DATE(i.interaction_date), u.id, u.first_name, u.last_name)
-      ORDER BY interaction_date DESC`,
+        i.interaction_date,
+        i.lead_id
+       FROM interactions i
+       JOIN leads l ON i.lead_id = l.id
+       WHERE ${conditions.join(' AND ')}`,
       params
     ),
-
-    // User performance statistics
     pool.query(
       `SELECT
         u.id,
@@ -80,84 +55,63 @@ export const getAnalytics = catchAsync(async (req: AuthRequest, res: Response) =
         COUNT(i.id) as total_interactions,
         COUNT(DISTINCT i.lead_id) as unique_leads,
         COUNT(DISTINCT DATE(i.interaction_date)) as active_days
-      FROM users u
-      LEFT JOIN interactions i ON u.id = i.user_id
-      LEFT JOIN leads l ON i.lead_id = l.id
-      WHERE u.organization_id = $1 AND u.is_active = true
-      GROUP BY u.id, u.first_name, u.last_name, u.role
-      ORDER BY total_interactions DESC`,
+       FROM users u
+       LEFT JOIN interactions i ON u.id = i.user_id
+       WHERE u.organization_id = $1
+       GROUP BY u.id, u.first_name, u.last_name, u.role`,
       [user.organization_id]
     )
   ]);
 
-  // Process the data
   const territories = territoriesResult.rows[0];
   const leads = leadsResult.rows[0];
   const interactions = interactionsResult.rows;
   const userStats = userStatsResult.rows;
 
-  // Calculate completion rate
-  const completionRate = leads.total_leads > 0
-    ? Math.round((leads.completed_leads / leads.total_leads) * 100)
-    : 0;
-
-  // Process interaction trends, outcomes, and summary metrics in a single pass
-  const trendsMap = new Map();
-  const outcomesMap = new Map();
+  // Process interactions data (replaces reduce with for loop for O(n) performance)
   let totalInteractions = 0;
-  let uniqueLeadsContacted = 0;
+  let completedInteractionsCount = 0;
+  const uniqueLeadsContactedSet = new Set();
+  const outcomesMap = new Map();
+  const trendsMap = new Map();
   const activeDaysSet = new Set();
 
   for (let i = 0; i < interactions.length; i++) {
     const row = interactions[i];
+    totalInteractions++;
+    if (row.lead_id) uniqueLeadsContactedSet.add(row.lead_id);
+    if (row.outcome === 'Completed') completedInteractionsCount++;
 
+    // Outcome counts
     if (row.outcome) {
-      const count = parseInt(row.outcome_count);
-      totalInteractions += count;
-
-      if (row.lead_id) {
-        uniqueLeadsContacted += 1;
-      }
-
-      // Outcomes distribution
       if (outcomesMap.has(row.outcome)) {
-        outcomesMap.get(row.outcome).value += count;
+        outcomesMap.get(row.outcome).count++;
       } else {
-        outcomesMap.set(row.outcome, { name: row.outcome, value: count });
+        outcomesMap.set(row.outcome, { name: row.outcome, count: 1 });
       }
+    }
 
-      // Trends map
-      if (row.interaction_date) {
-        const dateObj = new Date(row.interaction_date);
-        const dateKey = !isNaN(dateObj.getTime())
-          ? dateObj.toISOString().split('T')[0]
-          : row.interaction_date; // Fallback
-
-        activeDaysSet.add(dateKey);
-
-        if (trendsMap.has(dateKey)) {
-          const existing = trendsMap.get(dateKey);
-          existing.interactions += count;
-          if (row.lead_id && !existing.leadSet) existing.leadSet = new Set();
-          if (row.lead_id) existing.leadSet.add(row.lead_id);
-          existing.uniqueLeads = existing.leadSet ? existing.leadSet.size : 1;
-        } else {
-          const leadSet = new Set();
-          if (row.lead_id) leadSet.add(row.lead_id);
-          trendsMap.set(dateKey, {
-            date: dateKey,
-            interactions: count,
-            leadSet: leadSet,
-            uniqueLeads: leadSet.size
-          });
-        }
-      }
-    } else if (row.interaction_date) {
+    // Trends calculation
+    if (row.interaction_date && !isNaN(new Date(row.interaction_date).getTime())) {
       const dateObj = new Date(row.interaction_date);
-      const dateKey = !isNaN(dateObj.getTime())
-        ? dateObj.toISOString().split('T')[0]
-        : row.interaction_date; // Fallback
+      const dateKey = dateObj.toISOString().split('T')[0];
       activeDaysSet.add(dateKey);
+
+      if (trendsMap.has(dateKey)) {
+        const existing = trendsMap.get(dateKey);
+        existing.interactions++;
+        if (row.lead_id) existing.leadSet.add(row.lead_id);
+        existing.uniqueLeads = existing.leadSet.size;
+      } else {
+        const leadSet = new Set();
+        if (row.lead_id) leadSet.add(row.lead_id);
+        trendsMap.set(dateKey, {
+          date: dateKey,
+          interactions: 1,
+          leadSet: leadSet,
+          uniqueLeads: leadSet.size
+        });
+      }
     }
   }
 
@@ -171,6 +125,8 @@ export const getAnalytics = catchAsync(async (req: AuthRequest, res: Response) =
 
   const outcomes = Array.from(outcomesMap.values());
   const activeDays = activeDaysSet.size;
+  const uniqueLeadsContacted = uniqueLeadsContactedSet.size;
+  const completionRate = totalInteractions > 0 ? Math.round((completedInteractionsCount / totalInteractions) * 100) : 0;
 
   // Process top performers
   const topPerformers = userStats
@@ -318,19 +274,24 @@ export const reportTelemetry = catchAsync(async (req: AuthRequest, res: Response
   const telemetryData = req.body;
 
   // Sanitize the data
+  let safeMessage = telemetryData.message || 'unknown';
+  if (typeof safeMessage === 'string' && safeMessage.length > 1000) {
+    safeMessage = safeMessage.substring(0, 1000) + '...[TRUNCATED]';
+  }
+
   const sanitizedData = {
     userId: user.id,
     organizationId: user.organization_id,
     role: user.role,
     type: telemetryData.type || 'unknown',
-    message: telemetryData.message,
+    message: safeMessage,
     stack: telemetryData.stack ? telemetryData.stack.split('\n').slice(0, 5).join('\n') : undefined,
-    componentStack: telemetryData.componentStack,
+    componentStack: telemetryData.componentStack ? String(telemetryData.componentStack).split('\n').slice(0, 5).join('\n') : undefined,
     timestamp: new Date().toISOString()
   };
 
   // Ingest frontend error format identically to backend JSON logs
-  logger.error('Frontend Telemetry Event', sanitizedData);
+  logger.info('Frontend Telemetry Event', sanitizedData);
 
   res.status(202).json({ status: 'Accepted' });
 });
@@ -376,13 +337,18 @@ export const reportClientError = catchAsync(async (req: AuthRequest, res: Respon
       parsedComponentStack = 'Unparseable component stack trace';
     }
 
+    let safeMessage = errorData.message || 'Unknown error message';
+    if (typeof safeMessage === 'string' && safeMessage.length > 2000) {
+      safeMessage = safeMessage.substring(0, 2000) + '...[TRUNCATED]';
+    }
+
     // Sanitize the data
     const sanitizedData = {
       userId: user.id,
       organizationId: user.organization_id,
       role: user.role,
       type: 'client_error',
-      message: errorData.message || 'Unknown error message',
+      message: safeMessage,
       stack: parsedStack,
       componentStack: parsedComponentStack,
       timestamp: new Date().toISOString()
@@ -409,7 +375,19 @@ export const reportClientError = catchAsync(async (req: AuthRequest, res: Respon
       deviceSpec: userAgent
     };
 
-    const logLine = JSON.stringify(logObject) + '\n';
+    let logLine = JSON.stringify(logObject);
+    if (logLine.length > 100000) {
+        logLine = JSON.stringify({
+            timestamp: sanitizedData.timestamp,
+            userId: sanitizedData.userId,
+            organizationId: sanitizedData.organizationId,
+            message: 'Payload exceeded 100kb limit',
+            stack: 'TRUNCATED',
+            componentStack: 'TRUNCATED',
+            deviceSpec: userAgent
+        });
+    }
+    logLine += '\n';
 
     try {
       if (!clientExceptionStream.write(logLine)) {

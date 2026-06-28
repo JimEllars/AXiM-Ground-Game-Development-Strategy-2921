@@ -1,102 +1,109 @@
-import { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
-  Paper,
-  TextField,
-  Button,
-  Alert,
-  Grid,
   Card,
   CardContent,
+  Grid,
+  TextField,
+  Button,
   Switch,
   FormControlLabel,
   Divider,
-  Select,
-  MenuItem,
-  InputLabel,
-  FormControl,
-  IconButton,
+  Alert,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
+  IconButton,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions
 } from '@mui/material';
-import { FiSave, FiDownload, FiUpload, FiPlus, FiTrash2 } from 'react-icons/fi';
+import { FiSave, FiDownload, FiUpload, FiPlus, FiTrash2, FiAlertOctagon } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import { settingsAPI, leadsAPI } from '@/services/api';
+import { useQuery } from 'react-query';
+import { db } from '@/db';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const SettingsPage: React.FC = () => {
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
   const [settings, setSettings] = useState({
-    organizationName: 'Demo Organization',
+    organizationName: 'AXiM Ground Game',
     defaultInteractionGoal: 50,
     enableNotifications: true,
     enableLocationTracking: true,
     autoAssignLeads: false,
-    dataRetentionDays: 365,
+    dataRetentionDays: 90,
   });
 
-  // Survey Builder State
-  const [surveys, setSurveys] = useState<any[]>([]);
+  const { data: surveysData, refetch: refetchSurveys } = useQuery(
+    'surveys',
+    () => settingsAPI.getSurveys().then((res) => res.data.surveys)
+  );
+
+  const surveys = surveysData || [];
+
   const [newSurveyQuestions, setNewSurveyQuestions] = useState<any[]>([
-    { id: Date.now(), text: '', type: 'text', options: [] }
+    { id: 'q1', type: 'text', text: '', required: false, options: [] }
   ]);
 
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState('');
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    fetchSurveys();
-  }, []);
-
-  const fetchSurveys = async () => {
-    try {
-      const response = await settingsAPI.getSurveys();
-      setSurveys(response.data);
-    } catch (err: any) {
-      console.error('Error fetching surveys:', err);
-    }
-  };
+  const [openWipeDialog, setOpenWipeDialog] = useState(false);
+  const [wipeError, setWipeError] = useState('');
 
   const handleSaveSettings = async () => {
+    setLoading(true);
+    setSuccess('');
+    setError('');
+
     try {
-      setLoading(true);
-      setError('');
-      setSuccess('');
+      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
       setSuccess('Settings saved successfully');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
-      setError(error.response?.data?.error || 'Failed to save settings');
+    } catch (err) {
+      setError('Failed to save settings');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleExportData = () => {
+    const dataStr = JSON.stringify(settings, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'axim_settings.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleExportCampaignData = async () => {
     try {
       const response = await leadsAPI.export();
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const url = window.URL.createObjectURL(new Blob([response.data as any]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'axim_export.csv');
+      link.setAttribute('download', 'campaign_data.csv');
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to export campaign data');
+    } catch (error) {
+      setError('Failed to export campaign data');
     }
-  };
-
-  const handleExportData = () => {
-    const dataStr = JSON.stringify(settings, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-    const exportFileDefaultName = `settings-${new Date().toISOString().split('T')[0]}.json`;
-
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
   };
 
   const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,9 +115,8 @@ const SettingsPage: React.FC = () => {
           const importedSettings = JSON.parse(e.target?.result as string);
           setSettings({ ...settings, ...importedSettings });
           setSuccess('Settings imported successfully');
-          setTimeout(() => setSuccess(''), 3000);
-        } catch (error) {
-          setError('Failed to import settings file');
+        } catch (err) {
+          setError('Failed to parse settings file');
         }
       };
       reader.readAsText(file);
@@ -118,22 +124,43 @@ const SettingsPage: React.FC = () => {
   };
 
   const handleAddQuestion = () => {
-    setNewSurveyQuestions([...newSurveyQuestions, { id: Date.now(), text: '', type: 'text', options: [] }]);
+    setNewSurveyQuestions([
+      ...newSurveyQuestions,
+      { id: `q${Date.now()}`, type: 'text', text: '', required: false, options: [] }
+    ]);
   };
 
-  const handleQuestionChange = (id: number, field: string, value: any) => {
+  const handleRemoveQuestion = (id: string) => {
+    setNewSurveyQuestions(newSurveyQuestions.filter(q => q.id !== id));
+  };
+
+  const handleQuestionChange = (id: string, field: string, value: any) => {
     setNewSurveyQuestions(newSurveyQuestions.map(q =>
-      q.id === id ? { ...q, [field]: value, options: field === 'type' && value !== 'multiple_choice' ? [] : q.options } : q
+      q.id === id ? { ...q, [field]: value } : q
     ));
   };
 
-  const handleAddOption = (questionId: number) => {
-    setNewSurveyQuestions(newSurveyQuestions.map(q =>
-      q.id === questionId ? { ...q, options: [...q.options, ''] } : q
-    ));
+  const handleAddOption = (questionId: string) => {
+    setNewSurveyQuestions(newSurveyQuestions.map(q => {
+      if (q.id === questionId) {
+        return { ...q, options: [...q.options, ''] };
+      }
+      return q;
+    }));
   };
 
-  const handleOptionChange = (questionId: number, optionIndex: number, value: string) => {
+  const handleRemoveOption = (questionId: string, optionIndex: number) => {
+    setNewSurveyQuestions(newSurveyQuestions.map(q => {
+      if (q.id === questionId) {
+        const newOptions = [...q.options];
+        newOptions.splice(optionIndex, 1);
+        return { ...q, options: newOptions };
+      }
+      return q;
+    }));
+  };
+
+  const handleOptionChange = (questionId: string, optionIndex: number, value: string) => {
     setNewSurveyQuestions(newSurveyQuestions.map(q => {
       if (q.id === questionId) {
         const newOptions = [...q.options];
@@ -144,35 +171,59 @@ const SettingsPage: React.FC = () => {
     }));
   };
 
-  const handleRemoveOption = (questionId: number, optionIndex: number) => {
-    setNewSurveyQuestions(newSurveyQuestions.map(q => {
-      if (q.id === questionId) {
-        const newOptions = q.options.filter((_: any, idx: number) => idx !== optionIndex);
-        return { ...q, options: newOptions };
-      }
-      return q;
-    }));
-  };
-
-  const handleRemoveQuestion = (id: number) => {
-    setNewSurveyQuestions(newSurveyQuestions.filter(q => q.id !== id));
-  };
-
   const handleSaveSurvey = async () => {
+    setLoading(true);
+    setSuccess('');
+    setError('');
+
+    // Basic validation
+    if (newSurveyQuestions.some(q => !q.text.trim())) {
+      setError('All questions must have text');
+      setLoading(false);
+      return;
+    }
+
     try {
-      setLoading(true);
-      setError('');
-      // Clean up internal id field
-      const questionsToSave = newSurveyQuestions.map(({ id, ...rest }) => rest);
-      await settingsAPI.createSurvey(questionsToSave);
-      setSuccess('Survey created successfully');
-      setNewSurveyQuestions([{ id: Date.now(), text: '', type: 'text', options: [] }]);
-      await fetchSurveys();
-      setTimeout(() => setSuccess(''), 3000);
+      await settingsAPI.createSurvey({
+        name: `Survey ${new Date().toLocaleDateString()}`,
+        schema: newSurveyQuestions
+      });
+      setSuccess('Survey saved successfully');
+      setNewSurveyQuestions([{ id: 'q1', type: 'text', text: '', required: false, options: [] }]);
+      refetchSurveys();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to save survey');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const executeWipe = async () => {
+    setWipeError('');
+    try {
+      // 1. Assert syncEngine.isQueueEmpty() (Check local table directly)
+      const offlineCount = await db.interactions.where('synced').equals(0 as any).count();
+      if (offlineCount > 0) {
+        setWipeError(`Cannot wipe storage: You have ${offlineCount} pending interactions. Please sync first.`);
+        return;
+      }
+
+      // 2. Completely purge all local IndexedDB tables
+      await db.interactions.clear();
+      await db.territories.clear();
+      await db.settings.clear();
+      await db.telemetryQueue.clear();
+
+      // 3. Drop local encryption seeds and flush session state
+      localStorage.removeItem('axim_device_salt');
+      localStorage.removeItem('token');
+
+      // 4. Redirect instantly to dead state /login view
+      logout();
+      navigate('/login', { replace: true });
+    } catch (err) {
+      setWipeError('Critical error during storage wipe sequence.');
+      console.error(err);
     }
   };
 
@@ -377,8 +428,30 @@ const SettingsPage: React.FC = () => {
           </Card>
         </Grid>
 
+        {/* Device Management */}
+        <Grid item xs={12} md={6}>
+          <Card elevation={2} sx={{ border: '1px solid #EF4444' }}>
+            <CardContent>
+              <Typography variant="h6" color="error" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <SafeIcon icon={FiAlertOctagon} /> Device Management
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                Instantly flash-wipe all local storage, encrypted keys, and session data from this device.
+              </Typography>
+              <Button
+                variant="contained"
+                color="error"
+                startIcon={<SafeIcon icon={FiTrash2} />}
+                onClick={() => setOpenWipeDialog(true)}
+              >
+                Wipe Local Node Secure Storage
+              </Button>
+            </CardContent>
+          </Card>
+        </Grid>
+
         {/* Data Management */}
-        <Grid item xs={12}>
+        <Grid item xs={12} md={6}>
           <Card elevation={2}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
@@ -411,7 +484,7 @@ const SettingsPage: React.FC = () => {
 
         {/* Save Button */}
         <Grid item xs={12}>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 4 }}>
             <Button
               variant="contained"
               onClick={handleSaveSettings}
@@ -423,6 +496,27 @@ const SettingsPage: React.FC = () => {
           </Box>
         </Grid>
       </Grid>
+
+      {/* Wipe Confirmation Dialog */}
+      <Dialog open={openWipeDialog} onClose={() => setOpenWipeDialog(false)}>
+        <DialogTitle sx={{ color: 'error.main', display: 'flex', alignItems: 'center', gap: 1 }}>
+          <SafeIcon icon={FiAlertOctagon} /> Critical Warning
+        </DialogTitle>
+        <DialogContent>
+          {wipeError && (
+             <Alert severity="warning" sx={{ mb: 2 }}>{wipeError}</Alert>
+          )}
+          <DialogContentText>
+            This action will permanently delete all offline databases, wipe encryption keys, and immediately terminate this session. Any unsynced data will be irreversibly lost. Are you sure you want to proceed?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenWipeDialog(false)}>Cancel</Button>
+          <Button onClick={executeWipe} color="error" variant="contained">
+            Confirm Flash Wipe
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

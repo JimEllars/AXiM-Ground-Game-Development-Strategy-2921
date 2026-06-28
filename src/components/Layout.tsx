@@ -6,8 +6,34 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [syncCount, setSyncCount] = useState<number | null>(null);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showSessionWarning, setShowSessionWarning] = useState(false);
 
   useEffect(() => {
+    // Check token expiration periodically
+    const checkToken = () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const exp = payload.exp * 1000;
+          const now = Date.now();
+          // If token expires in less than 5 minutes (300,000 ms) and is still valid
+          if (exp - now < 300000 && exp - now > 0) {
+            setShowSessionWarning(true);
+          } else {
+            setShowSessionWarning(false);
+          }
+        } catch (e) {
+          // ignore parsing errors
+        }
+      } else {
+        setShowSessionWarning(false);
+      }
+    };
+
+    checkToken();
+    const tokenInterval = setInterval(checkToken, 60000); // check every minute
+
     const handleSyncComplete = (event: Event) => {
       const customEvent = event as CustomEvent;
       setSyncCount(customEvent.detail.count);
@@ -27,6 +53,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     window.addEventListener('online', handleOnline);
 
     return () => {
+      clearInterval(tokenInterval);
       window.removeEventListener('offline-sync-complete', handleSyncComplete);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
@@ -42,6 +69,23 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {showSessionWarning && (
+         <Box
+           sx={{
+             bgcolor: 'warning.main',
+             color: 'warning.contrastText',
+             textAlign: 'center',
+             py: 0.5,
+             position: 'sticky',
+             top: 0,
+             zIndex: 1200
+           }}
+         >
+           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+             Warning: Your session expires in less than 5 minutes. Please save work and refresh to avoid data loss when going offline.
+           </Typography>
+         </Box>
+      )}
       <Navbar />
       {(isOffline || isSyncing) && (
         <Box
@@ -51,7 +95,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             textAlign: 'center',
             py: 0.5,
             position: 'sticky',
-            top: 0,
+            top: showSessionWarning ? 30 : 0,
             zIndex: 1100,
             transition: 'background-color 0.3s ease'
           }}
