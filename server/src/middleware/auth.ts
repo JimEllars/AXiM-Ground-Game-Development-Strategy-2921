@@ -8,6 +8,7 @@ import axios from 'axios';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const AXIM_CORE_API_URL = process.env.AXIM_CORE_API_URL || 'http://localhost:4000/api';
+const AXIM_PASSPORT_ISSUER = process.env.AXIM_PASSPORT_ISSUER;
 
 export interface JWTPayload {
   userId: string;
@@ -59,7 +60,12 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
         logger.error('[auth] JWT_SECRET is not configured for local fallback validation');
         return next(new AppError('Internal server error', 500));
       }
-      payload = jwt.verify(token, JWT_SECRET) as JWTPayload;
+      const verifyOptions: jwt.VerifyOptions = {};
+      if (AXIM_PASSPORT_ISSUER) {
+        verifyOptions.issuer = AXIM_PASSPORT_ISSUER;
+        verifyOptions.audience = AXIM_PASSPORT_ISSUER;
+      }
+      payload = jwt.verify(token, JWT_SECRET, verifyOptions) as JWTPayload;
     }
 
     if (!payload) {

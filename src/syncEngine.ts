@@ -56,6 +56,13 @@ export const syncOfflineData = async () => {
             }
           }
 
+          if (!item.leadId || !item.outcome) {
+            throw new Error('Missing required fields');
+          }
+          if (isNaN(new Date(item.interactionDate).getTime())) {
+            throw new Error('Invalid interactionDate');
+          }
+
           reconciledBatch.push({
             id: item.id,
             leadId: item.leadId,

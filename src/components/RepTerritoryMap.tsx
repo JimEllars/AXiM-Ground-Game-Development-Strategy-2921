@@ -5,7 +5,8 @@ import Map, { Source, Layer, Popup } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Territory, Lead } from '@/types';
 import { parseLeadLocation } from '@/common/locationUtils';
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Typography, Button, TextField } from '@mui/material';
+import { useDebounce } from '@/hooks/useDebounce';
 import { db } from '@/db';
 import { syncOfflineData } from '@/syncEngine';
 
@@ -18,6 +19,8 @@ interface RepTerritoryMapProps {
 
 const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) => {
   const [popupInfo, setPopupInfo] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   if (!boundary) {
     return <div>No boundary data available.</div>;
@@ -107,9 +110,17 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
     }
   };
 
+  const filteredLeads = leads.filter(lead => {
+    if (!debouncedSearchTerm) return true;
+    const name = `${lead.firstName || ''} ${lead.lastName || ''}`.toLowerCase();
+    const address = (lead.streetAddress || '').toLowerCase();
+    const term = debouncedSearchTerm.toLowerCase();
+    return name.includes(term) || address.includes(term);
+  });
+
   const leadsData = {
     type: 'FeatureCollection' as const,
-    features: leads.reduce((acc: any[], lead) => {
+    features: filteredLeads.reduce((acc: any[], lead) => {
       const parsedLocation = parseLeadLocation(lead.location);
       if (parsedLocation) {
         acc.push({
@@ -184,6 +195,17 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
 
   return (
     <MapErrorBoundary fallbackLeads={leads}>
+      <Box sx={{ mb: 2 }}>
+        <TextField
+          fullWidth
+          label="Map Quick Search"
+          variant="outlined"
+          size="small"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search leads by name or address..."
+        />
+      </Box>
     <Map
       initialViewState={initialViewState}
       style={{ width: '100%', height: 400 }}
