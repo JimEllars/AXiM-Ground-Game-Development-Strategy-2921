@@ -39,7 +39,7 @@ describe('Interactions Controller - Performance Baseline', () => {
 
   it('measures pool.query call count for 100 interactions', async () => {
     const startTime = performance.now();
-    await createInteractions(req, res);
+    await createInteractions(req, res, () => {});
     const endTime = performance.now();
 
     const queryCount = (pool.query as any).mock.calls.length;
