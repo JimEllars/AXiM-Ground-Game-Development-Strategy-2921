@@ -136,7 +136,7 @@ describe('authController', () => {
     });
 
     it('should return 404 when user is not found in database', async () => {
-      mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+      mockQuery.mockResolvedValueOnce({ rows: [] } as never);
 
       await getProfile(req, res, next);
 

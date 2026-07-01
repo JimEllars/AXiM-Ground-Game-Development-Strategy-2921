@@ -39,7 +39,7 @@ describe('Teams Controller - Performance Verification', () => {
 
   it('measures pool.query call count for updateTeam (Optimized)', async () => {
     // Single query for everything
-    mockQuery.mockResolvedValueOnce({
+    (mockQuery as any).mockResolvedValueOnce({
       rowCount: 1,
       rows: [{
         id: 'team1',

@@ -62,7 +62,7 @@ describe('Database Config', () => {
 
     await import('../database.js');
 
-    const callArgs = MockPool.mock.calls[0][0];
+    const callArgs = (MockPool as any).mock.calls[0][0];
     // Ensure we don't fall back to "password". Note: if the module sets it to process.env.DB_PASSWORD,
     // it will be undefined in the environment if not set (or could be falsy). We explicitly check it's not 'password'.
     expect(callArgs.password).not.toBe('password');

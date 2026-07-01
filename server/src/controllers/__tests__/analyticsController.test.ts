@@ -191,7 +191,7 @@ describe('Analytics Controller', () => {
     it('should add date filter conditions when startDate and endDate are provided', async () => {
         req = mockReq({ startDate: '2023-01-01', endDate: '2023-01-31' });
 
-        mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+        mockQuery.mockResolvedValueOnce({ rows: [] } as never);
 
         await getPerformanceMetrics(req, res, mockNext);
 

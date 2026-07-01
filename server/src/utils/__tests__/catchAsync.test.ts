@@ -14,7 +14,7 @@ describe('catchAsync', () => {
   });
 
   it('should call the asynchronous function and not call next with an error if it resolves', async () => {
-    const mockAsyncFunction = jest.fn().mockResolvedValue('success');
+    const mockAsyncFunction = jest.fn().mockResolvedValue('success' as never);
     const wrappedFunction = catchAsync(mockAsyncFunction as any);
 
     await wrappedFunction(mockReq as Request, mockRes as Response, mockNext);
@@ -25,7 +25,7 @@ describe('catchAsync', () => {
 
   it('should call next with the error if the asynchronous function rejects', async () => {
     const testError = new Error('Test error');
-    const mockAsyncFunction = jest.fn().mockRejectedValue(testError);
+    const mockAsyncFunction = jest.fn().mockRejectedValue(testError as never);
     const wrappedFunction = catchAsync(mockAsyncFunction as any);
 
     await wrappedFunction(mockReq as Request, mockRes as Response, mockNext);

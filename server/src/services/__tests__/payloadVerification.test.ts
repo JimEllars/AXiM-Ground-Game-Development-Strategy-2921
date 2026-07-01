@@ -16,7 +16,7 @@ jest.unstable_mockModule('axios', () => {
   return {
     default: {
       create: jest.fn(() => ({
-        post: jest.fn().mockResolvedValue({ data: { success: true } }),
+        post: jest.fn().mockResolvedValue({ data: { success: true } } as never),
         get: jest.fn(),
       })),
     },
