@@ -56,7 +56,7 @@ describe('usersController', () => {
         }
       ];
 
-      mockQuery.mockResolvedValueOnce({ rows: mockUsers } as any);
+      mockQuery.mockResolvedValueOnce({ rows: mockUsers } as never);
 
       await getUsers(req, res);
 
@@ -80,7 +80,7 @@ describe('usersController', () => {
 
     it('should filter users by role', async () => {
       req.query = { role: 'REP' };
-      mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+      mockQuery.mockResolvedValueOnce({ rows: [] } as never);
 
       await getUsers(req, res);
 
@@ -92,7 +92,7 @@ describe('usersController', () => {
 
     it('should filter users by isActive', async () => {
       req.query = { isActive: 'true' };
-      mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+      mockQuery.mockResolvedValueOnce({ rows: [] } as never);
 
       await getUsers(req, res);
 
@@ -104,7 +104,7 @@ describe('usersController', () => {
 
     it('should filter users by both role and isActive', async () => {
       req.query = { role: 'ADMIN', isActive: 'false' };
-      mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+      mockQuery.mockResolvedValueOnce({ rows: [] } as never);
 
       await getUsers(req, res);
 
@@ -116,7 +116,7 @@ describe('usersController', () => {
 
     it('should pass error to next on database error', async () => {
       const error = new Error('Database error');
-      mockQuery.mockRejectedValueOnce(error);
+      mockQuery.mockRejectedValueOnce(error as never);
       const next = jest.fn();
 
       await getUsers(req, res, next);
@@ -181,7 +181,7 @@ describe('usersController', () => {
       // Mock user belongs to organization check
       mockQuery.mockResolvedValueOnce({
         rows: [{ id: 'user1', organization_id: 'org1', role: 'REP' }]
-      } as any);
+      } as never);
 
       await updateUser(req, res);
 

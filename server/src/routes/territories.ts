@@ -8,14 +8,15 @@ import {
   getAvailableReps
 } from '../controllers/territoriesController.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
+import { setEdgeCache, bypassEdgeCache } from '../middleware/cache.js';
 
 const router = express.Router();
 
-router.post('/', authenticateToken, requireRole(['ADMIN', 'MANAGER']), createTerritory);
-router.get('/', authenticateToken, requireRole(['ADMIN', 'MANAGER']), getTerritories);
-router.delete('/:territoryId', authenticateToken, requireRole(['ADMIN', 'MANAGER']), deleteTerritory);
-router.post('/:territoryId/assign', authenticateToken, requireRole(['ADMIN', 'MANAGER']), assignTerritory);
-router.get('/available-reps', authenticateToken, requireRole(['ADMIN', 'MANAGER']), getAvailableReps);
-router.get('/my-territories', authenticateToken, getUserTerritories);
+router.post('/', bypassEdgeCache, authenticateToken, requireRole(['ADMIN', 'MANAGER']), createTerritory);
+router.get('/', setEdgeCache, authenticateToken, requireRole(['ADMIN', 'MANAGER']), getTerritories);
+router.delete('/:territoryId', bypassEdgeCache, authenticateToken, requireRole(['ADMIN', 'MANAGER']), deleteTerritory);
+router.post('/:territoryId/assign', bypassEdgeCache, authenticateToken, requireRole(['ADMIN', 'MANAGER']), assignTerritory);
+router.get('/available-reps', setEdgeCache, authenticateToken, requireRole(['ADMIN', 'MANAGER']), getAvailableReps);
+router.get('/my-territories', setEdgeCache, authenticateToken, getUserTerritories);
 
 export default router;

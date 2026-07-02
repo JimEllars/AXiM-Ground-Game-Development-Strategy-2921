@@ -82,7 +82,7 @@ describe('geocoding service', () => {
 
     it('should return null when an error occurs', async () => {
       const consoleErrorSpy = jest.spyOn(logger, 'error').mockImplementation(() => {});
-      mockGet.mockRejectedValueOnce(new Error('Network error'));
+      mockGet.mockRejectedValueOnce(new Error('Network error') as never);
 
       const result = await geocodeAddress('Some Place');
 
