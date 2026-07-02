@@ -131,3 +131,26 @@ export const dispatchLeadConversion = async (leadData: any, interactionData: any
     throw error;
   }
 };
+
+export const dispatchAgentViewTask = async (payload: any) => {
+  const webhookUrl = process.env.AXIM_AGENTVIEW_WEBHOOK_URL;
+  if (!webhookUrl) {
+    logger.warn('AXIM_AGENTVIEW_WEBHOOK_URL not configured. AgentView task handoff will not be performed.');
+    return;
+  }
+
+  try {
+    const response = await axios.post(webhookUrl, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': aximCoreApiKey || '',
+      },
+      timeout: 5000
+    });
+    logger.info(`AgentView task handoff successful for lead: ${payload.leadId}`);
+    return response.data;
+  } catch (error) {
+    logger.error('Error dispatching AgentView task handoff:', error);
+    throw error;
+  }
+};

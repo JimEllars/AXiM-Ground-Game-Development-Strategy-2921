@@ -58,7 +58,7 @@ describe('teamsController', () => {
         }
       ];
 
-      mockQuery.mockResolvedValueOnce({ rows: mockTeams } as any);
+      mockQuery.mockResolvedValueOnce({ rows: mockTeams } as never);
 
       await getTeams(req, res);
 
@@ -89,7 +89,7 @@ describe('teamsController', () => {
 
     it('should pass error to next on database error', async () => {
       const error = new Error('Database error');
-      mockQuery.mockRejectedValueOnce(error);
+      mockQuery.mockRejectedValueOnce(error as never);
       const next = jest.fn();
 
       await getTeams(req, res, next);
@@ -116,7 +116,7 @@ describe('teamsController', () => {
       mockQuery.mockResolvedValueOnce({
         rowCount: 1,
         rows: [mockUpdatedTeam]
-      } as any);
+      } as never);
 
       await updateTeam(req, res);
 
@@ -145,7 +145,7 @@ describe('teamsController', () => {
       mockQuery.mockResolvedValueOnce({
         rowCount: 0,
         rows: []
-      } as any);
+      } as never);
 
       await updateTeam(req, res);
 

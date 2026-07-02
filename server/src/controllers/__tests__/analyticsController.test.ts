@@ -44,21 +44,21 @@ describe('Analytics Controller', () => {
       req = mockReq();
 
       mockQuery
-        .mockResolvedValueOnce({ rows: [{ total_territories: '10', territories_assigned: '5' }] } as any) // territories
-        .mockResolvedValueOnce({ rows: [{ total_leads: '100', completed_leads: '25', geocoded_leads: '50' }] } as any) // leads
+        .mockResolvedValueOnce({ rows: [{ total_territories: '10', territories_assigned: '5' }] } as never) // territories
+        .mockResolvedValueOnce({ rows: [{ total_leads: '100', completed_leads: '25', geocoded_leads: '50' }] } as never) // leads
         .mockResolvedValueOnce({ rows: [
           { id: 1, outcome: 'Completed', lead_id: 'l1', interaction_date: new Date() },
           { id: 2, outcome: 'Completed', lead_id: 'l2', interaction_date: new Date() },
           { id: 3, outcome: 'Not Home', lead_id: 'l3', interaction_date: new Date() },
           { id: 4, outcome: 'Not Interested', lead_id: 'l4', interaction_date: new Date() },
-        ] } as any) // interactions - 2/4 completed = 50%
+        ] } as never) // interactions - 2/4 completed = 50%
         .mockResolvedValueOnce({ // userStats
           rows: [
             { id: 'u1', first_name: 'Alice', last_name: 'A', role: 'REP', total_interactions: '50', unique_leads: '40', active_days: '10' },
             { id: 'u2', first_name: 'Bob', last_name: 'B', role: 'REP', total_interactions: '0', unique_leads: '0', active_days: '0' },
             { id: 'u3', first_name: 'Charlie', last_name: 'C', role: 'REP', total_interactions: '30', unique_leads: '25', active_days: '8' }
           ]
-        } as any);
+        } as never);
 
       await getAnalytics(req, res, mockNext);
 
@@ -77,8 +77,8 @@ describe('Analytics Controller', () => {
       const date3 = new Date('2023-01-02T10:00:00Z');
 
       mockQuery
-        .mockResolvedValueOnce({ rows: [{ total_territories: 0, territories_assigned: 0 }] } as any) // territories
-        .mockResolvedValueOnce({ rows: [{ total_leads: 0, completed_leads: 0, geocoded_leads: 0 }] } as any) // leads
+        .mockResolvedValueOnce({ rows: [{ total_territories: 0, territories_assigned: 0 }] } as never) // territories
+        .mockResolvedValueOnce({ rows: [{ total_leads: 0, completed_leads: 0, geocoded_leads: 0 }] } as never) // leads
         .mockResolvedValueOnce({ // interactions
           rows: [
             { interaction_date: date1, outcome: 'Sold', outcome_count: '1', lead_id: 'l1' },
@@ -86,8 +86,8 @@ describe('Analytics Controller', () => {
             { interaction_date: date3, outcome: 'Refused', outcome_count: '1', lead_id: 'l3' },
             { interaction_date: date3, outcome: null, outcome_count: '1', lead_id: 'l4' } // edge case: no outcome but has date
           ]
-        } as any)
-        .mockResolvedValueOnce({ rows: [] } as any); // userStats
+        } as never)
+        .mockResolvedValueOnce({ rows: [] } as never); // userStats
 
       await getAnalytics(req, res, mockNext);
 
@@ -111,10 +111,10 @@ describe('Analytics Controller', () => {
         req = mockReq({ startDate: '2023-01-01', endDate: '2023-01-31' });
 
         mockQuery
-          .mockResolvedValueOnce({ rows: [{ total_territories: 0, territories_assigned: 0 }] } as any) // territories
-          .mockResolvedValueOnce({ rows: [{ total_leads: 0, completed_leads: 0, geocoded_leads: 0 }] } as any) // leads
-          .mockResolvedValueOnce({ rows: [] } as any) // interactions
-          .mockResolvedValueOnce({ rows: [] } as any); // userStats
+          .mockResolvedValueOnce({ rows: [{ total_territories: 0, territories_assigned: 0 }] } as never) // territories
+          .mockResolvedValueOnce({ rows: [{ total_leads: 0, completed_leads: 0, geocoded_leads: 0 }] } as never) // leads
+          .mockResolvedValueOnce({ rows: [] } as never) // interactions
+          .mockResolvedValueOnce({ rows: [] } as never); // userStats
 
         await getAnalytics(req, res, mockNext);
 
@@ -163,7 +163,7 @@ describe('Analytics Controller', () => {
       };
 
       // Ensure mock queries are resolved as a single array as per Promise.all
-      mockQuery.mockResolvedValueOnce({ rows: mockResult.rows } as any); // performanceResult
+      mockQuery.mockResolvedValueOnce({ rows: mockResult.rows } as never); // performanceResult
 
       await getPerformanceMetrics(req, res, mockNext);
 

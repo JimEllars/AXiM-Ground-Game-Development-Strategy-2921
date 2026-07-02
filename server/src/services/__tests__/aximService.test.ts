@@ -70,7 +70,7 @@ describe('aximService', () => {
 
     it('should successfully sync a lead to AXiM Core', async () => {
       const mockResponse = { data: { success: true, id: 'core-lead-123' } };
-      mockPost.mockResolvedValue(mockResponse);
+      mockPost.mockResolvedValue(mockResponse as never);
 
       const result = await syncLeadToCore(mockLeadData);
 
@@ -87,7 +87,7 @@ describe('aximService', () => {
 
     it('should throw an error when sync fails', async () => {
       const mockError = new Error('Network Error');
-      mockPost.mockRejectedValue(mockError);
+      mockPost.mockRejectedValue(mockError as never);
 
       await expect(syncLeadToCore(mockLeadData)).rejects.toThrow('Network Error');
       expect(mockPost).toHaveBeenCalledWith('/leads/sync', mockLeadData);
@@ -95,7 +95,7 @@ describe('aximService', () => {
   });
 
   describe('dispatchLeadConversion', () => {
-    let dispatchLeadConversion;
+    let dispatchLeadConversion: any;
     beforeAll(async () => {
       const module = await import('../aximService.js');
       dispatchLeadConversion = module.dispatchLeadConversion;
@@ -118,15 +118,15 @@ describe('aximService', () => {
       };
 
       const mockResponse = { data: { success: true } };
-      mockPost.mockResolvedValue(mockResponse);
+      mockPost.mockResolvedValue(mockResponse as never);
 
       await dispatchLeadConversion(mockLead, mockInteraction);
 
       expect(mockPost).toHaveBeenCalledWith('/webhook/universal-dispatcher', expect.any(Object));
       const callArg = mockPost.mock.calls[0][1];
-      expect(callArg.encryptedData).toBeDefined();
-      expect(callArg.iv).toBeDefined();
-      expect(callArg.authTag).toBeDefined();
+      expect((callArg as any).encryptedData).toBeDefined();
+      expect((callArg as any).iv).toBeDefined();
+      expect((callArg as any).authTag).toBeDefined();
     });
   });
 
@@ -135,7 +135,7 @@ describe('aximService', () => {
 
     it('should successfully fetch an organization from AXiM Core', async () => {
       const mockResponse = { data: { id: 'org-123', name: 'Test Org' } };
-      mockGet.mockResolvedValue(mockResponse);
+      mockGet.mockResolvedValue(mockResponse as never);
 
       const result = await getOrganizationFromCore(mockOrgId);
 
@@ -145,7 +145,7 @@ describe('aximService', () => {
 
     it('should throw an error when fetch fails', async () => {
       const mockError = new Error('Not Found');
-      mockGet.mockRejectedValue(mockError);
+      mockGet.mockRejectedValue(mockError as never);
 
       await expect(getOrganizationFromCore(mockOrgId)).rejects.toThrow('Not Found');
       expect(mockGet).toHaveBeenCalledWith(`/organizations/${mockOrgId}`);

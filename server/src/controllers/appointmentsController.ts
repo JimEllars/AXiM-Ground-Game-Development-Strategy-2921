@@ -2,6 +2,9 @@ import { Response } from "express";
 import { pool } from "../config/database.js";
 import { AuthRequest } from "../types/index.js";
 import catchAsync from "../utils/catchAsync.js";
+import { dispatchAgentViewTask } from "../services/aximService.js";
+import logger, { clientExceptionStream } from "../utils/logger.js";
+
 
 export const getAppointments = catchAsync(
   async (req: AuthRequest, res: Response) => {
@@ -97,18 +100,26 @@ export const createAppointment = catchAsync(
     }
 
     const client = await pool.connect();
+    let leadCoordinates: [number, number] | null = null;
+    let newAppointment: any = null;
+
     try {
       await client.query("BEGIN");
 
       // Verify lead belongs to org
       const leadCheck = await client.query(
-        "SELECT id FROM leads WHERE id = $1 AND organization_id = $2",
+        "SELECT id, location FROM leads WHERE id = $1 AND organization_id = $2",
         [leadId, user.organization_id]
       );
 
       if (leadCheck.rows.length === 0) {
         await client.query("ROLLBACK");
         return res.status(404).json({ error: "Lead not found" });
+      }
+
+      const location = leadCheck.rows[0].location;
+      if (location && location.coordinates) {
+        leadCoordinates = location.coordinates;
       }
 
       // Verify assigned user belongs to org
@@ -129,18 +140,63 @@ export const createAppointment = catchAsync(
         [user.organization_id, leadId, userId, scheduledAt, notes]
       );
 
+      newAppointment = result.rows[0];
       await client.query("COMMIT");
 
-      res.status(201).json({
-        message: "Appointment scheduled successfully",
-        appointment: result.rows[0],
-      });
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
     } finally {
       client.release();
     }
+
+    // Asynchronously handoff to AgentView
+    (async () => {
+      try {
+        const payload = {
+          appointmentId: newAppointment.id,
+          leadId: leadId,
+          userId: userId,
+          organizationId: user.organization_id,
+          scheduledAt: scheduledAt,
+          notes: notes,
+          coordinates: leadCoordinates,
+          status: 'Scheduled'
+        };
+        await dispatchAgentViewTask(payload);
+      } catch (handoffError: any) {
+        logger.error('AgentView handoff failed', handoffError);
+        const logLine = JSON.stringify({
+          timestamp: new Date().toISOString(),
+          type: 'AGENTVIEW_HANDOFF_FAILURE',
+          error: handoffError.message,
+          appointmentId: newAppointment.id,
+          leadId: leadId,
+          organizationId: user.organization_id,
+          payload: {
+            appointmentId: newAppointment.id,
+            leadId: leadId,
+            userId: userId,
+            scheduledAt: scheduledAt,
+            notes: notes,
+            coordinates: leadCoordinates
+          }
+        }) + '\n';
+
+        try {
+          if (!clientExceptionStream.write(logLine)) {
+             clientExceptionStream.once('drain', () => {});
+          }
+        } catch (streamError) {
+          logger.error('Failed to write to client-exceptions stream for AgentView handoff', streamError);
+        }
+      }
+    })();
+
+    res.status(201).json({
+      message: "Appointment scheduled successfully",
+      appointment: newAppointment,
+    });
   }
 );
 

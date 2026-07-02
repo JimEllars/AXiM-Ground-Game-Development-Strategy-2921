@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 import { Request, Response, NextFunction } from 'express';
 
-const mockPost = jest.fn().mockResolvedValue({ data: 'ok' } as any);
+const mockPost = jest.fn().mockResolvedValue({ data: 'ok' } as never);
 jest.unstable_mockModule('axios', () => ({
   default: {
     post: mockPost
@@ -40,8 +40,8 @@ describe.skip('errorHandler middleware', () => {
       method: 'GET',
       ip: '127.0.0.1',
       body: {},
-      user: { id: 'rep-123' } as any
-    };
+      user: { id: 'rep-123' }
+    } as Partial<Request> & { user: any };
     mockRes = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn()
