@@ -89,7 +89,7 @@ describe('Reps Controller', () => {
         ]
       };
 
-      mockQuery.mockResolvedValueOnce(mockResult as any);
+      mockQuery.mockResolvedValueOnce(mockResult as never);
 
       await getMyTurf(req, res, mockNext);
 
@@ -126,7 +126,7 @@ describe('Reps Controller', () => {
 
     it('should handle user with no assigned territories', async () => {
       req = mockReq();
-      mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+      mockQuery.mockResolvedValueOnce({ rows: [] } as never);
 
       await getMyTurf(req, res, mockNext);
 
@@ -168,7 +168,7 @@ describe('Reps Controller', () => {
         ]
       };
 
-      mockQuery.mockResolvedValueOnce(mockResult as any);
+      mockQuery.mockResolvedValueOnce(mockResult as never);
 
       await getRepStats(req, res, mockNext);
 
@@ -203,7 +203,7 @@ describe('Reps Controller', () => {
         ]
       };
 
-      mockQuery.mockResolvedValueOnce(mockResult as any);
+      mockQuery.mockResolvedValueOnce(mockResult as never);
 
       await getRepStats(req, res, mockNext);
 
@@ -219,7 +219,7 @@ describe('Reps Controller', () => {
 
     it('should handle user with no interactions', async () => {
       req = mockReq();
-      mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+      mockQuery.mockResolvedValueOnce({ rows: [] } as never);
 
       await getRepStats(req, res, mockNext);
 

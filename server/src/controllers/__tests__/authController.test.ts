@@ -62,11 +62,11 @@ describe('authController', () => {
               release: jest.fn()
             };
 
-            mockPool.connect.mockResolvedValueOnce(mockClient);
+            mockPool.connect.mockResolvedValueOnce(mockClient as never);
             mockClient.query.mockImplementation((query) => {
-  if (query.includes("SELECT id FROM users")) return Promise.resolve({ rows: [] });
-  if (query.includes("INSERT INTO organizations")) return Promise.resolve({ rows: [{ id: "org123" }] });
-  if (query.includes("INSERT INTO users")) return Promise.resolve({ rows: [{ id: "user123", email: "admin@test.com", role: "ADMIN", organization_id: "org123" }] });
+  if (String(query).includes("SELECT id FROM users")) return Promise.resolve({ rows: [] });
+  if (String(query).includes("INSERT INTO organizations")) return Promise.resolve({ rows: [{ id: "org123" }] });
+  if (String(query).includes("INSERT INTO users")) return Promise.resolve({ rows: [{ id: "user123", email: "admin@test.com", role: "ADMIN", organization_id: "org123" }] });
   return Promise.resolve();
 });
 
@@ -102,7 +102,7 @@ describe('authController', () => {
         organization_id: 'org123',
       };
 
-      mockQuery.mockResolvedValueOnce({ rows: [mockUser] } as any);
+      mockQuery.mockResolvedValueOnce({ rows: [mockUser] } as never);
 
       await getProfile(req, res, next);
 
@@ -151,7 +151,7 @@ describe('authController', () => {
 
     it('should pass database errors to next', async () => {
       const dbError = new Error('DB Connection Failed');
-      mockQuery.mockRejectedValueOnce(dbError);
+      mockQuery.mockRejectedValueOnce(dbError as never);
 
       await getProfile(req, res, next);
 

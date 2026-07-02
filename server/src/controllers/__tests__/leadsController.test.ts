@@ -48,8 +48,8 @@ describe.skip('getLeads', () => {
 
   it('should construct the query correctly with default parameters', async () => {
     mockQuery
-      .mockResolvedValueOnce({ rows: [] } as any) // leads query
-      .mockResolvedValueOnce({ rows: [{ count: '0' }] } as any); // count query
+      .mockResolvedValueOnce({ rows: [] } as never) // leads query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] } as never); // count query
 
     const req = mockReq();
     await getLeads(req as any, res, () => {});
@@ -75,8 +75,8 @@ describe.skip('getLeads', () => {
 
   it('should include status filter in the query', async () => {
     mockQuery
-      .mockResolvedValueOnce({ rows: [] } as any)
-      .mockResolvedValueOnce({ rows: [{ count: '0' }] } as any);
+      .mockResolvedValueOnce({ rows: [] } as never)
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] } as never);
 
     const req = mockReq({ status: 'New' });
     await getLeads(req as any, res, () => {});
@@ -90,8 +90,8 @@ describe.skip('getLeads', () => {
 
   it('should include search filter in the query', async () => {
     mockQuery
-      .mockResolvedValueOnce({ rows: [] } as any)
-      .mockResolvedValueOnce({ rows: [{ count: '0' }] } as any);
+      .mockResolvedValueOnce({ rows: [] } as never)
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] } as never);
 
     const req = mockReq({ search: 'John' });
     await getLeads(req as any, res, () => {});
@@ -107,8 +107,8 @@ describe.skip('getLeads', () => {
 
   it('should handle sorting by last_name correctly', async () => {
     mockQuery
-      .mockResolvedValueOnce({ rows: [] } as any)
-      .mockResolvedValueOnce({ rows: [{ count: '0' }] } as any);
+      .mockResolvedValueOnce({ rows: [] } as never)
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] } as never);
 
     const req = mockReq({ sort: 'last_name', order: 'asc' });
     await getLeads(req as any, res, () => {});
@@ -119,8 +119,8 @@ describe.skip('getLeads', () => {
 
   it('should handle sorting by status correctly', async () => {
     mockQuery
-      .mockResolvedValueOnce({ rows: [] } as any)
-      .mockResolvedValueOnce({ rows: [{ count: '0' }] } as any);
+      .mockResolvedValueOnce({ rows: [] } as never)
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] } as never);
 
     const req = mockReq({ sort: 'status' });
     await getLeads(req as any, res, () => {});
@@ -140,8 +140,8 @@ describe.skip('getLeads', () => {
 
   it('should handle pagination correctly', async () => {
     mockQuery
-      .mockResolvedValueOnce({ rows: [] } as any)
-      .mockResolvedValueOnce({ rows: [{ count: '250' }] } as any);
+      .mockResolvedValueOnce({ rows: [] } as never)
+      .mockResolvedValueOnce({ rows: [{ count: '250' }] } as never);
 
     const req = mockReq({ page: '3', limit: '50' });
     await getLeads(req as any, res, () => {});

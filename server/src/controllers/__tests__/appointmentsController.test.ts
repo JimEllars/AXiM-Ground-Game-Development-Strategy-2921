@@ -1,4 +1,14 @@
 import { jest } from '@jest/globals';
+
+jest.unstable_mockModule('../../services/aximService.js', () => ({
+  dispatchAgentViewTask: jest.fn().mockResolvedValue(true as never),
+  getLeadEnrichment: jest.fn().mockResolvedValue({} as never),
+  syncLeadToCore: jest.fn().mockResolvedValue({} as never),
+  getOrganizationFromCore: jest.fn().mockResolvedValue({} as never),
+  dispatchLeadConversion: jest.fn().mockResolvedValue(true as never),
+  default: { post: jest.fn(), get: jest.fn() }
+}));
+
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 
