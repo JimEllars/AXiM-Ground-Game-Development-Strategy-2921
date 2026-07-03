@@ -94,13 +94,14 @@ const SettingsPage: React.FC = () => {
   const handleExportCampaignData = async () => {
     try {
       const response = await leadsAPI.export();
-      const url = window.URL.createObjectURL(new Blob([response.data as any]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'campaign_data.csv');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      if (response.data && response.data.url) {
+        const link = document.createElement('a');
+        link.href = response.data.url;
+        link.setAttribute('download', 'campaign_data.csv');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }
     } catch (error) {
       setError('Failed to export campaign data');
     }

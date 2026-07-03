@@ -103,14 +103,34 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 
 
 
-      const handleExportData = () => {
-        const dataStr = JSON.stringify(analytics, null, 2);
-        const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-        const exportFileDefaultName = `analytics-${new Date().toISOString().split('T')[0]}.json`;
-        const linkElement = document.createElement('a');
-        linkElement.setAttribute('href', dataUri);
-        linkElement.setAttribute('download', exportFileDefaultName);
-        linkElement.click();
+      const [isExporting, setIsExporting] = useState(false);
+      const { enqueueSnackbar } = useSnackbar();
+
+      const handleExportData = async () => {
+        setIsExporting(true);
+        try {
+          const response = await analyticsAPI.getAnalytics({
+            startDate: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString(),
+            endDate: new Date().toISOString()
+          });
+          // actually we just want to hit leadsAPI.export(), which returns presigned URL now
+          const { leadsAPI } = await import('../services/api');
+          const exportResponse = await leadsAPI.export();
+
+          if (exportResponse.data && exportResponse.data.url) {
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', exportResponse.data.url);
+            linkElement.setAttribute('download', `axim_export_${new Date().toISOString().split('T')[0]}.csv`);
+            linkElement.click();
+            enqueueSnackbar('Secure Export Generated.', { variant: 'success' });
+          } else {
+            throw new Error('No URL returned');
+          }
+        } catch (error) {
+          enqueueSnackbar('Export failed.', { variant: 'error' });
+        } finally {
+          setIsExporting(false);
+        }
       };
 
 
@@ -133,8 +153,8 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                   <MenuItem value="90days">Last 90 Days</MenuItem>
                 </Select>
               </FormControl>
-              <Button variant="outlined" startIcon={<SafeIcon icon={FiDownload} />} onClick={handleExportData}>
-                Export Data
+              <Button variant="outlined" startIcon={isExporting ? <CircularProgress size={20} /> : <SafeIcon icon={FiDownload} />} onClick={handleExportData} disabled={isExporting}>
+                {isExporting ? 'Exporting...' : 'Export Data'}
               </Button>
             </Box>
           </Box>

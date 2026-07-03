@@ -16,3 +16,8 @@
 - AgentView Task Ingestion Handoff (Integration - 50%): Intercepted new appointments to construct an async outbound POST request to the central AgentView ingestion endpoint. Translated interaction data into standardized AgentView task ticket schema.
 - Cloudflare Edge Caching Headers (Infrastructure Optimization - 40%): Injected `Cache-Control` headers (max-age 3600) into `GET` responses for territories and global settings endpoints (`server/src/routes/territories.ts`, `server/src/routes/settings.ts`).
 - Appointment Handoff Telemetry (Hardening - 10%): Wrapped AgentView dispatch in a try/catch, logging failures directly to `logs/client-exceptions.log` via `clientExceptionStream` to ensure they are swept up by `telemetryWorker.ts`.
+
+# Phase 26 Micro-Sprint
+- Offloaded large CSV exports from main thread to Cloudflare R2 streams using `pg-query-stream` and AWS S3 SDK.
+- Added strict Row-Level Security policies on `leads` and `interactions` tables for REP and MANAGER boundaries.
+- Upgraded Export UI with downloading spinner feedback and integrated presigned URL fetching.
