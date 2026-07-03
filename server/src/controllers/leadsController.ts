@@ -418,11 +418,29 @@ export const getLeadInsights = catchAsync(async (req: AuthRequest, res: Response
 });
 
 import { Parser } from 'json2csv';
+import QueryStream from 'pg-query-stream';
+import { stringify } from 'csv-stringify';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Upload } from '@aws-sdk/lib-storage';
+import { PassThrough } from 'stream';
 
 export const exportLeads = catchAsync(async (req: AuthRequest, res: Response) => {
   const user = req.user!;
 
-  const query = `
+  const s3Client = new S3Client({
+    region: process.env.R2_REGION || 'auto',
+    endpoint: process.env.R2_ENDPOINT_URL || 'https://default.r2.cloudflarestorage.com',
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID || 'dummy',
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || 'dummy',
+    },
+  });
+
+  const bucketName = process.env.R2_BUCKET_NAME || 'axim-exports';
+  const fileName = `exports/${user.organization_id}/axim_export_${Date.now()}.csv`;
+
+  const query = new QueryStream(`
     SELECT
       l.id,
       pii.first_name as "First Name",
@@ -454,35 +472,59 @@ export const exportLeads = catchAsync(async (req: AuthRequest, res: Response) =>
     ) i ON true
     WHERE l.organization_id = $1
     ORDER BY l.created_at DESC
-  `;
+  `, [user.organization_id]);
 
-  const result = await pool.query(query, [user.organization_id]);
+  const client = await pool.connect();
 
-  // Flatten survey_data if present, otherwise just convert to string
-  const processedRows = result.rows.map(row => {
-    let flatRow = { ...row };
-    if (flatRow["Survey Data"]) {
-      try {
-        const surveyData = typeof flatRow["Survey Data"] === 'string' ? JSON.parse(flatRow["Survey Data"]) : flatRow["Survey Data"];
-        flatRow["Survey Data"] = JSON.stringify(surveyData); // Basic flattening, can be improved to top-level columns if needed
-      } catch (e) {
-        // keep as is
+  try {
+    const stream = client.query(query);
+    const passThrough = new PassThrough();
+
+    const stringifier = stringify({
+      header: true,
+      columns: [
+        'id', 'First Name', 'Last Name', 'Street Address', 'City', 'State', 'Zip',
+        'Phone', 'Email', 'Status', 'Notes', 'Longitude', 'Latitude',
+        'Created At', 'Updated At', 'Latest Outcome', 'Latest Interaction Notes',
+        'Latest Interaction Date', 'Survey Data'
+      ],
+      cast: {
+        object: (value: any) => {
+          if (value && typeof value === 'object') {
+             try {
+                return JSON.stringify(value);
+             } catch (e) {
+                return String(value);
+             }
+          }
+          return value;
+        }
       }
-    }
-    return flatRow;
+    });
+
+    stream.pipe(stringifier).pipe(passThrough);
+
+    const upload = new Upload({
+      client: s3Client,
+      params: {
+        Bucket: bucketName,
+        Key: fileName,
+        Body: passThrough,
+        ContentType: 'text/csv',
+      },
+    });
+
+    await upload.done();
+  } finally {
+    client.release();
+  }
+
+  const getCommand = new GetObjectCommand({
+    Bucket: bucketName,
+    Key: fileName,
   });
 
-  const fields = [
-    'id', 'First Name', 'Last Name', 'Street Address', 'City', 'State', 'Zip',
-    'Phone', 'Email', 'Status', 'Notes', 'Longitude', 'Latitude',
-    'Created At', 'Updated At', 'Latest Outcome', 'Latest Interaction Notes',
-    'Latest Interaction Date', 'Survey Data'
-  ];
+  const url = await getSignedUrl(s3Client, getCommand, { expiresIn: 900 });
 
-  const json2csvParser = new Parser({ fields });
-  const csv = json2csvParser.parse(processedRows);
-
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="axim_export.csv"');
-  res.status(200).send(csv);
+  res.json({ url });
 });

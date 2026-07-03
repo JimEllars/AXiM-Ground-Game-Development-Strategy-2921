@@ -159,7 +159,7 @@ export const leadsAPI = {
   getInsights: (id: string) =>
     api.get(`/leads/${id}/insights`),
   export: () =>
-    api.get('/leads/export', { responseType: 'blob' }),
+    api.get('/leads/export'),
 };
 
 // Reps API
