@@ -5,6 +5,8 @@ import { Response } from "express";
 import { pool } from "../config/database.js";
 import { AuthRequest } from "../types/index.js";
 import catchAsync from "../utils/catchAsync.js";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { v4 as uuidv4 } from 'uuid';
 
 export const createInteractions = catchAsync(
   async (req: AuthRequest, res: Response) => {
@@ -93,3 +95,41 @@ const user = req.user!;
     res.json(result.data);
   },
 );
+
+export const uploadAudio = catchAsync(async (req: AuthRequest, res: Response) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "No audio file provided." });
+  }
+
+  const s3Client = new S3Client({
+    region: process.env.R2_REGION || 'auto',
+    endpoint: process.env.R2_ENDPOINT || '',
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+    },
+  });
+
+  const bucketName = process.env.R2_AUDIO_BUCKET_NAME || 'GROUND_GAME_AUDIO_VAULT';
+  const fileExtension = req.file.mimetype.includes('webm') ? 'webm' : 'mp3';
+  const objectKey = `audio/${req.user!.id}/${uuidv4()}.${fileExtension}`;
+
+  try {
+    const uploadParams = {
+      Bucket: bucketName,
+      Key: objectKey,
+      Body: req.file.buffer,
+      ContentType: req.file.mimetype,
+    };
+
+    await s3Client.send(new PutObjectCommand(uploadParams));
+
+    res.status(201).json({
+      message: "Audio uploaded successfully",
+      objectKey: objectKey
+    });
+  } catch (error) {
+    logger.error("Error uploading audio to R2:", error);
+    res.status(500).json({ error: "Failed to upload audio." });
+  }
+});

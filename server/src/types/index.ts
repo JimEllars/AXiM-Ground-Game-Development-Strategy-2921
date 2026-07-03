@@ -81,5 +81,6 @@ export interface Interaction {
 }
 
 export interface AuthRequest extends Request {
+  file?: Express.Multer.File;
   user?: User;
 }

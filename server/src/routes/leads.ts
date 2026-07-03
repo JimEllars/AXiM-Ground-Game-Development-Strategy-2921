@@ -1,10 +1,11 @@
 import express from 'express';
 import { bulkImportLeads, uploadMiddleware, getLeads, deleteLeads, updateLead, getImportJobStatus, getLeadInsights, exportLeads } from '../controllers/leadsController.js';
+import { requireCloudflareIP } from '../middleware/cloudflare.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/bulk-import', authenticateToken, requireRole(['ADMIN', 'MANAGER']), uploadMiddleware, bulkImportLeads);
+router.post('/bulk-import', requireCloudflareIP, authenticateToken, requireRole(['ADMIN', 'MANAGER']), uploadMiddleware, bulkImportLeads);
 router.get('/upload/:jobId', authenticateToken, requireRole(['ADMIN', 'MANAGER']), getImportJobStatus);
 router.get('/export', authenticateToken, requireRole(['ADMIN', 'MANAGER']), exportLeads);
 router.get('/', authenticateToken, getLeads);
