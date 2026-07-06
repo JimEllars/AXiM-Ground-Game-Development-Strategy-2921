@@ -8,8 +8,9 @@ const router = express.Router();
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // limit each IP to 20 requests per windowMs
-  message: { error: 'Too many authentication attempts, please try again after 15 minutes' },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  message: 'Too many authentication attempts, please try again after 15 minutes' as any,
+  standardHeaders: true,
+  keyGenerator: (req: any) => (req.headers['cf-connecting-ip'] || req.ip) as string, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 

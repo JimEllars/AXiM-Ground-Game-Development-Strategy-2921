@@ -21,3 +21,9 @@
 - Offloaded large CSV exports from main thread to Cloudflare R2 streams using `pg-query-stream` and AWS S3 SDK.
 - Added strict Row-Level Security policies on `leads` and `interactions` tables for REP and MANAGER boundaries.
 - Upgraded Export UI with downloading spinner feedback and integrated presigned URL fetching.
+
+# Phase 27 Micro-Sprint
+- Implemented Cloudflare WAF hardening by requiring the `CF-Connecting-IP` header for sensitive ingest routes (`/bulk-import`, `/telemetry`).
+- Configured Express to trust the proxy and updated `express-rate-limit` configs to accurately use `CF-Connecting-IP` as the key generation mechanism.
+- Built a secure backend R2 storage pipeline via the `POST /api/interactions/upload-audio` route utilizing `multer` and `@aws-sdk/client-s3` to prepare for Noota transcriptions.
+- Added a frontend UI stub for the microphone in the `LeadInteractionForm` to prompt and verify user device permissions.

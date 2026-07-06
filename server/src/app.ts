@@ -21,6 +21,9 @@ import appointmentRoutes from "./routes/appointments.js";
 
 const app = express();
 
+// Trust Cloudflare proxy to get real client IP
+app.set('trust proxy', true);
+
 // Middleware
 app.use(
   helmet({

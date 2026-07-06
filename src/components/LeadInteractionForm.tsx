@@ -11,7 +11,8 @@ import { useState } from 'react';
 
       Alert,
     } from '@mui/material';
-    import { FiSave, FiX } from 'react-icons/fi';
+    import { FiSave, FiX, FiMic } from 'react-icons/fi';
+import { IconButton, Tooltip, Snackbar } from '@mui/material';
     import SafeIcon from '@/common/SafeIcon';
     import { interactionsAPI, settingsAPI } from '@/services/api';
     import { db } from '@/db';
@@ -39,6 +40,7 @@ import { useState } from 'react';
       const [surveyAnswers, setSurveyAnswers] = useState<Record<string, any>>({});
       const [submitting, setSubmitting] = useState(false);
       const [error, setError] = useState('');
+      const [micStatus, setMicStatus] = useState<{ open: boolean, message: string }>({ open: false, message: '' });
 
       const { data: settingsData } = useQuery('settings', async () => {
         try {
@@ -65,6 +67,19 @@ import { useState } from 'react';
 
       const surveys = settingsData?.surveys || [];
       const currentDisposition = settingsData?.dispositions?.find((d: any) => d.name === outcome);
+
+
+      const handleMicClick = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // Stop all tracks immediately just to release the mic after getting permission
+          stream.getTracks().forEach(track => track.stop());
+          setMicStatus({ open: true, message: 'Microphone Access Granted' });
+        } catch (err) {
+          console.error("Microphone access error", err);
+          setMicStatus({ open: true, message: 'Permission Denied: Could not access microphone' });
+        }
+      };
 
       const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -135,16 +150,28 @@ import { useState } from 'react';
                 ))}
               </Select>
             </FormControl>
-            <TextField
-              fullWidth
-              label={`Notes ${currentDisposition?.require_notes ? '(Required)' : '(Optional)'}`}
-              required={currentDisposition?.require_notes}
-              multiline
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              sx={{ mb: 2 }}
-            />
+
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 2 }}>
+              <TextField
+                fullWidth
+                label={`Notes ${currentDisposition?.require_notes ? '(Required)' : '(Optional)'}`}
+                required={currentDisposition?.require_notes}
+                multiline
+                rows={3}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+              <Tooltip title="Dictate Note">
+                <IconButton
+                  color="primary"
+                  onClick={handleMicClick}
+                  sx={{ mt: 1, backgroundColor: 'action.hover' }}
+                >
+                  <SafeIcon icon={FiMic} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
             {surveys.map((survey: any) => (
                <Box key={survey.id} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
                  <Typography variant="subtitle1" fontWeight="bold" gutterBottom>{survey.name}</Typography>
@@ -202,6 +229,12 @@ import { useState } from 'react';
               </Button>
             </Box>
           </form>
+          <Snackbar
+            open={micStatus.open}
+            autoHideDuration={3000}
+            onClose={() => setMicStatus({ ...micStatus, open: false })}
+            message={micStatus.message}
+          />
         </Box>
       );
     };

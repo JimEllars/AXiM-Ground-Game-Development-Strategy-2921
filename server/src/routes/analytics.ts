@@ -1,5 +1,6 @@
 import express from 'express';
 import { getAnalytics, getPerformanceMetrics, reportTelemetry, getHealthMetrics, reportClientError } from '../controllers/analyticsController.js';
+import { requireCloudflareIP } from '../middleware/cloudflare.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -11,7 +12,7 @@ router.get('/health', authenticateToken, requireRole(['ADMIN', 'MANAGER']), getH
 
 export default router;
 // Telemetry endpoint - available to any authenticated user
-router.post('/telemetry', authenticateToken, reportTelemetry);
+router.post('/telemetry', requireCloudflareIP, authenticateToken, reportTelemetry);
 
 // Client error endpoint
 router.post('/client-error', authenticateToken, reportClientError);
