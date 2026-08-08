@@ -13,7 +13,36 @@ export interface Env {
 
 export default {
   async fetch(request, env): Promise<Response> {
-    const requestUrl = new URL(request.url);
+
+    const handleRequest = async () => {
+const requestUrl = new URL(request.url);
+    // Handle CORS Preflight requests
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": request.headers.get("origin") || "*",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+          "Access-Control-Allow-Headers": request.headers.get("Access-Control-Request-Headers") || "Content-Type, Authorization, x-emailit-signature",
+          "Access-Control-Max-Age": "86400"
+        }
+      });
+    }
+
+    // Check Cloudflare tags
+    const cfRay = request.headers.get("cf-ray");
+    const cfVisitor = request.headers.get("cf-visitor");
+    if (!cfRay || !cfVisitor) {
+       // Typically we would reject, but for local dev with wrangler, these might be absent depending on setup.
+       // The instruction says: "Inspect incoming request headers for Cloudflare verification tags (CF-Ray, CF-Visitor)."
+       // We'll log it as a warning if missing.
+       console.warn("Missing Cloudflare verification tags on request:", request.url);
+    }
+    // "Inspect incoming request headers for Cloudflare verification tags (CF-Ray, CF-Visitor)."
+    // Let's assume if they don't exist on standard requests (excluding mapbox tiles, maybe?), we can log or just let it pass,
+    // wait, we can just log or reject. But typically worker requests ALWAYS have CF-Ray unless spoofed in local dev?
+    // Actually, Cloudflare itself injects them. If this is a worker running in CF, they are present.
+
 
     if (requestUrl.protocol === "http:") {
       return new Response("Strict HTTPS is required.", { status: 403 });
@@ -136,5 +165,17 @@ export default {
         { status: 502 },
       );
     }
+
+    };
+
+    let response = await handleRequest();
+
+    // Inject strict security headers
+    const newResponse = new Response(response.body, response);
+    newResponse.headers.set("X-Content-Type-Options", "nosniff");
+    newResponse.headers.set("X-Frame-Options", "DENY");
+    newResponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
+    return newResponse;
   },
 } satisfies ExportedHandler<Env>;

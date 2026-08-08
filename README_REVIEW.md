@@ -11,3 +11,8 @@
 - Integrated EmailIt Outbound Drip Automation: configured leads to enroll in nurture campaigns upon transitioning to `Qualified` or `Follow Up` statuses.
 - Added Cloudflare Edge Rate-Limit Perimeter Guard: updated `cloudflare/worker.ts` and `wrangler.jsonc` to block brute force auth attempts and map tile scraping requests dynamically using CF KV bindings.
 - Built Rapid Disposition Map Filter Bar: applied MUI stack of chips in `RepTerritoryMap.tsx` enabling canvas reps to live-filter pins with zero network requests.
+
+# Phase 36 Micro-Sprint
+- Implemented EmailIt Webhook Telemetry Endpoint at `POST /api/v1/webhooks/emailit`.
+- Cloudflare worker edge preflight interception and strictly injected security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`).
+- Added Turn-by-Turn Mobile Navigation action deep linking (`maps://` for iOS, `https://www.google.com/maps/dir/` everywhere else) on LeadDetails screen.
