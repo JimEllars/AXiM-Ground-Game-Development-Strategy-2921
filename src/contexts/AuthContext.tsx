@@ -39,8 +39,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const response = await authAPI.getProfile();
           setUser(response.data);
         } catch (err: any) {
-          setError(err.response?.data?.error || 'Failed to load user profile');
-          localStorage.removeItem('token'); // Clear invalid token
+          // Graceful degradation: If offline, decode token to maintain session
+          if (err.response && [502, 503, 504].includes(err.response.status)) {
+            try {
+              const payload = JSON.parse(atob(token.split('.')[1]));
+              setUser({
+                id: payload.id || payload.sub,
+                email: payload.email || '',
+                firstName: payload.firstName || '',
+                lastName: payload.lastName || '',
+                role: payload.role || '',
+                organizationId: payload.organizationId || ''
+              });
+              setError(null);
+            } catch (e) {
+              setError('Failed to load user profile (offline decode failed)');
+              localStorage.removeItem('token');
+            }
+          } else {
+            setError(err.response?.data?.error || 'Failed to load user profile');
+            localStorage.removeItem('token'); // Clear invalid token
+          }
         } finally {
           setLoading(false);
         }

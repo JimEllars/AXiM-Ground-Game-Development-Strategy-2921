@@ -101,7 +101,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           }}
         >
           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-            {isOffline ? 'Offline Mode: Changes are saving locally.' : 'Online: Syncing...'}
+            {isOffline ? 'Operating in Offline Mode. Canvassing continues safely. Data will sync automatically when the connection is restored.' : 'Online: Syncing...'}
           </Typography>
         </Box>
       )}

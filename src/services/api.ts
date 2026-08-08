@@ -57,6 +57,8 @@ api.interceptors.response.use(
         }
       }
     }
+    window.dispatchEvent(new Event('online'));
+
     // Pass through successful responses
     return response;
   },
@@ -72,6 +74,14 @@ api.interceptors.response.use(
         window.location.assign('/login');
       }
     }
+    // Graceful Degradation for 502, 503, 504 errors
+    if (error.response && [502, 503, 504].includes(error.response.status)) {
+      logger.warn('Backend unavailable (502/503/504). Switching to offline mode.');
+      window.dispatchEvent(new Event('offline'));
+      // We don't remove the token. We just reject so the UI can handle the offline state
+      return Promise.reject(error);
+    }
+
     // For all other errors, just reject the promise
     return Promise.reject(error);
   }
