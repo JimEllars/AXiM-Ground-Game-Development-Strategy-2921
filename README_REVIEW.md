@@ -52,3 +52,8 @@
 - Cloudflare Worker to Supabase Direct Edge Proxy (Infrastructure/Hardening - 50%): Implemented an edge proxy inside `cloudflare/worker.ts` that safely passes JWT tokens to Supabase to fetch territory pins directly on the edge. Implemented `Cache-Control` (`s-maxage=300, stale-while-revalidate=600`) to maximize map responsiveness.
 - Mobile Map Touch & Pin Disposition Polish (Field UX/Resilience - 45%): Enhanced map interactions in `RepTerritoryMap.tsx` and `LeadDetails.tsx` by replacing popups with a lightweight, bottom-sliding MUI `Drawer`, preventing tap-through issues on mobile devices while streamlining disposition updates.
 - Edge-to-Database Health Telemetry (Telemetry - 5%): Configured the edge worker's `/health/edge-supabase` endpoint to track connection timeouts with Supabase and push `EDGE_SUPABASE_DISCONNECT` events directly to the backend telemetry route for ingestion into `telemetryWorker.ts`.
+
+# Phase 31 Micro-Sprint
+- Architected Test Account Provisioning via `seedTestAccount.js` script to seed specific user and mock leads.
+- Built Offline Sync Queue Visualizer within `SyncQueueDrawer.tsx` connected to `Navbar.tsx` for easy offline data viewing and force-sync capability.
+- Enforced Cloudflare SSL Strictness by adding HTTP rejection rules in the edge worker `cloudflare/worker.ts`.

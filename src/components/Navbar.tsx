@@ -17,6 +17,7 @@ import SafeIcon from '@/common/SafeIcon';
 import { useAuth } from '@/contexts/AuthContext';
 import { syncOfflineData, syncTelemetryQueue } from '@/syncEngine';
 import { db } from '@/db';
+import SyncQueueDrawer from "./SyncQueueDrawer";
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ const Navbar: React.FC = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [queueDrawerOpen, setQueueDrawerOpen] = useState(false);
 
 
   useEffect(() => {
@@ -191,6 +193,7 @@ const Navbar: React.FC = () => {
         {/* Sync Health Indicator */}
         <Tooltip title={`Sync Status: ${syncStatus}`}>
           <Box
+            onClick={() => setQueueDrawerOpen(true)}
             onDoubleClick={handleSyncDotDoubleClick}
             sx={{
               width: 12,
@@ -316,6 +319,7 @@ const Navbar: React.FC = () => {
           Diagnostics Sent.
         </Alert>
       </Snackbar>
+      <SyncQueueDrawer open={queueDrawerOpen} onClose={() => setQueueDrawerOpen(false)} />
     </AppBar>
   );
 };
