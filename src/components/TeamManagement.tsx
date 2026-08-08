@@ -52,7 +52,7 @@ const TeamManagement: React.FC = () => {
     email: '',
     firstName: '',
     lastName: '',
-    role: 'REP' as 'ADMIN' | 'MANAGER' | 'REP',
+    role: 'REP' as 'ORG_ADMIN' | 'TEAM_LEADER' | 'REP',
     password: '',
   });
 
@@ -305,8 +305,8 @@ const TeamManagement: React.FC = () => {
       return acc;
     }, {} as Record<string, number>);
     return [
-      { role: 'Admin', count: stats.ADMIN || 0, color: '#EF4444' },
-      { role: 'Manager', count: stats.MANAGER || 0, color: '#F59E0B' },
+      { role: 'Org Admin', count: stats.ORG_ADMIN || 0, color: '#EF4444' },
+      { role: 'Team Leader', count: stats.TEAM_LEADER || 0, color: '#F59E0B' },
       { role: 'Rep', count: stats.REP || 0, color: '#1E3A8A' },
     ];
   };
@@ -462,7 +462,7 @@ const TeamManagement: React.FC = () => {
                     <IconButton size="small" onClick={() => handleEditUser(user)}>
                       <SafeIcon icon={FiEdit2} />
                     </IconButton>
-                    <IconButton size="small" onClick={() => handleDeleteUser(user.id)} disabled={user.role === 'ADMIN'}>
+                    <IconButton size="small" onClick={() => handleDeleteUser(user.id)} disabled={user.role === 'ORG_ADMIN'}>
                       <SafeIcon icon={FiTrash2} />
                     </IconButton>
                   </TableCell>
@@ -566,8 +566,8 @@ const TeamManagement: React.FC = () => {
               label="Role"
             >
               <MenuItem value="REP">Field Representative</MenuItem>
-              <MenuItem value="MANAGER">Manager</MenuItem>
-              <MenuItem value="ADMIN">Administrator</MenuItem>
+              <MenuItem value="TEAM_LEADER">Team Leader</MenuItem>
+              <MenuItem value="ORG_ADMIN">Administrator</MenuItem>
             </Select>
           </FormControl>
           <TextField

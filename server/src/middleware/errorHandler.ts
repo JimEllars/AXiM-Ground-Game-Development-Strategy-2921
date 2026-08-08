@@ -26,6 +26,32 @@ const errorHandler = (err: any, req: Request, res: Response, next: NextFunction)
     error = { ...error, message: 'Invalid data provided.', statusCode: 400, isOperational: true };
   }
 
+  // Tenant access violation / RLS rejection (42501 in Postgres is insufficient_privilege)
+  if (err.code === '42501' || err.message === 'TENANT_MISMATCH') {
+    const reqUser = (req as any).user;
+
+    // Log structured tenant violation payload to local log file
+    const violationPayload = JSON.stringify({
+       type: 'TENANT_ACCESS_VIOLATION',
+       user_id: reqUser?.id || 'UNKNOWN',
+       organization_id: reqUser?.organization_id || 'UNKNOWN',
+       target_url: req.originalUrl,
+       method: req.method,
+       timestamp: new Date().toISOString()
+    });
+
+    // Using node fs to append to logs/client-exceptions.log synchronously for simplicity (a dedicated worker could poll this)
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const logPath = path.join(process.cwd(), 'logs', 'client-exceptions.log');
+      fs.mkdirSync(path.dirname(logPath), { recursive: true });
+      fs.appendFileSync(logPath, violationPayload + '\n');
+    } catch(e) {}
+
+    error = { ...error, message: 'Unauthorized data access attempt detected.', statusCode: 403, isOperational: false };
+  }
+
   // Telemetry pipeline: Catch non-operational errors and send to Core for diagnostics
   if (!error.isOperational) {
     const reqUser = (req as any).user;
