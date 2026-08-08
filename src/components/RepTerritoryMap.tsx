@@ -8,6 +8,7 @@ import { parseLeadLocation } from '@/common/locationUtils';
 import { Box, Typography, Button, TextField } from '@mui/material';
 import { useDebounce } from '@/hooks/useDebounce';
 import { db } from '@/db';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { syncOfflineData } from '@/syncEngine';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -97,20 +98,48 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
         'circle-color': [
           'match',
           ['get', 'status'],
-          'New', '#1E3A8A', // AXiM Primary
-          'Uncontacted', '#1E3A8A', // AXiM Primary
-          'Contacted', '#F59E0B', // Accent Warning
-          'Follow-up', '#F59E0B', // Accent Warning
-          'Sold', '#10B981', // Accent Success
-          'Completed', '#10B981', // Accent Success
-          'Not Interested', '#EF4444', // Accent Danger
-          'Not Home', '#EF4444', // Accent Danger
-          '#1E3A8A' // Default
+          'New', '#9E9E9E', // Unattempted
+          'Uncontacted', '#9E9E9E', // Unattempted
+          'Contacted', '#F59E0B', // Follow Up
+          'Follow-up', '#F59E0B', // Follow Up
+          'Follow Up', '#F59E0B', // Follow Up
+          'Left Flyer', '#F59E0B', // Follow Up
+          'Sold', '#10B981', // Qualified/Sale
+          'Qualified', '#10B981', // Qualified/Sale
+          'Completed', '#10B981', // Qualified/Sale
+          'Not Interested', '#EF4444', // Not Home (or similar disposition)
+          'Not Home', '#EF4444', // Not Home
+          '#9E9E9E' // Default
         ]
     }
   };
 
-  const filteredLeads = leads.filter(lead => {
+
+  const recentInteractions = useLiveQuery(() => db.interactions.toArray(), []);
+
+  // Merge interactions into leads to dynamically update status
+  const mergedLeads = React.useMemo(() => {
+    if (!recentInteractions) return leads;
+
+    // Map of leadId -> latest outcome
+    const latestOutcomes = new Map();
+    recentInteractions.forEach(i => {
+       const existing = latestOutcomes.get(i.leadId);
+       if (!existing || new Date(i.interactionDate) > new Date(existing.interactionDate)) {
+           latestOutcomes.set(i.leadId, i);
+       }
+    });
+
+    return leads.map(lead => {
+       const interaction = latestOutcomes.get(lead.id);
+       if (interaction) {
+           return { ...lead, status: interaction.outcome };
+       }
+       return lead;
+    });
+  }, [leads, recentInteractions]);
+
+  const filteredLeads = mergedLeads.filter(lead => {
     if (!debouncedSearchTerm) return true;
     const name = `${lead.firstName || ''} ${lead.lastName || ''}`.toLowerCase();
     const address = (lead.streetAddress || '').toLowerCase();
@@ -206,7 +235,15 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
           placeholder="Search leads by name or address..."
         />
       </Box>
-    <Map
+    <Map transformRequest={(url, resourceType) => {
+        if (resourceType === 'Tile' && url.includes('api.mapbox.com')) {
+          const proxyUrl = import.meta.env.VITE_AXIM_PROXY_URL;
+          if (proxyUrl) {
+            return { url: url.replace('https://api.mapbox.com', proxyUrl) };
+          }
+        }
+        return { url };
+      }}
       initialViewState={initialViewState}
       style={{ width: '100%', height: 400 }}
       mapStyle="mapbox://styles/mapbox/streets-v9"

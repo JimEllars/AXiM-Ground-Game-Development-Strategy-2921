@@ -27,3 +27,17 @@
 - Configured Express to trust the proxy and updated `express-rate-limit` configs to accurately use `CF-Connecting-IP` as the key generation mechanism.
 - Built a secure backend R2 storage pipeline via the `POST /api/interactions/upload-audio` route utilizing `multer` and `@aws-sdk/client-s3` to prepare for Noota transcriptions.
 - Added a frontend UI stub for the microphone in the `LeadInteractionForm` to prompt and verify user device permissions.
+
+# Phase 28 Micro-Sprint
+**Task 1: Progressive Web App (PWA) Configuration**
+- Updated `vite.config.js` to ensure the PWA manifest contains `display: 'standalone'`, defined AXiM brand colors (`#1E3A8A`) for the mobile status bar, and mapped purpose `any maskable` to 192x192 and 512x512 maskable app icons.
+- Added mock maskable app icons `pwa-192x192.png` and `pwa-512x512.png` to the `public/` directory to satisfy the manifest requirements for installability.
+- Preconfigured the Workbox service worker caching strategy to strictly cache the shell and static JS/CSS chunks for offline reliability.
+
+**Task 2: Cloudflare Edge Map Tile Caching**
+- Configured the Vite `runtimeCaching` rule to broadly cache map vector tiles (from both `api.mapbox.com` and `cloudflare` matching subdomains) with a `CacheFirst` strategy.
+- Implemented `transformRequest` interception on the `react-map-gl` instances (in `RepTerritoryMap`, `TerritoryMap`, `Dashboard`, `AdminDashboard`, `LeadDetails`) to dynamically rewrite tile fetch requests, routing them directly to the `VITE_AXIM_PROXY_URL` Cloudflare gateway if configured.
+
+**Task 3: Disposition-Based Map Pins**
+- Updated the React Map GL point layer rendering configuration (`leads-points` in `RepTerritoryMap.tsx`) with strict data-driven styling matching disposition states: Grey (Unattempted), Yellow (Follow Up), Green (Qualified/Sale), and Red (Not Home).
+- Incorporated `useLiveQuery` from `dexie-react-hooks` to subscribe directly to the `db.interactions` table in IndexedDB. Map leads now automatically merge with the latest localized disposition logs without requiring a page refresh.
