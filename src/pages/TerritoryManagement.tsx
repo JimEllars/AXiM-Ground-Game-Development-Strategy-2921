@@ -58,7 +58,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
       );
 
       const assignMutation = useMutation(
-        ({ territoryId, userId }: { territoryId: string; userId: string }) => territoriesAPI.assign(territoryId, userId),
+        ({ territoryId, userId, teamId }: { territoryId: string; userId?: string; teamId?: string }) => territoriesAPI.assign(territoryId, userId, teamId),
         {
           onSuccess: (_, { territoryId, userId }) => {
             const territory = territories.find((t: any) => t.id === territoryId);

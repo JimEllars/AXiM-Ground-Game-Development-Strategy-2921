@@ -109,7 +109,7 @@ CREATE TABLE territory_assignments (
     territory_id UUID NOT NULL REFERENCES territories(id) ON DELETE CASCADE,
     assigned_by UUID NOT NULL REFERENCES users(id),
     assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, territory_id)
+    -- UNIQUE(user_id, territory_id)
 );
 
 -- Interactions/activities table
@@ -223,3 +223,13 @@ SELECT id,
        CASE WHEN id = '550e8400-e29b-41d4-a716-446655440004' THEN 'NY' ELSE 'CA' END,
        CASE WHEN id = '550e8400-e29b-41d4-a716-446655440004' THEN '10001' ELSE '90001' END
 FROM lead_insert;
+
+-- Apply Phase 33 Territory Team assignments modification
+ALTER TABLE territory_assignments ALTER COLUMN user_id DROP NOT NULL;
+ALTER TABLE territory_assignments ADD COLUMN team_id UUID REFERENCES teams(id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX territory_assignments_user_id_territory_id_idx ON territory_assignments (user_id, territory_id) WHERE user_id IS NOT NULL;
+CREATE UNIQUE INDEX territory_assignments_team_id_territory_id_idx ON territory_assignments (team_id, territory_id) WHERE team_id IS NOT NULL;
+ALTER TABLE territory_assignments ADD CONSTRAINT territory_assignments_target_check CHECK (
+    (user_id IS NOT NULL AND team_id IS NULL) OR
+    (user_id IS NULL AND team_id IS NOT NULL)
+);

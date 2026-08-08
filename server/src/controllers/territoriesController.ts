@@ -110,7 +110,7 @@ export const deleteTerritory = catchAsync(
 export const assignTerritory = catchAsync(
   async (req: AuthRequest, res: Response, next: any) => {
     const { territoryId } = req.params;
-    const { userId } = req.body;
+    const { userId, teamId } = req.body;
     const assignedBy = req.user!;
 
     if (assignedBy.role !== "ADMIN" && assignedBy.role !== "MANAGER") {
@@ -119,8 +119,8 @@ export const assignTerritory = catchAsync(
         .json({ error: "You are not authorized to assign territories." });
     }
 
-    if (!userId) {
-      return res.status(400).json({ error: "User ID is required" });
+    if (!userId && !teamId) {
+      return res.status(400).json({ error: "User ID or Team ID is required" });
     }
 
     // Verify territory belongs to organization
@@ -138,25 +138,47 @@ export const assignTerritory = catchAsync(
         });
     }
 
-    // Verify user belongs to organization
-    const userResult = await pool.query(
-      "SELECT id FROM users WHERE id = $1 AND organization_id = $2",
-      [userId, assignedBy.organization_id],
-    );
+    if (userId) {
+      // Verify user belongs to organization
+      const userResult = await pool.query(
+        "SELECT id FROM users WHERE id = $1 AND organization_id = $2",
+        [userId, assignedBy.organization_id],
+      );
 
-    if (userResult.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ error: "User not found in your organization." });
+      if (userResult.rows.length === 0) {
+        return res
+          .status(404)
+          .json({ error: "User not found in your organization." });
+      }
+
+      // Create assignment (ON CONFLICT DO NOTHING to handle duplicates)
+      await pool.query(
+        `INSERT INTO territory_assignments (user_id, territory_id, assigned_by)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (user_id, territory_id) WHERE user_id IS NOT NULL DO NOTHING`,
+        [userId, territoryId, assignedBy.id],
+      );
+    } else if (teamId) {
+      // Verify team belongs to organization
+      const teamResult = await pool.query(
+        "SELECT id FROM teams WHERE id = $1 AND organization_id = $2",
+        [teamId, assignedBy.organization_id],
+      );
+
+      if (teamResult.rows.length === 0) {
+        return res
+          .status(404)
+          .json({ error: "Team not found in your organization." });
+      }
+
+      // Create assignment
+      await pool.query(
+        `INSERT INTO territory_assignments (team_id, territory_id, assigned_by)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (team_id, territory_id) WHERE team_id IS NOT NULL DO NOTHING`,
+        [teamId, territoryId, assignedBy.id],
+      );
     }
-
-    // Create assignment (ON CONFLICT DO NOTHING to handle duplicates)
-    await pool.query(
-      `INSERT INTO territory_assignments (user_id, territory_id, assigned_by)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id, territory_id) DO NOTHING`,
-      [userId, territoryId, assignedBy.id],
-    );
 
     res.json({ message: "Territory assigned successfully" });
   },

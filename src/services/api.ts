@@ -119,8 +119,8 @@ export const territoriesAPI = {
     api.get('/territories'),
   delete: (id: string) => 
     api.delete(`/territories/${id}`),
-  assign: (territoryId: string, userId: string) => 
-    api.post(`/territories/${territoryId}/assign`, { userId }),
+  assign: (territoryId: string, userId?: string, teamId?: string) =>
+    api.post(`/territories/${territoryId}/assign`, { userId, teamId }),
   getAvailableReps: () => 
     api.get('/territories/available-reps'),
   getMyTerritories: () => 
