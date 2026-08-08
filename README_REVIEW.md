@@ -41,3 +41,9 @@
 **Task 3: Disposition-Based Map Pins**
 - Updated the React Map GL point layer rendering configuration (`leads-points` in `RepTerritoryMap.tsx`) with strict data-driven styling matching disposition states: Grey (Unattempted), Yellow (Follow Up), Green (Qualified/Sale), and Red (Not Home).
 - Incorporated `useLiveQuery` from `dexie-react-hooks` to subscribe directly to the `db.interactions` table in IndexedDB. Map leads now automatically merge with the latest localized disposition logs without requiring a page refresh.
+
+# Phase 29 Micro-Sprint
+- Graceful Degradation & Session Preservation (Hardening - 50%): Updated Axios response interceptors in `api.ts` to intercept 502/503/504 backend errors, instantly dispatching an 'offline' event rather than forcing a logout. `AuthContext.tsx` now parses the JWT locally in offline mode to maintain the session.
+- Cloudflare Worker Edge Caching (Infrastructure Optimization - 40%): Configured `cloudflare/worker.ts` to intercept mapping tile requests routing through the proxy gateway, serving Mapbox/Google tiles directly from the Cloudflare edge cache (Cache API) with a 7-day TTL.
+- Persistent Offline/Maintenance UI Banner (UI Polish - 10%): Implemented a sleek, fixed MUI alert banner in `Layout.tsx` that slides down when the application enters offline mode (such as during backend deployments), ensuring clear communication to canvassers.
+- Added corresponding tests to `apiInterceptors.test.ts` to verify that 502/503 errors do not trigger logout events.

@@ -136,6 +136,33 @@ describe('API Interceptors', () => {
     expect(Storage.prototype.removeItem).toHaveBeenCalledWith('token');
   });
 
+  it('response interceptor should not logout on 502/503/504 errors and dispatch offline event', async () => {
+    const error = {
+      response: {
+        status: 503
+      }
+    };
+
+    const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent');
+    vi.spyOn(logger, 'warn').mockImplementation(() => {});
+
+    await expect(responseInterceptorError(error)).rejects.toBe(error);
+
+    expect(Storage.prototype.removeItem).not.toHaveBeenCalled();
+    expect(dispatchEventSpy).toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith('Backend unavailable (502/503/504). Switching to offline mode.');
+  });
+
+  it('response interceptor should dispatch online event on success', () => {
+    const dispatchEventSpy = vi.spyOn(window, 'dispatchEvent');
+    const response = { data: 'test' };
+
+    const result = responseInterceptorSuccess(response);
+
+    expect(result).toBe(response);
+    expect(dispatchEventSpy).toHaveBeenCalled();
+  });
+
   it('response interceptor should just reject for other errors', async () => {
     const assignMock = vi.fn();
     try {

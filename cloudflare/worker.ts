@@ -6,6 +6,37 @@ export default {
   async fetch(request, env): Promise<Response> {
     const requestUrl = new URL(request.url);
 
+    // Intercept map tile requests for edge caching (routed via VITE_AXIM_PROXY_URL replacing api.mapbox.com)
+    // The request to worker has path like /v4/mapbox.mapbox-streets-v8/1/0/0.mvt
+    if (requestUrl.pathname.includes('/v4/') || requestUrl.pathname.includes('/styles/v1/') || requestUrl.pathname.includes('/fonts/') || requestUrl.searchParams.has('access_token')) {
+      const cache = (caches as any).default;
+      let response = await cache.match(request);
+
+      if (!response) {
+        // Reconstruct the original mapbox URL
+        const mapboxUrl = new URL(request.url);
+        mapboxUrl.hostname = 'api.mapbox.com';
+
+        const providerRequest = new Request(mapboxUrl.toString(), request);
+        response = await fetch(providerRequest);
+
+        if (response.ok) {
+          // Clone the response to modify headers and store in cache
+          response = new Response(response.body, response);
+          response.headers.set('Cache-Control', 'public, max-age=604800'); // 7 days
+          response.headers.set('Access-Control-Allow-Origin', '*'); // Preserve CORS
+
+          // Put the clone in cache (we must clone before reading or caching)
+          // Wait, fetch might already return cors headers. We ensure them.
+          const cacheResponse = response.clone();
+          // We can put it in cache using the original worker request
+          // It's usually better to cache based on the worker request
+          await cache.put(request, cacheResponse);
+        }
+      }
+      return response;
+    }
+
     if (!requestUrl.pathname.startsWith("/api/")) {
       return env.ASSETS.fetch(request);
     }
