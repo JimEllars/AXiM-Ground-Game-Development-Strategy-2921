@@ -47,3 +47,8 @@
 - Cloudflare Worker Edge Caching (Infrastructure Optimization - 40%): Configured `cloudflare/worker.ts` to intercept mapping tile requests routing through the proxy gateway, serving Mapbox/Google tiles directly from the Cloudflare edge cache (Cache API) with a 7-day TTL.
 - Persistent Offline/Maintenance UI Banner (UI Polish - 10%): Implemented a sleek, fixed MUI alert banner in `Layout.tsx` that slides down when the application enters offline mode (such as during backend deployments), ensuring clear communication to canvassers.
 - Added corresponding tests to `apiInterceptors.test.ts` to verify that 502/503 errors do not trigger logout events.
+
+# Phase 30 Micro-Sprint
+- Cloudflare Worker to Supabase Direct Edge Proxy (Infrastructure/Hardening - 50%): Implemented an edge proxy inside `cloudflare/worker.ts` that safely passes JWT tokens to Supabase to fetch territory pins directly on the edge. Implemented `Cache-Control` (`s-maxage=300, stale-while-revalidate=600`) to maximize map responsiveness.
+- Mobile Map Touch & Pin Disposition Polish (Field UX/Resilience - 45%): Enhanced map interactions in `RepTerritoryMap.tsx` and `LeadDetails.tsx` by replacing popups with a lightweight, bottom-sliding MUI `Drawer`, preventing tap-through issues on mobile devices while streamlining disposition updates.
+- Edge-to-Database Health Telemetry (Telemetry - 5%): Configured the edge worker's `/health/edge-supabase` endpoint to track connection timeouts with Supabase and push `EDGE_SUPABASE_DISCONNECT` events directly to the backend telemetry route for ingestion into `telemetryWorker.ts`.
