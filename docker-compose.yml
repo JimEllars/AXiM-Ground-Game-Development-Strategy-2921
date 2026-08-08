@@ -40,6 +40,7 @@ services:
       - AXIM_CORE_API_URL=${AXIM_CORE_API_URL:-http://host.docker.internal:4000/api}
       - AXIM_CORE_API_KEY=${AXIM_CORE_API_KEY:-}
       - WEBHOOK_SECRET_KEY=${WEBHOOK_SECRET_KEY:-12345678901234567890123456789012}
+      - ORIGIN_AUTH_TOKEN=${ORIGIN_AUTH_TOKEN:?ORIGIN_AUTH_TOKEN must be set for production}
     depends_on:
       - db
       - redis

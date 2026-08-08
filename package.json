@@ -11,6 +11,10 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "cloudflare:types": "wrangler types ./cloudflare/env.d.ts --env-file=.dev.vars.example",
+    "cloudflare:typecheck": "tsc --project cloudflare/tsconfig.json",
+    "deploy:cloudflare:staging": "npm run build && npm run cloudflare:types && npm run cloudflare:typecheck && wrangler deploy --env staging",
+    "deploy:cloudflare:production": "npm run build && npm run cloudflare:types && npm run cloudflare:typecheck && wrangler deploy --env production",
     "test:serve": "vite build && vite preview --port 5173 --strictPort",
     "test:e2e": "concurrently --kill-others --success first \"npm run server:dev\" \"npm run test:serve\"",
     "e2e": "npm run db:reset && npm run db:seed && start-server-and-test test:e2e 'http://127.0.0.1:3001/health|http://localhost:5173' 'npx playwright test tests/e2e/basic.spec.ts'",
@@ -77,6 +81,7 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.5.3",
     "vite": "^5.4.21",
-    "vitest": "^3.2.6"
+    "vitest": "^3.2.6",
+    "wrangler": "^4.120.0"
   }
 }
