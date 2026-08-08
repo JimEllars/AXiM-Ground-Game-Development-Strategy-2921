@@ -6,6 +6,11 @@ export default {
   async fetch(request, env): Promise<Response> {
     const requestUrl = new URL(request.url);
 
+    if (requestUrl.protocol === "http:") {
+      return new Response("Strict HTTPS is required.", { status: 403 });
+    }
+
+
     // Intercept map tile requests for edge caching (routed via VITE_AXIM_PROXY_URL replacing api.mapbox.com)
     // The request to worker has path like /v4/mapbox.mapbox-streets-v8/1/0/0.mvt
     if (requestUrl.pathname.includes('/v4/') || requestUrl.pathname.includes('/styles/v1/') || requestUrl.pathname.includes('/fonts/') || requestUrl.searchParams.has('access_token')) {
