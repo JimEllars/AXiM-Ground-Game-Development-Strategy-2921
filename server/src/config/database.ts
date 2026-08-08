@@ -10,6 +10,8 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const { Pool } = pg;
+const useSsl =
+  process.env.NODE_ENV === 'production' || process.env.DB_SSL === 'true';
 
 // Enforce DB_PASSWORD in production
 if (process.env.NODE_ENV === 'production' && !process.env.DB_PASSWORD) {
@@ -22,7 +24,7 @@ export const pool = new Pool({
   database: process.env.DB_NAME || 'axim_ground_game',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: useSsl ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
