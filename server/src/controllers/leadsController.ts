@@ -1,5 +1,6 @@
 import { getLeads as repoGetLeads } from "../repositories/LeadRepository.js";
 import logger from '../utils/logger.js';
+import { enrollInEmailItNurture } from '../services/emailitService.js';
 import { Response } from "express";
 import { pool } from "../config/database.js";
 import { AuthRequest } from "../types/index.js";

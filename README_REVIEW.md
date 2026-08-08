@@ -6,3 +6,8 @@
 - [x] Refactored Row-Level Security (`database/rls_migration_phase33.sql`) to check team hierarchy boundaries: Team Leaders have visibility into team territories, and Reps are filtered accordingly.
 - [x] Implemented Tenant Violation Telemetry: Modified `server/src/middleware/errorHandler.ts` to intercept RLS Postgres error `42501` and JWT mismatch errors. Writes structured `TENANT_ACCESS_VIOLATION` payloads to local logs.
 - [x] Front-end updates pushed and tested; local test suites verified against regressions (Note: test execution environment DB issues persist in the local sandbox but are unrelated to application code).
+
+# Phase 35 Micro-Sprint
+- Integrated EmailIt Outbound Drip Automation: configured leads to enroll in nurture campaigns upon transitioning to `Qualified` or `Follow Up` statuses.
+- Added Cloudflare Edge Rate-Limit Perimeter Guard: updated `cloudflare/worker.ts` and `wrangler.jsonc` to block brute force auth attempts and map tile scraping requests dynamically using CF KV bindings.
+- Built Rapid Disposition Map Filter Bar: applied MUI stack of chips in `RepTerritoryMap.tsx` enabling canvas reps to live-filter pins with zero network requests.

@@ -2,6 +2,15 @@
  * Serves the PWA from Cloudflare and forwards API requests to the existing
  * stateful Express service without exposing that service directly to clients.
  */
+
+export interface Env {
+  API_ORIGIN: string;
+  ORIGIN_AUTH_TOKEN: string;
+  ENVIRONMENT: string;
+  ASSETS: any;
+  RATE_LIMITER: any;
+}
+
 export default {
   async fetch(request, env): Promise<Response> {
     const requestUrl = new URL(request.url);
@@ -42,7 +51,44 @@ export default {
       return response;
     }
 
+
+    // Task 2: Cloudflare Edge Rate-Limit Perimeter Guard
+    const clientIp = request.headers.get("cf-connecting-ip") || "unknown-ip";
+    const path = requestUrl.pathname;
+
+    // Check if path is targeted for rate limiting
+    const isLogin = path === "/api/auth/login";
+    const isMapPin = path === "/edge/territory-pins";
+
+    if (isLogin || isMapPin) {
+      if (env.RATE_LIMITER) {
+        const limitType = isLogin ? "login" : "mappins";
+        const limitCount = isLogin ? 10 : 100;
+        const windowKey = `${clientIp}:${limitType}:${Math.floor(Date.now() / 60000)}`;
+
+        let currentCount = 0;
+        try {
+          const val = await env.RATE_LIMITER.get(windowKey);
+          if (val) {
+             currentCount = parseInt(val, 10);
+          }
+          if (currentCount >= limitCount) {
+             console.warn(`Rate limit exceeded for ${clientIp} on ${path}`);
+             return new Response(JSON.stringify({ error: "Too Many Requests" }), {
+                status: 429,
+                headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+             });
+          }
+          await env.RATE_LIMITER.put(windowKey, (currentCount + 1).toString(), { expirationTtl: 60 });
+        } catch (err) {
+          console.error("Rate Limiter error", err);
+          // Fails open
+        }
+      }
+    }
+
     if (!requestUrl.pathname.startsWith("/api/")) {
+
       return env.ASSETS.fetch(request);
     }
 
