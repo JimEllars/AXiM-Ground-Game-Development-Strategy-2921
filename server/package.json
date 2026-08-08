@@ -4,9 +4,9 @@
   "type": "module",
   "scripts": {
     "dev": "npm run build && npm run start",
-    "build": "rm -rf dist && tsc",
+    "build": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
     "start": "node dist/server.js",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "start:test": "tsx src/server.ts",
     "db:migrate": "node dist/scripts/migrate.js",
     "db:seed": "npm run build && node dist/services/seedDatabase.js"

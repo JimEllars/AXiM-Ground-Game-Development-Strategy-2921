@@ -6,6 +6,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import errorHandler from "./middleware/errorHandler.js";
+import { requireOriginToken } from "./middleware/originAuth.js";
 
 // Import routes
 import authRoutes from "./routes/auth.js";
@@ -102,6 +103,7 @@ app.get("/health", (req, res) => {
 });
 
 // API routes
+app.use("/api", requireOriginToken);
 app.use("/api/auth", authRoutes);
 app.use("/api/territories", territoryRoutes);
 app.use("/api/leads", leadRoutes);
