@@ -68,6 +68,26 @@ describe('Database Config', () => {
     expect(callArgs.password).not.toBe('password');
   });
 
+  it('should enable TLS when DB_SSL is set outside production', async () => {
+    process.env.NODE_ENV = 'development';
+    process.env.DB_SSL = 'true';
+
+    const mockPoolInstance = {
+      on: jest.fn(),
+    };
+    const MockPool = jest.fn(() => mockPoolInstance);
+
+    await jest.unstable_mockModule('pg', () => ({
+      default: { Pool: MockPool },
+      Pool: MockPool,
+    }));
+
+    await import('../database.js');
+
+    const callArgs = (MockPool as any).mock.calls[0][0];
+    expect(callArgs.ssl).toEqual({ rejectUnauthorized: false });
+  });
+
   it('should throw error if DB_PASSWORD is missing in production', async () => {
     process.env.NODE_ENV = 'production';
     delete process.env.DB_PASSWORD;
