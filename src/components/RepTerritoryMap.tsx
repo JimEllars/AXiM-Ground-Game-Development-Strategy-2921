@@ -5,7 +5,8 @@ import Map, { Source, Layer, Popup } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Territory, Lead } from '@/types';
 import { parseLeadLocation } from '@/common/locationUtils';
-import { Box, Typography, Button, TextField } from '@mui/material';
+import { Box, Typography, Button, TextField, Chip, Stack } from '@mui/material';
+
 import { useDebounce } from '@/hooks/useDebounce';
 import { db } from '@/db';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -20,7 +21,10 @@ interface RepTerritoryMapProps {
 
 const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) => {
   const [popupInfo, setPopupInfo] = useState<any>(null);
+
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   if (!boundary) {
@@ -139,11 +143,21 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
     });
   }, [leads, recentInteractions]);
 
+  const statuses = ['All', 'Unattempted', 'Not Home', 'Follow Up', 'Qualified'];
+
   const filteredLeads = mergedLeads.filter(lead => {
+    if (statusFilter !== 'All') {
+       const mappedStatus = lead.status === 'New' || lead.status === 'Uncontacted' ? 'Unattempted'
+                           : lead.status === 'Contacted' || lead.status === 'Follow-up' || lead.status === 'Follow Up' || lead.status === 'Left Flyer' ? 'Follow Up'
+                           : lead.status === 'Sold' || lead.status === 'Qualified' || lead.status === 'Completed' ? 'Qualified'
+                           : lead.status === 'Not Interested' || lead.status === 'Not Home' ? 'Not Home'
+                           : lead.status;
+       if (mappedStatus !== statusFilter) return false;
+    }
     if (!debouncedSearchTerm) return true;
-    const name = `${lead.firstName || ''} ${lead.lastName || ''}`.toLowerCase();
-    const address = (lead.streetAddress || '').toLowerCase();
     const term = debouncedSearchTerm.toLowerCase();
+    const name = `${lead.firstName || ''} ${lead.lastName || ''}`.toLowerCase();
+    const address = `${lead.streetAddress || ''} ${lead.city || ''}`.toLowerCase();
     return name.includes(term) || address.includes(term);
   });
 
@@ -223,6 +237,7 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
   };
 
   return (
+
     <MapErrorBoundary fallbackLeads={leads}>
       <Box sx={{ mb: 2 }}>
         <TextField
@@ -233,8 +248,22 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search leads by name or address..."
+          sx={{ mb: 1 }}
         />
+        <Stack direction="row" spacing={1} sx={{ overflowX: 'auto', pb: 1 }}>
+          {statuses.map(status => (
+            <Chip
+              key={status}
+              label={status}
+              onClick={() => setStatusFilter(status)}
+              color={statusFilter === status ? 'primary' : 'default'}
+              variant={statusFilter === status ? 'filled' : 'outlined'}
+              clickable
+            />
+          ))}
+        </Stack>
       </Box>
+
     <Map transformRequest={(url, resourceType) => {
         if (resourceType === 'Tile' && url.includes('api.mapbox.com')) {
           const proxyUrl = import.meta.env.VITE_AXIM_PROXY_URL;

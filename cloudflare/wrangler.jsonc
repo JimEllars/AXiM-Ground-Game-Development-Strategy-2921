@@ -4,6 +4,15 @@
   "main": "./cloudflare/worker.ts",
   "compatibility_date": "2026-08-07",
   "compatibility_flags": ["nodejs_compat"],
+
+  "kv_namespaces": [
+    {
+      "binding": "RATE_LIMITER",
+      "id": "rate_limiter_local",
+      "preview_id": "rate_limiter_preview"
+    }
+  ],
+
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
