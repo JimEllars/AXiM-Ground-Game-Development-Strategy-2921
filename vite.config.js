@@ -13,7 +13,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\.mapbox\.com\/.*/i,
+            urlPattern: /^https:\/\/(api\.mapbox\.com|.*cloudflare.*)\/.*/i,
             handler: 'CacheFirst',
             options: {
               cacheName: 'mapbox-cache',
@@ -29,19 +29,21 @@ export default defineConfig({
         name: 'AXiM Ground Game',
         short_name: 'Ground Game',
         description: 'Offline-First Canvassing App',
-        theme_color: '#1976d2',
+        theme_color: '#1E3A8A',
         background_color: '#ffffff',
         display: 'standalone',
         icons: [
           {
             src: 'pwa-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
             src: 'pwa-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
       }

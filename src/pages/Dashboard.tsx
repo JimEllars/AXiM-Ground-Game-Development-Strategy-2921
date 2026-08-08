@@ -66,7 +66,15 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
           <Typography variant="h6" gutterBottom>
             Live Operations Map
           </Typography>
-          <Map
+          <Map transformRequest={(url, resourceType) => {
+        if (resourceType === 'Tile' && url.includes('api.mapbox.com')) {
+          const proxyUrl = import.meta.env.VITE_AXIM_PROXY_URL;
+          if (proxyUrl) {
+            return { url: url.replace('https://api.mapbox.com', proxyUrl) };
+          }
+        }
+        return { url };
+      }}
             initialViewState={{
               longitude: -98.5795,
               latitude: 39.8283,

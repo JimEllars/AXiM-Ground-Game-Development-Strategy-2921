@@ -33,6 +33,7 @@
     "axios": "^1.7.2",
     "crypto-js": "^4.2.0",
     "dexie": "^4.4.2",
+    "dexie-react-hooks": "^4.4.0",
     "framer-motion": "^11.18.2",
     "idb-keyval": "^6.2.2",
     "mapbox-gl": "^3.16.0",
