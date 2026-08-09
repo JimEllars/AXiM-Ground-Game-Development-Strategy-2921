@@ -1,4 +1,9 @@
-import logger from '../../utils/logger.js';
+const fs = require('fs');
+let geoPath = 'server/src/services/__tests__/geocoding.test.ts';
+let geo = fs.readFileSync(geoPath, 'utf8');
+
+// I will overwrite it with a fresh correctly typed mock because it seems it was corrupted during some find-replace.
+const content = `import logger from '../../utils/logger.js';
 import { jest } from '@jest/globals';
 
 const mockGet = jest.fn<any>();
@@ -130,3 +135,6 @@ describe('geocoding service', () => {
     });
   });
 });
+`;
+
+fs.writeFileSync(geoPath, content);
