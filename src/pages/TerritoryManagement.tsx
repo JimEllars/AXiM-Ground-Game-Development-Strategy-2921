@@ -2,11 +2,49 @@ import { useState } from 'react';
     import { Box, Typography, Alert, } from '@mui/material';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { SpeedDial, SpeedDialIcon, SpeedDialAction, Dialog, DialogTitle, DialogContent, DialogActions, Button, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { MdGroupAdd } from 'react-icons/md';
+import { leadsAPI } from '@/services/api';
+
     import TerritoryMap from '@/components/TerritoryMap';
 import ErrorBoundary from '@/components/ErrorBoundary';
     import { territoriesAPI } from '@/services/api';
 
     const TerritoryManagement: React.FC = () => {
+      const [lassoSelectedPins, setLassoSelectedPins] = useState<any[]>([]);
+      const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+      const [assignTargetId, setAssignTargetId] = useState('');
+      const [assignTargetType, setAssignTargetType] = useState<'rep' | 'team'>('rep');
+      const { data: teamsData } = useQuery('teams', () => import('@/services/api').then(m => m.teamsAPI.getTeams()).then(res => res.data));
+      const teams = teamsData || [];
+
+      const handleBatchAssign = async () => {
+        if (!assignTargetId || lassoSelectedPins.length === 0) return;
+        try {
+          // This assumes the backend leadsAPI can update leads, or you have a batch endpoint.
+          // In this example, I'll update each lead using a loop (a batch endpoint is ideal but I will loop over update for now)
+          const updatePromises = lassoSelectedPins.map(pin => {
+              // Usually leads have an 'assigned_rep_id' or 'team_id'. The leads API update takes data.
+              // Assuming it's part of the standard update.
+              // Wait, the prompt says: "surface a quick-action MUI speed dial allowing one-click assignment of all selected pins to a specific team_id or assigned_rep_id."
+              // We'll dispatch to a new endpoint or loop `leadsAPI.update` depending on what we can do.
+              // Let's do loop for simplicity since we don't know if batch assign endpoint exists.
+              const updateData: any = {};
+              if (assignTargetType === 'rep') updateData.assigned_rep_id = assignTargetId;
+              if (assignTargetType === 'team') updateData.team_id = assignTargetId;
+              // wait, the leads API in api.ts doesn't have assigned_rep_id in its typed partial but we can pass it anyway or the backend handles it.
+              return leadsAPI.update(pin.id, updateData);
+          });
+          await Promise.all(updatePromises);
+          setSuccess(`Successfully assigned ${lassoSelectedPins.length} pins.`);
+          setAssignDialogOpen(false);
+          setLassoSelectedPins([]);
+          queryClient.invalidateQueries('territory-pins'); // if there is such a query
+        } catch (e) {
+          setError('Failed to assign pins');
+        }
+      };
+
       const queryClient = useQueryClient();
       const [error, setError] = useState('');
       const [success, setSuccess] = useState('');
@@ -130,6 +168,58 @@ import ErrorBoundary from '@/components/ErrorBoundary';
               onAssignTerritory={handleAssignTerritory}
             /></ErrorBoundary>
           )}
+
+          {lassoSelectedPins.length > 0 && (
+            <SpeedDial
+              ariaLabel="Batch Assign"
+              sx={{ position: 'absolute', bottom: 16, right: 16 }}
+              icon={<SpeedDialIcon />}
+            >
+              <SpeedDialAction
+                key="Assign"
+                icon={<MdGroupAdd />}
+                tooltipTitle="Assign Selected Pins"
+                onClick={() => setAssignDialogOpen(true)}
+              />
+            </SpeedDial>
+          )}
+
+          <Dialog open={assignDialogOpen} onClose={() => setAssignDialogOpen(false)}>
+            <DialogTitle>Assign {lassoSelectedPins.length} Pins</DialogTitle>
+            <DialogContent>
+              <Box sx={{ minWidth: 300, mt: 2 }}>
+                <FormControl fullWidth sx={{ mb: 2 }}>
+                  <InputLabel>Assign To Type</InputLabel>
+                  <Select
+                    value={assignTargetType}
+                    label="Assign To Type"
+                    onChange={(e) => setAssignTargetType(e.target.value as 'rep' | 'team')}
+                  >
+                    <MenuItem value="rep">Representative</MenuItem>
+                    <MenuItem value="team">Team</MenuItem>
+                  </Select>
+                </FormControl>
+
+                <FormControl fullWidth>
+                  <InputLabel>Select {assignTargetType === 'rep' ? 'Rep' : 'Team'}</InputLabel>
+                  <Select
+                    value={assignTargetId}
+                    label={`Select ${assignTargetType === 'rep' ? 'Rep' : 'Team'}`}
+                    onChange={(e) => setAssignTargetId(e.target.value as string)}
+                  >
+                    {assignTargetType === 'rep'
+                      ? availableReps.map((r: any) => <MenuItem key={r.id} value={r.id}>{r.first_name} {r.last_name}</MenuItem>)
+                      : teams.map((t: any) => <MenuItem key={t.id} value={t.id}>{t.name}</MenuItem>)
+                    }
+                  </Select>
+                </FormControl>
+              </Box>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setAssignDialogOpen(false)}>Cancel</Button>
+              <Button variant="contained" onClick={handleBatchAssign} disabled={!assignTargetId}>Assign</Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       );
     };

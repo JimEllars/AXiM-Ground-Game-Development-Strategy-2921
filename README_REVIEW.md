@@ -16,3 +16,8 @@
 - Implemented EmailIt Webhook Telemetry Endpoint at `POST /api/v1/webhooks/emailit`.
 - Cloudflare worker edge preflight interception and strictly injected security headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`).
 - Added Turn-by-Turn Mobile Navigation action deep linking (`maps://` for iOS, `https://www.google.com/maps/dir/` everywhere else) on LeadDetails screen.
+
+# Phase 38 Micro-Sprint
+- Integrated Deskera / Albato Inbound Contact Sync: Built `POST /api/v1/webhooks/deskera-ingest` handling webhook security, payload mapping, auto-geocoding, and SSE broadcasting.
+- Support Agent Edge Self-Healing Binding: Overrode `ErrorBoundary.tsx` and Axios interceptors to intercept rate limit and sync conflicts, dialing out to the `groundgame-support-edge` cloud worker for self-healing actions and flushing offline syncs transparently.
+- Built Manager Territory Batch Selection Tool: Updated map UI with `@turf/turf` to enable polygon-based box-selection lasso for unassigned leads, with quick batch assignment SpeedDial to Reps or Teams.

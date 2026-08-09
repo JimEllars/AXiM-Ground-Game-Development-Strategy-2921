@@ -2,6 +2,10 @@ import MapErrorBoundary from '@/components/MapErrorBoundary';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import Map, { Source, Layer, NavigationControl, useControl } from 'react-map-gl';
 import { LngLatBounds } from 'mapbox-gl';
+
+import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
+import { point, polygon } from '@turf/helpers';
+
 // @ts-ignore
 // @ts-ignore
 // @ts-ignore
@@ -12,7 +16,7 @@ import { LngLatBounds } from 'mapbox-gl';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
-import { Box, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Button, useMediaQuery, useTheme } from '@mui/material';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import TerritoryPanel from './TerritoryPanel';
 import { useTerritoryPanelState } from '../hooks/useTerritoryPanelState';
@@ -44,6 +48,7 @@ function DrawControl(props: any) {
 
 interface TerritoryMapProps {
   territories: Territory[];
+  onLassoSelect?: (pins: any[]) => void;
   availableReps: User[];
   onSaveTerritory: (data: { name: string; description: string; geoJson: any }) => void;
   onDeleteTerritory: (id: string) => void;
@@ -103,6 +108,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
   }, [bounds]);
 
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [isDrawingMode, setIsDrawingMode] = useState(true);
   const {
     selectedTerritoryId,
     newTerritory,
@@ -185,6 +191,11 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
           onLoad={() => setMapLoaded(true)}
         >
           <NavigationControl position="top-right" />
+
+        <Box sx={{ position: 'absolute', top: 16, right: 60, zIndex: 1, backgroundColor: 'white', padding: 1, borderRadius: 1, boxShadow: 1 }}>
+           <Button variant={isDrawingMode ? 'contained' : 'outlined'} size="small" onClick={() => setIsDrawingMode(true)} sx={{ mr: 1 }}>Draw Turf</Button>
+           <Button variant={!isDrawingMode ? 'contained' : 'outlined'} size="small" onClick={() => setIsDrawingMode(false)}>Lasso Pins</Button>
+        </Box>
           {/* @ts-ignore */} {/* @ts-ignore */} {/* @ts-ignore */} {/* @ts-ignore */} {/* @ts-ignore */} {/* @ts-ignore */} {/* @ts-ignore */} {/* @ts-ignore */} <DrawControl
             position="top-left"
             displayControlsDefault={false}
@@ -195,7 +206,41 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
             defaultMode="draw_polygon"
             onCreate={({ features }: any) => {
               if (features[0]) {
-                handleCreateNewTerritory(features[0].geometry);
+                const geom = features[0].geometry;
+                if (geom.type === 'Polygon' && isDrawingMode) {
+                   handleCreateNewTerritory(geom);
+                } else if (geom.type === 'Polygon' && onLassoSelect) {
+                   // Lasso mode
+                   try {
+                     const poly = polygon(geom.coordinates);
+                     const selectedPins: any[] = [];
+                     // We need to access pins. If unassigned pins are in state or passed down:
+                     // Wait, we don't have access to pins data directly here unless we fetch them or query the map features
+                     // A simple way is to queryRenderedFeatures on the map
+                     if (mapRef.current) {
+                        const allRenderedPins = mapRef.current.queryRenderedFeatures({ layers: ['unassigned-pins'] });
+
+                        allRenderedPins.forEach(f => {
+                           if (f.geometry.type === 'Point') {
+                              const pt = point(f.geometry.coordinates as [number, number]);
+                              if (booleanPointInPolygon(pt, poly)) {
+                                 // To get the full pin data, we can just use the properties
+                                 selectedPins.push({
+                                    id: f.properties?.id,
+                                    ...f.properties
+                                 });
+                              }
+                           }
+                        });
+
+                        // Deduplicate by ID
+                        const uniquePins = Array.from(new Map(selectedPins.map(p => [p.id, p])).values());
+                        onLassoSelect(uniquePins);
+                     }
+                   } catch(e) {
+                     console.error('Lasso select failed', e);
+                   }
+                }
               }
             }}
             onDelete={() => {
