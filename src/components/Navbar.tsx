@@ -15,6 +15,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import SafeIcon from '@/common/SafeIcon';
 import { useAuth } from '@/contexts/AuthContext';
+import { repsAPI } from '@/services/api';
 import { syncOfflineData, syncTelemetryQueue } from '@/syncEngine';
 import { db } from '@/db';
 import SyncQueueDrawer from "./SyncQueueDrawer";
@@ -31,6 +32,8 @@ const Navbar: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [queueDrawerOpen, setQueueDrawerOpen] = useState(false);
+  const [activeShift, setActiveShift] = useState<string | null>(localStorage.getItem('activeShift'));
+  const [shiftSnackbar, setShiftSnackbar] = useState<{open: boolean, message: string}>({open: false, message: ''});
 
 
   useEffect(() => {
@@ -80,6 +83,26 @@ const Navbar: React.FC = () => {
     }
   };
 
+
+  useEffect(() => {
+    let watchId: number;
+    if (activeShift) {
+      if ('geolocation' in navigator) {
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            console.log('GPS Tracked:', pos.coords.latitude, pos.coords.longitude);
+            // We would store this locally or send telemetry if active
+          },
+          (err) => console.warn('GPS Error', err),
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      }
+    }
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [activeShift]);
+
   const getSyncDotColor = () => {
     switch (syncStatus) {
       case 'synced': return '#10B981'; // Green
@@ -87,6 +110,29 @@ const Navbar: React.FC = () => {
       case 'syncing': return '#3B82F6'; // Blue
       case 'error': return '#EF4444'; // Red
       default: return '#10B981';
+    }
+  };
+
+
+  const handleToggleShift = async () => {
+    if (activeShift) {
+      try {
+        await repsAPI.endShift({ shiftId: activeShift, distanceMeters: 0, pinsKnocked: 0 }); // We can pull stats if needed
+        setActiveShift(null);
+        localStorage.removeItem('activeShift');
+        setShiftSnackbar({ open: true, message: 'Shift Ended. Client set to battery-saver mode.' });
+      } catch (err) {
+        console.error("Failed to end shift", err);
+      }
+    } else {
+      try {
+        const res = await repsAPI.startShift();
+        setActiveShift(res.data.id);
+        localStorage.setItem('activeShift', res.data.id);
+        setShiftSnackbar({ open: true, message: 'Shift Started. GPS Tracking Active.' });
+      } catch (err) {
+        console.error("Failed to start shift", err);
+      }
     }
   };
 
@@ -320,7 +366,14 @@ const Navbar: React.FC = () => {
         </Alert>
       </Snackbar>
       <SyncQueueDrawer open={queueDrawerOpen} onClose={() => setQueueDrawerOpen(false)} />
+
+      <Snackbar open={shiftSnackbar.open} autoHideDuration={4000} onClose={() => setShiftSnackbar({...shiftSnackbar, open: false})}>
+        <Alert severity={activeShift ? "success" : "info"} sx={{ width: '100%' }}>
+          {shiftSnackbar.message}
+        </Alert>
+      </Snackbar>
     </AppBar>
+
   );
 };
 

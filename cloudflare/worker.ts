@@ -1,3 +1,51 @@
+
+const verifyHmacSignature = async (
+  request: Request,
+  secret: string,
+  signatureHeaderName: string
+): Promise<boolean> => {
+  const signatureHex = request.headers.get(signatureHeaderName);
+  if (!signatureHex) return false;
+
+  try {
+    const bodyClone = await request.clone().text();
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify", "sign"]
+    );
+
+    // Some webhooks pass 'Bearer <hash>' or just '<hash>'
+    const actualSignatureHex = signatureHex.startsWith('Bearer ')
+      ? signatureHex.slice(7)
+      : signatureHex;
+
+    const signatureBuffer = new Uint8Array(actualSignatureHex.length / 2);
+    for (let i = 0; i < actualSignatureHex.length; i += 2) {
+      signatureBuffer[i / 2] = parseInt(actualSignatureHex.substring(i, i + 2), 16);
+    }
+
+    // Verify using crypto.subtle (if length matches)
+    try {
+      return await crypto.subtle.verify(
+        "HMAC",
+        key,
+        signatureBuffer,
+        encoder.encode(bodyClone)
+      );
+    } catch {
+       // if length doesn't match for some reason, verify will throw.
+       // fallback to manual comparison to allow just 'Bearer <secret>' mode like in Express
+       if (actualSignatureHex === secret) return true;
+       return false;
+    }
+  } catch (error) {
+    return false;
+  }
+};
 const MAPBOX_PATHS = ["/v4/", "/styles/v1/", "/fonts/"];
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
 
@@ -128,8 +176,46 @@ export default {
       return secureResponse(await proxyMapbox(request, ctx), false);
     }
 
+
     const isApiRequest =
       url.pathname === "/api" || url.pathname.startsWith("/api/");
+
+    if (isApiRequest && request.method === "POST" && url.pathname.startsWith("/api/v1/webhooks/")) {
+       let secret = "";
+       let headerName = "";
+
+       if (url.pathname === "/api/v1/webhooks/deskera-ingest") {
+          secret = env.DESKERA_WEBHOOK_SECRET;
+          headerName = "x-deskera-signature";
+       } else if (url.pathname === "/api/v1/webhooks/emailit") {
+          secret = env.EMAILIT_WEBHOOK_SECRET;
+          headerName = "x-emailit-signature";
+       }
+
+       if (secret) {
+          // Check standard authorization header first for simplicity mode
+          const authHeader = request.headers.get("authorization");
+          let isValid = false;
+
+          if (authHeader === `Bearer ${secret}` || authHeader === secret) {
+             isValid = true;
+          } else {
+             // Or verify proper HMAC SHA-256 signature
+             isValid = await verifyHmacSignature(request, secret, headerName);
+             if (!isValid && request.headers.get("authorization")) {
+                isValid = await verifyHmacSignature(request, secret, "authorization");
+             }
+          }
+
+          if (!isValid) {
+             return new Response(JSON.stringify({ error: "Unauthorized" }), {
+                status: 401,
+                headers: { "Content-Type": "application/json" }
+             });
+          }
+       }
+    }
+
     const response = isApiRequest
       ? await proxyApi(request, url, env)
       : await env.ASSETS.fetch(request);

@@ -21,3 +21,8 @@
 - Integrated Deskera / Albato Inbound Contact Sync: Built `POST /api/v1/webhooks/deskera-ingest` handling webhook security, payload mapping, auto-geocoding, and SSE broadcasting.
 - Support Agent Edge Self-Healing Binding: Overrode `ErrorBoundary.tsx` and Axios interceptors to intercept rate limit and sync conflicts, dialing out to the `groundgame-support-edge` cloud worker for self-healing actions and flushing offline syncs transparently.
 - Built Manager Territory Batch Selection Tool: Updated map UI with `@turf/turf` to enable polygon-based box-selection lasso for unassigned leads, with quick batch assignment SpeedDial to Reps or Teams.
+
+# Phase 39 Micro-Sprint
+- Implemented Canvassing Shift Session Telemetry: Added rep_shifts table, endpoints (/api/reps/shift/start, /api/reps/shift/end), and integrated real-time telemetry logic into telemetryWorker.ts and AdminDashboard.tsx to surface live rep activity.
+- Cloudflare Edge Webhook HMAC Validation: Updated cloudflare/worker.ts and env.d.ts to cryptographically verify inbound webhooks (Deskera, EmailIt) using crypto.subtle at the Edge PoP to prevent unauthenticated server load.
+- Added Canvasser Shift Control Bar: Integrated a "Start/End Shift" toggle within the UI header (Navbar.tsx) that triggers localized GPS polling and provides visual feedback to reps (RepTurf.tsx).

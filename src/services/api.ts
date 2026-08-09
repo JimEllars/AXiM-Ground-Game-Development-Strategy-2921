@@ -188,6 +188,10 @@ export const repsAPI = {
     api.get('/reps/me/turf'),
   getStats: (params?: { startDate?: string; endDate?: string }) => 
     api.get('/reps/me/stats', { params }),
+  startShift: () =>
+    api.post('/reps/shift/start'),
+  endShift: (data: { shiftId: string; distanceMeters?: number; pinsKnocked?: number }) =>
+    api.post('/reps/shift/end', data),
 };
 
 // Interactions API

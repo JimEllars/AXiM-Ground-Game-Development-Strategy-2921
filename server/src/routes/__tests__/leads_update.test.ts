@@ -10,6 +10,7 @@ jest.unstable_mockModule('../../services/aximService.js', () => ({
   syncLeadToCore: jest.fn(),
   getLeadEnrichment: jest.fn(),
   dispatchLeadConversion: jest.fn(),
+  dispatchAgentViewTask: jest.fn(),
 }));
 
 // 2. Import modules dynamically AFTER mocking

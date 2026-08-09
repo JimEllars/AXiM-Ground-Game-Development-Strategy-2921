@@ -58,7 +58,8 @@ describe('Analytics Controller', () => {
             { id: 'u2', first_name: 'Bob', last_name: 'B', role: 'REP', total_interactions: '0', unique_leads: '0', active_days: '0' },
             { id: 'u3', first_name: 'Charlie', last_name: 'C', role: 'REP', total_interactions: '30', unique_leads: '25', active_days: '8' }
           ]
-        } as never);
+        } as never)
+        .mockResolvedValueOnce({ rows: [{ active_count: '2' }] } as never); // activeReps
 
       await getAnalytics(req, res, mockNext);
 
@@ -87,7 +88,8 @@ describe('Analytics Controller', () => {
             { interaction_date: date3, outcome: null, outcome_count: '1', lead_id: 'l4' } // edge case: no outcome but has date
           ]
         } as never)
-        .mockResolvedValueOnce({ rows: [] } as never); // userStats
+        .mockResolvedValueOnce({ rows: [] } as never) // userStats
+          .mockResolvedValueOnce({ rows: [{ active_count: '0' }] } as never); // activeReps
 
       await getAnalytics(req, res, mockNext);
 
@@ -118,7 +120,7 @@ describe('Analytics Controller', () => {
 
         await getAnalytics(req, res, mockNext);
 
-        expect(mockQuery).toHaveBeenCalledTimes(4);
+        expect(mockQuery).toHaveBeenCalledTimes(5);
 
         // interactions query should have the date filter
         expect(mockQuery.mock.calls[2][0]).toContain('BETWEEN $2 AND $3');

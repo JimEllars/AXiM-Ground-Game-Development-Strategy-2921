@@ -162,7 +162,13 @@ export const getAnalytics = catchAsync(async (req: AuthRequest, res: Response) =
     telemetry: {
       apiLatency: Math.floor(Math.random() * 50) + 20, // Simulated ms
       offlineSyncHealth: Math.floor(Math.random() * 10) + 90, // Simulated %
-      activeReps: Math.floor(Math.random() * 20) + 5
+      activeReps: await (async () => {
+        const activeRes = await pool.query(
+          "SELECT COUNT(DISTINCT user_id) as active_count FROM rep_shifts WHERE organization_id = $1 AND end_time IS NULL",
+          [user.organization_id]
+        );
+        return parseInt(activeRes.rows[0].active_count) || 0;
+      })()
     },
     userStats: userStats.map(user => ({
       id: user.id,
