@@ -221,6 +221,24 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
               {isEditing ? 'Edit Lead' : `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed Lead'}
             </Typography>
             {!isEditing ? (
+              <Box display="flex" alignItems="center">
+              {hasLocation && (
+                <Button
+                  startIcon={<SafeIcon icon={FiMapPin} />}
+                  size="small"
+                  onClick={() => {
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !("MSStream" in window);
+                    if (isIOS) {
+                      window.open(`maps://maps.apple.com/?daddr=${latitude},${longitude}`, '_blank');
+                    } else {
+                      window.open(`https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`, '_blank');
+                    }
+                  }}
+                  sx={{ mr: 1 }}
+                >
+                  Navigate
+                </Button>
+              )}
               <Button
                 startIcon={<SafeIcon icon={FiEdit2} />}
                 size="small"
@@ -228,6 +246,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
               >
                 Edit
               </Button>
+              </Box>
             ) : (
               <Box>
                 <Button
