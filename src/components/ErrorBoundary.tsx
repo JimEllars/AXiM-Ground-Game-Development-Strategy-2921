@@ -24,6 +24,41 @@ import { Component, ErrorInfo, ReactNode } from 'react';
         return { hasError: true, error };
       }
 
+
+      componentDidMount() {
+        window.addEventListener('api_rate_limit_lock', this.handleSelfHealing);
+        window.addEventListener('data_sync_conflict', this.handleSelfHealing);
+      }
+
+      componentWillUnmount() {
+        window.removeEventListener('api_rate_limit_lock', this.handleSelfHealing);
+        window.removeEventListener('data_sync_conflict', this.handleSelfHealing);
+      }
+
+      private handleSelfHealing = async (event: any) => {
+        const errorData = event.detail?.error;
+        const type = event.type;
+        logger.info(`Self-healing triggered for ${type}`, errorData);
+
+        try {
+          const res = await fetch('/api/v1/support/groundgame/report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, error: errorData })
+          });
+          const directives = await res.json();
+
+          if (directives?.action === 'RESET_RATE_LIMIT' || directives?.action === 'FLUSH_OFFLINE_BUFFER') {
+             // import { syncOfflineData } from '@/syncEngine';
+             // We'll dynamically trigger the sync queue
+             window.dispatchEvent(new Event('online')); // This triggers syncEngine to run
+             logger.info('Self-healing directive executed:', directives.action);
+          }
+        } catch(e) {
+          logger.error('Failed to report to support edge worker', e);
+        }
+      }
+
       public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
         const errorData = { message: error.message, stack: error.stack, componentStack: errorInfo.componentStack };
         logger.error('Uncaught component error', errorData);

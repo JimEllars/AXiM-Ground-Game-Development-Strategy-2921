@@ -1,8 +1,9 @@
 import express from 'express';
-import { handleEmailItWebhook } from '../controllers/webhooksController.js';
+import { handleEmailItWebhook, handleDeskeraIngestWebhook } from '../controllers/webhooksController.js';
 
 const router = express.Router();
 
 router.post('/emailit', handleEmailItWebhook);
+router.post('/deskera-ingest', handleDeskeraIngestWebhook);
 
 export default router;

@@ -14,6 +14,12 @@ const createTestQueryClient = () => new QueryClient({
 
 // Mock API
 vi.mock('@/services/api', () => ({
+  teamsAPI: {
+    getTeams: vi.fn().mockResolvedValue({ data: [] })
+  },
+  leadsAPI: {
+    update: vi.fn()
+  },
   territoriesAPI: {
     getAll: vi.fn(),
     getAvailableReps: vi.fn(),

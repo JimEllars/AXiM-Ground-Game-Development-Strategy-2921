@@ -75,6 +75,16 @@ api.interceptors.response.use(
       }
     }
     // Graceful Degradation for 502, 503, 504 errors
+    if (error.response && error.response.status === 429) {
+      logger.warn('Rate limit hit (429). Triggering self-healing...');
+      window.dispatchEvent(new CustomEvent('api_rate_limit_lock', { detail: { error: error.response.data } }));
+    }
+
+    if (error.response && error.response.status === 409) {
+      logger.warn('Sync conflict (409). Triggering self-healing...');
+      window.dispatchEvent(new CustomEvent('data_sync_conflict', { detail: { error: error.response.data } }));
+    }
+
     if (error.response && [502, 503, 504].includes(error.response.status)) {
       logger.warn('Backend unavailable (502/503/504). Switching to offline mode.');
       window.dispatchEvent(new Event('offline'));
