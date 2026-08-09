@@ -2,7 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "axim-ground-game",
   "main": "./cloudflare/worker.ts",
-  "compatibility_date": "2026-08-07",
+  "compatibility_date": "2026-08-08",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./dist",
@@ -21,11 +21,23 @@
     "staging": {
       "vars": {
         "ENVIRONMENT": "staging"
+      },
+      "assets": {
+        "directory": "./dist",
+        "binding": "ASSETS",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": ["/api/*"]
       }
     },
     "production": {
       "vars": {
         "ENVIRONMENT": "production"
+      },
+      "assets": {
+        "directory": "./dist",
+        "binding": "ASSETS",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": ["/api/*"]
       }
     }
   }
