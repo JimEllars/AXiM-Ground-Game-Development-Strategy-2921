@@ -85,6 +85,11 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 
       return (
         <Box>
+          {!localStorage.getItem('activeShift') && (
+            <Alert severity="warning" sx={{ mb: 3 }} action={<Button color="inherit" size="small" onClick={() => window.location.reload()}>Refresh</Button>}>
+              Your shift is currently inactive. Start your shift in the navigation bar to enable background GPS tracking.
+            </Alert>
+          )}
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, mb: 3 }}>
             <Box>
               <Typography variant="h4" gutterBottom>

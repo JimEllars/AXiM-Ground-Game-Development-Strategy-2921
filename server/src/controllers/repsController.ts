@@ -2,6 +2,7 @@ import { Response } from "express";
 import { pool } from "../config/database.js";
 import { AuthRequest } from "../types/index.js";
 import catchAsync from "../utils/catchAsync.js";
+import { clientExceptionStream } from "../utils/logger.js";
 
 export const getMyTurf = catchAsync(async (req: AuthRequest, res: Response) => {
   const user = req.user!;
@@ -178,3 +179,58 @@ export const getRepStats = catchAsync(
     });
   },
 );
+
+export const startShift = catchAsync(async (req: AuthRequest, res: Response) => {
+  const user = req.user!;
+  const result = await pool.query(
+    `INSERT INTO rep_shifts (user_id, organization_id, team_id, start_time)
+     VALUES ($1, $2, $3, NOW())
+     RETURNING id, start_time`,
+    [user.id, user.organization_id, user.team_id || null]
+  );
+
+  // Log telemetry heartbeat
+  const logEntry = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    type: 'shift_telemetry',
+    event: 'shift_started',
+    user_id: user.id,
+    organization_id: user.organization_id,
+    shift_id: result.rows[0].id
+  });
+  clientExceptionStream.write(logEntry + '\n');
+
+  res.status(200).json(result.rows[0]);
+});
+
+export const endShift = catchAsync(async (req: AuthRequest, res: Response) => {
+  const user = req.user!;
+  const { shiftId, distanceMeters, pinsKnocked } = req.body;
+
+  const result = await pool.query(
+    `UPDATE rep_shifts
+     SET end_time = NOW(), distance_meters = $1, pins_knocked = $2, updated_at = NOW()
+     WHERE id = $3 AND user_id = $4
+     RETURNING id, start_time, end_time, distance_meters, pins_knocked`,
+    [distanceMeters || 0, pinsKnocked || 0, shiftId, user.id]
+  );
+
+  if (result.rowCount === 0) {
+    return res.status(404).json({ error: 'Shift not found' });
+  }
+
+  // Log telemetry heartbeat
+  const logEntry = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    type: 'shift_telemetry',
+    event: 'shift_ended',
+    user_id: user.id,
+    organization_id: user.organization_id,
+    shift_id: shiftId,
+    distance_meters: distanceMeters,
+    pins_knocked: pinsKnocked
+  });
+  clientExceptionStream.write(logEntry + '\n');
+
+  res.status(200).json(result.rows[0]);
+});
