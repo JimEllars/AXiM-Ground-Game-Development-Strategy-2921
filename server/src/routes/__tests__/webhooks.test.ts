@@ -6,6 +6,15 @@ jest.unstable_mockModule('../../config/database.js', () => ({
   },
 }));
 
+
+jest.unstable_mockModule('../../middleware/auth.js', () => ({
+  authenticateToken: (req: any, res: any, next: any) => {
+    req.user = { id: 'test-user', organization_id: 'test-org', role: 'ORG_ADMIN' };
+    next();
+  },
+  requireRole: () => (req: any, res: any, next: any) => next(),
+}));
+
 jest.unstable_mockModule('../../config/queue.js', () => ({
   leadImportQueue: { add: jest.fn() },
   telemetryQueue: { add: jest.fn() },
