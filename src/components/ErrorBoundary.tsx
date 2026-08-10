@@ -48,11 +48,18 @@ import { Component, ErrorInfo, ReactNode } from 'react';
           });
           const directives = await res.json();
 
-          if (directives?.action === 'RESET_RATE_LIMIT' || directives?.action === 'FLUSH_OFFLINE_BUFFER') {
-             // import { syncOfflineData } from '@/syncEngine';
-             // We'll dynamically trigger the sync queue
+          const action = directives?.action || directives?.directive;
+
+          if (
+            action === 'EXECUTED: reset_edge_rate_limit' ||
+            action === 'EXECUTED: flush_field_offline_buffer' ||
+            action === 'EXECUTED: release_canvass_row_lock' ||
+            action === 'RESET_RATE_LIMIT' ||
+            action === 'FLUSH_OFFLINE_BUFFER'
+          ) {
+             logger.info('Self-healing directive executed:', action);
+             // We dynamically trigger the sync queue
              window.dispatchEvent(new Event('online')); // This triggers syncEngine to run
-             logger.info('Self-healing directive executed:', directives.action);
           }
         } catch(e) {
           logger.error('Failed to report to support edge worker', e);

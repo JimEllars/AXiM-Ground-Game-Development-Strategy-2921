@@ -166,6 +166,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
               onSaveTerritory={handleSaveTerritory}
               onDeleteTerritory={handleDeleteTerritory}
               onAssignTerritory={handleAssignTerritory}
+              onLassoSelect={setLassoSelectedPins}
             /></ErrorBoundary>
           )}
 

@@ -1,3 +1,4 @@
+import { syncToNexusCRM } from "../services/nexusService.js";
 import { getLeads as repoGetLeads } from "../repositories/LeadRepository.js";
 import logger from '../utils/logger.js';
 import { enrollInEmailItNurture } from '../services/emailitService.js';
@@ -261,6 +262,22 @@ export const updateLead = catchAsync(
         logger.warn("Failed to sync updated lead to AXiM Core:", syncError);
         // We don't fail the request if sync fails, but we should log it
       }
+
+      // Sync with Nexus CRM
+      syncToNexusCRM({
+        first_name: updatedLead.firstName || null,
+        last_name: updatedLead.lastName || null,
+        street_address: updatedLead.streetAddress,
+        city: updatedLead.city || null,
+        state: updatedLead.state || null,
+        zip: updatedLead.zip || null,
+        phone: updatedLead.phone || null,
+        email: updatedLead.email || null,
+        latitude: updatedLead.location ? updatedLead.location.coordinates[1] : null,
+        longitude: updatedLead.location ? updatedLead.location.coordinates[0] : null,
+        disposition: updatedLead.status,
+        organization_id: user.organization_id,
+      });
 
       res
         .status(200)
