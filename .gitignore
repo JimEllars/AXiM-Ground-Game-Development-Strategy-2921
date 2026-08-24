@@ -29,4 +29,4 @@ dist-ssr
 server/.env.test
 
 # Coverage
-coverage
+coveragegroundgame-support-edge/src/*.js

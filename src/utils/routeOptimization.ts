@@ -1,7 +1,24 @@
 import { Lead } from '../types';
 
 // Simple haversine distance based nearest neighbor approximation
+
+export const calculateTotalDistance = (route: Lead[]): number => {
+  let totalDist = 0;
+  for (let i = 0; i < route.length - 1; i++) {
+    const current = route[i];
+    const next = route[i + 1];
+    if (current.location?.coordinates && next.location?.coordinates) {
+      totalDist += getDistance(
+        current.location.coordinates[1], current.location.coordinates[0],
+        next.location.coordinates[1], next.location.coordinates[0]
+      );
+    }
+  }
+  return totalDist * 1000; // convert km to meters
+};
+
 export const optimizeRoute = (leads: Lead[], startLocation: { latitude: number, longitude: number } | null = null): Lead[] => {
+
   const validLeads = leads.filter(l => l.location && l.location.coordinates);
   const invalidLeads = leads.filter(l => !l.location || !l.location.coordinates);
 

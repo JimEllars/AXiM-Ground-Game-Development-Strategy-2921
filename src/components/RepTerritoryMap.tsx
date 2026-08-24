@@ -175,6 +175,9 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
           properties: {
             id: lead.id,
             status: lead.status,
+            credit_tier: lead.credit_tier,
+            property_value_est: lead.property_value_est,
+            commercial_uniform_fit: lead.commercial_uniform_fit,
             name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed Lead',
           },
         });
@@ -301,6 +304,25 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
             <Typography variant="subtitle2" gutterBottom>
               {popupInfo.feature.name}
             </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5 }}>
+              <strong>Status:</strong> {popupInfo.feature.properties.status}
+            </Typography>
+            {popupInfo.feature.properties.credit_tier && (
+              <Typography variant="body2">
+                <strong>Credit:</strong> {popupInfo.feature.properties.credit_tier}
+              </Typography>
+            )}
+            {popupInfo.feature.properties.property_value_est && (
+              <Typography variant="body2">
+                <strong>Value:</strong> {popupInfo.feature.properties.property_value_est}
+              </Typography>
+            )}
+            {popupInfo.feature.properties.commercial_uniform_fit && (
+              <Typography variant="body2">
+                <strong>Commercial Fit:</strong> {popupInfo.feature.properties.commercial_uniform_fit}
+              </Typography>
+            )}
+
             <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
               <Button
                 variant="outlined"
