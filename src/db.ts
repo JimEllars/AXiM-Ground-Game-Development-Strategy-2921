@@ -25,6 +25,16 @@ export interface OfflineTelemetry {
   timestamp: number;
 }
 
+
+export interface OfflineOptimizedRoute {
+  id?: number;
+  user_id: string;
+  date: string;
+  ordered_lead_ids: string[];
+  estimated_distance_meters: number;
+  updated_at: number;
+}
+
 export interface OfflineSetting {
   id: string; // e.g. "surveys" or "dispositions"
   data: any;
@@ -34,6 +44,7 @@ export class AppDB extends Dexie {
   interactions!: Table<OfflineInteraction, number>;
   territories!: Table<OfflineTerritory, string>;
   settings!: Table<OfflineSetting, string>;
+  optimized_routes!: Table<OfflineOptimizedRoute, number>;
   telemetryQueue!: Table<OfflineTelemetry, number>;
 
   constructor() {
@@ -42,7 +53,8 @@ export class AppDB extends Dexie {
       telemetryQueue: '++id',
       interactions: '++id, leadId, synced',
       territories: 'id, name',
-      settings: 'id'
+      settings: 'id',
+      optimized_routes: '++id, user_id, date'
     });
 
     // Add middleware for encryption/decryption

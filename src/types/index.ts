@@ -43,6 +43,10 @@ export interface Lead {
   email?: string;
   status: 'New' | 'Contacted' | 'Hot Lead' | 'Not Interested' | 'Completed';
   notes?: string;
+  credit_tier?: string;
+  property_value_est?: string;
+  commercial_uniform_fit?: string;
+
   location?: {
     type: 'Point';
     coordinates: [number, number];

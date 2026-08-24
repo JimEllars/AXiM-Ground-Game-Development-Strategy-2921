@@ -428,6 +428,21 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
               <Typography variant="body1" gutterBottom>
                   <strong>Status:</strong> <Chip label={lead.status} size="small" />
               </Typography>
+              {/* Enriched Lead Metadata Badges */}
+              {(lead.credit_tier || lead.property_value_est || lead.commercial_uniform_fit) && (
+                <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {lead.credit_tier && (
+                    <Chip label={`Credit: ${lead.credit_tier}`} size="small" color="primary" variant="outlined" />
+                  )}
+                  {lead.property_value_est && (
+                    <Chip label={`Value: ${lead.property_value_est}`} size="small" color="success" variant="outlined" />
+                  )}
+                  {lead.commercial_uniform_fit && (
+                    <Chip label={`Commercial Fit: ${lead.commercial_uniform_fit}`} size="small" color="secondary" variant="outlined" />
+                  )}
+                </Box>
+              )}
+
 
               <Divider sx={{ my: 2 }} />
               <Typography variant="h6" gutterBottom>

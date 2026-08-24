@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
     import {
       Box,
       Typography,
@@ -15,6 +15,9 @@ import { useState } from 'react';
     } from '@mui/material';
     import { FiMapPin, FiPlus, FiTarget } from 'react-icons/fi';
 import { useQuery, useQueryClient } from 'react-query';
+import { optimizeRoute, calculateTotalDistance } from '@/utils/routeOptimization';
+import { db } from '@/db';
+import { useAuth } from '@/contexts/AuthContext';
     import SafeIcon from '@/common/SafeIcon';
     import LeadInteractionForm from '@/components/LeadInteractionForm';
     import TerritoryStats from '@/components/TerritoryStats';
@@ -43,6 +46,84 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 
       const territories = territoriesData || [];
       const errorMsg = queryError ? (queryError as any).response?.data?.error || 'Failed to load turf data' : '';
+      const { user } = useAuth();
+      const [optimizedRoutes, setOptimizedRoutes] = useState<Record<string, any[]>>({});
+      const [routeDistance, setRouteDistance] = useState<Record<string, number>>({});
+
+      const handleOptimizeRoute = async (territoryId: string, leads: any[]) => {
+        if (!leads || leads.length === 0) return;
+
+        let startLocation = null;
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+          });
+          startLocation = { latitude: position.coords.latitude, longitude: position.coords.longitude };
+        } catch (e) {
+          console.warn('Geolocation unavailable, using default TSP starting point');
+        }
+
+        const optimized = optimizeRoute(leads, startLocation);
+        const orderedIds = optimized.map(l => l.id);
+        const distanceMeters = calculateTotalDistance(optimized);
+        const today = new Date().toISOString().split('T')[0];
+
+        // Hydrate UI state
+        setOptimizedRoutes(prev => ({ ...prev, [territoryId]: optimized }));
+        setRouteDistance(prev => ({ ...prev, [territoryId]: distanceMeters }));
+
+        // Persist to Dexie for offline use
+        if (user) {
+          try {
+            await db.optimized_routes.put({
+              user_id: user.id,
+              date: today,
+              ordered_lead_ids: orderedIds,
+              estimated_distance_meters: distanceMeters,
+              updated_at: Date.now()
+            });
+          } catch (e) {
+            console.error('Failed to save route to Dexie', e);
+          }
+        }
+      };
+
+      // Load cached routes from Dexie on mount
+      useEffect(() => {
+        const loadOfflineRoutes = async () => {
+          if (!user) return;
+          const today = new Date().toISOString().split('T')[0];
+          try {
+            const cached = await db.optimized_routes
+              .where({ user_id: user.id, date: today })
+              .last();
+
+            if (cached && territoriesData) {
+               // Hydrate if we have the data
+               const newRoutes: Record<string, any[]> = {};
+               territoriesData.forEach((t: any) => {
+                  const sortedLeads = [];
+                  cached.ordered_lead_ids.forEach((id: string) => {
+                     const lead = t.leads.find((l:any) => l.id === id);
+                     if (lead) sortedLeads.push(lead);
+                  });
+                  // append any unoptimized ones
+                  t.leads.forEach((l:any) => {
+                     if (!cached.ordered_lead_ids.includes(l.id)) sortedLeads.push(l);
+                  });
+                  if (sortedLeads.length > 0 && cached.ordered_lead_ids.length > 0) {
+                     newRoutes[t.id] = sortedLeads;
+                  }
+               });
+               setOptimizedRoutes(newRoutes);
+            }
+          } catch (e) {
+             console.error('Failed to load offline routes', e);
+          }
+        };
+        loadOfflineRoutes();
+      }, [user, territoriesData]);
+
 
       const handleInteractionSubmit = () => {
         setShowInteractionForm(false);
@@ -142,14 +223,26 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                     <ErrorBoundary><RepTerritoryMap boundary={territory.boundary} leads={territory.leads} /></ErrorBoundary>
                   </Paper>
                   <Paper sx={{ p: 3 }}>
-                    <Typography variant="h6" gutterBottom>
-                      Leads in {territory.name}
-                    </Typography>
+
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="h6">
+                        Leads in {territory.name}
+                      </Typography>
+                      <Button variant="outlined" size="small" onClick={() => handleOptimizeRoute(territory.id, territory.leads)}>
+                        Optimize Shift Route
+                      </Button>
+                    </Box>
+                    {routeDistance[territory.id] > 0 && (
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Estimated Distance: {Math.round(routeDistance[territory.id])} meters
+                      </Typography>
+                    )}
                     {territory.leads?.length === 0 ? (
                       <Typography color="text.secondary">No leads in this territory yet.</Typography>
                     ) : (
                       <List>
-                        {territory.leads.map((lead: any) => (
+                        {(optimizedRoutes[territory.id] || territory.leads).map((lead: any, idx: number) => (
+
                           <ListItem key={lead.id} divider>
                             <ListItemIcon>
                               <SafeIcon icon={FiMapPin} />
