@@ -1,7 +1,30 @@
 export default {
     async fetch(request, env, ctx) {
         if (request.method !== 'POST') {
-            return new Response('Method not allowed', { status: 405 });
+            return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+                status: 405,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
+        const authHeader = request.headers.get('Authorization');
+        const xAximKeyHeader = request.headers.get('X-Axim-Internal-Service-Key');
+        let token = null;
+        if (xAximKeyHeader) {
+            token = xAximKeyHeader;
+        }
+        else if (authHeader) {
+            if (authHeader.toLowerCase().startsWith('bearer ')) {
+                token = authHeader.slice(7);
+            }
+            else {
+                token = authHeader;
+            }
+        }
+        if (!token || token !== env.AXIM_INTERNAL_SERVICE_KEY) {
+            return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
         try {
             const body = await request.json();
@@ -31,7 +54,10 @@ export default {
             });
         }
         catch (e) {
-            return new Response('Bad request', { status: 400 });
+            return new Response(JSON.stringify({ error: 'Bad request' }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
     },
 };
