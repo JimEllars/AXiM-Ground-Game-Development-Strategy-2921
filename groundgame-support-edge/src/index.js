@@ -1,11 +1,18 @@
+import pako from 'pako';
+function createGzipResponse(data, status = 200) {
+    const jsonStr = JSON.stringify(data);
+    const compressed = pako.gzip(jsonStr);
+    return new Response(compressed, {
+        status,
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Encoding': 'gzip'
+        }
+    });
+}
 export default {
     async fetch(request, env, ctx) {
-        if (request.method !== 'POST') {
-            return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-                status: 405,
-                headers: { 'Content-Type': 'application/json' }
-            });
-        }
+        const url = new URL(request.url);
         const authHeader = request.headers.get('Authorization');
         const xAximKeyHeader = request.headers.get('X-Axim-Internal-Service-Key');
         let token = null;
@@ -21,20 +28,46 @@ export default {
             }
         }
         if (!token || token !== env.AXIM_INTERNAL_SERVICE_KEY) {
-            return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-                status: 401,
-                headers: { 'Content-Type': 'application/json' }
-            });
+            return createGzipResponse({ error: 'Unauthorized' }, 401);
+        }
+        if (url.pathname === '/api/v1/support/groundgame/cleanup-stale-kv') {
+            if (request.method !== 'POST')
+                return createGzipResponse({ error: 'Method not allowed' }, 405);
+            let deletedCount = 0;
+            if (env.GROUNDGAME_KV) {
+                const cutoffTime = Date.now() - (48 * 60 * 60 * 1000);
+                try {
+                    let cursor = '';
+                    let isDone = false;
+                    while (!isDone) {
+                        const list = await env.GROUNDGAME_KV.list({ cursor });
+                        for (const key of list.keys) {
+                            const val = await env.GROUNDGAME_KV.getWithMetadata(key.name);
+                            if (val.metadata && val.metadata.timestamp < cutoffTime) {
+                                await env.GROUNDGAME_KV.delete(key.name);
+                                deletedCount++;
+                            }
+                        }
+                        isDone = list.list_complete;
+                        cursor = list.cursor || '';
+                    }
+                }
+                catch (e) {
+                    console.error('KV Cleanup Error', e);
+                }
+            }
+            return createGzipResponse({ success: true, message: 'Maintenance complete', prunedCount: deletedCount }, 200);
+        }
+        if (request.method !== 'POST') {
+            return createGzipResponse({ error: 'Method not allowed' }, 405);
         }
         try {
             const body = await request.json();
             const { battery, latency, incident_status, device_id, operator_id } = body;
-            // Condition: battery < 15%, latency > 500ms, or escalated
             const isCritical = (battery !== undefined && battery < 15) ||
                 (latency !== undefined && latency > 500) ||
                 (incident_status === 'escalated_to_central_support');
             if (isCritical) {
-                // Dispatch alert in non-blocking block
                 ctx.waitUntil(fetch(env.CENTRAL_SUPPORT_WEBHOOK_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -49,15 +82,10 @@ export default {
                     })
                 }).catch(e => console.error('Failed to dispatch alert', e)));
             }
-            return new Response(JSON.stringify({ success: true, queued: isCritical }), {
-                headers: { 'Content-Type': 'application/json' }
-            });
+            return createGzipResponse({ success: true, queued: isCritical }, 200);
         }
         catch (e) {
-            return new Response(JSON.stringify({ error: 'Bad request' }), {
-                status: 400,
-                headers: { 'Content-Type': 'application/json' }
-            });
+            return createGzipResponse({ error: 'Bad request' }, 400);
         }
     },
 };

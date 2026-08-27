@@ -227,6 +227,11 @@ import SkeletonLoader from '@/components/SkeletonLoader';
             </Paper>
           </Box>
 
+          {/* Daily Milestones Gamification Widget */}
+          <Box sx={{ mb: 3 }}>
+             <RepDailyMilestones todayInteractions={todayInteractions} todayCompletionRate={todayCompletionRate} />
+          </Box>
+
           {errorMsg && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {errorMsg}

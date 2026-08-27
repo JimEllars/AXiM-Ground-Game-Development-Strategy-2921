@@ -23,3 +23,8 @@
 - Added 15-second heartbeat loop to SSE configuration for cell resilience.
 - Added End Shift Summary Modal tracking shift performance and progress in `Navbar.tsx`.
 - Ensured all Jest/Vitest unit tests pass successfully.
+
+# Phase 46 Micro-Sprint
+* Implemented Battery-Optimized Polyline Tracker (`RepTerritoryMap.tsx`, `locationUtils.ts`, `db.ts`) for drawing current shifts paths utilizing Dexie's `breadcrumbs` offline table.
+* Developed Canvasser Gamification Milestones Widget (`RepDailyMilestones.tsx`, `RepTurf.tsx`) tracking Door Opener, First Strike, Half-Century, and Pace Setter with dynamic states.
+* Implemented Edge KV Pruning Maintenance Route (`groundgame-support-edge`) removing stale sync locks and rate-limit records, while enforcing standard `Content-Encoding: gzip` output.

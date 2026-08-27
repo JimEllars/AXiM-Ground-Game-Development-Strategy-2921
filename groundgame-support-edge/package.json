@@ -8,5 +8,9 @@
   },
   "scripts": {
     "build": "tsc"
+  },
+  "dependencies": {
+    "@types/pako": "^2.0.4",
+    "pako": "^3.0.1"
   }
 }
