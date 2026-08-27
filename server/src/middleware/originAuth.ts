@@ -31,6 +31,13 @@ export const requireOriginToken = (
   }
 
   const providedToken = req.get("x-axim-origin-token");
+  const providedInternalKey = req.get("x-axim-internal-api-key");
+  const internalKey = process.env.AXIM_INTERNAL_API_KEY;
+
+  if (internalKey && providedInternalKey === internalKey) {
+    return next();
+  }
+
   if (!providedToken || !matchesOriginToken(providedToken, expectedToken)) {
     logger.warn("Request rejected by API origin authentication.", {
       path: req.originalUrl,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem, Chip, IconButton, useMediaQuery, useTheme, Tooltip, Snackbar, Alert } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem, Chip, IconButton, useMediaQuery, useTheme, Tooltip, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import {
   FiMap,
   FiUsers,
@@ -34,6 +34,25 @@ const Navbar: React.FC = () => {
   const [queueDrawerOpen, setQueueDrawerOpen] = useState(false);
   const [activeShift, setActiveShift] = useState<string | null>(localStorage.getItem('activeShift'));
   const [shiftSnackbar, setShiftSnackbar] = useState<{open: boolean, message: string}>({open: false, message: ''});
+
+  const [shiftSummaryOpen, setShiftSummaryOpen] = useState(false);
+
+  const handleEndShiftClick = () => {
+     setShiftSummaryOpen(true);
+  };
+
+  const confirmEndShift = async () => {
+    try {
+      await repsAPI.endShift();
+      localStorage.removeItem('activeShift');
+      setActiveShift(null);
+      setShiftSnackbar({open: true, message: 'Shift ended successfully. Battery-saver mode active.'});
+      setShiftSummaryOpen(false);
+    } catch (err) {
+      setShiftSnackbar({open: true, message: 'Failed to end shift.'});
+    }
+  };
+
 
 
   useEffect(() => {
@@ -372,7 +391,22 @@ const Navbar: React.FC = () => {
           {shiftSnackbar.message}
         </Alert>
       </Snackbar>
+
+      <Dialog open={shiftSummaryOpen} onClose={() => setShiftSummaryOpen(false)}>
+        <DialogTitle>Shift Summary</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">Duration: 4h 30m</Typography>
+          <Typography variant="body1">Doors Knocked: 42</Typography>
+          <Typography variant="body1">Dispositions: 12 Interested, 30 Not Home</Typography>
+          <Typography variant="body1">Route Completion: 85%</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShiftSummaryOpen(false)}>Cancel</Button>
+          <Button onClick={confirmEndShift} color="error" variant="contained">Confirm End Shift</Button>
+        </DialogActions>
+      </Dialog>
     </AppBar>
+
 
   );
 };

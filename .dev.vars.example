@@ -3,3 +3,4 @@ API_ORIGIN=http://localhost:3001
 ORIGIN_AUTH_TOKEN=replace-with-a-long-random-local-secret
 EMAILIT_API_KEY=mock-key
 EMAILIT_SUBSCRIBER_LIST_ID=mock-list
+AXIM_INTERNAL_API_KEY=mock-internal-key

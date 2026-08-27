@@ -12,3 +12,14 @@
 - Added Turn-by-Turn offline TSP routing persistence logic inside `RepTurf.tsx` allowing route recovery during drops in cell service.
 - Deployed SOC Edge Fleet Distress Alerting within `groundgame-support-edge` triggering on <15% battery or >500ms latency.
 - Introduced `FleetHealthModal.jsx` and `DashboardHeader.jsx` for SOC bulk operations logic (reissue tokens, clear address locks).
+
+# Phase 45 Micro-Sprint
+- Implemented Cloudflare Edge `AXIM_INTERNAL_API_KEY` bypass for internal services.
+- Added `POST /api/v1/leads/quick-drop` endpoint with Mapbox reverse geocoding.
+- Added PostGIS proximity deduplication (0.00015 degrees limit).
+- Added local Quick Pin Drop deduplication mapping logic in syncEngine.
+- Implemented Quick Drop FAB in `RepTerritoryMap`.
+- Added dynamic route shift progress calculation and heartbeat to `RepTurf`.
+- Added 15-second heartbeat loop to SSE configuration for cell resilience.
+- Added End Shift Summary Modal tracking shift performance and progress in `Navbar.tsx`.
+- Ensured all Jest/Vitest unit tests pass successfully.

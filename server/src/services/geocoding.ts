@@ -67,3 +67,61 @@ export const batchGeocode = async (addresses: string[]): Promise<(GeocodeResult 
   const results = await Promise.all(batchPromises);
   return results.flat();
 };
+export interface ReverseGeocodeResult {
+  formatted_address: string;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+}
+
+export const reverseGeocode = async (latitude: number, longitude: number): Promise<ReverseGeocodeResult | null> => {
+  try {
+    if (!GEOCODING_API_KEY) {
+      logger.warn('No geocoding API key provided, using mock reverse geocoding');
+      return {
+        formatted_address: '123 Mock St, San Francisco, CA 94103',
+        street: '123 Mock St',
+        city: 'San Francisco',
+        state: 'CA',
+        zip: '94103'
+      };
+    }
+
+    const url = `${GEOCODING_BASE_URL}/${longitude},${latitude}.json?access_token=${GEOCODING_API_KEY}&limit=1`;
+    const response = await axios.get(url);
+
+    if (response.data.features && response.data.features.length > 0) {
+      const feature = response.data.features[0];
+
+      let street = null;
+      let city = null;
+      let state = null;
+      let zip = null;
+
+      feature.context?.forEach((ctx: any) => {
+        if (ctx.id.startsWith('place')) city = ctx.text;
+        if (ctx.id.startsWith('region')) state = ctx.text;
+        if (ctx.id.startsWith('postcode')) zip = ctx.text;
+      });
+
+      if (feature.address) {
+         street = feature.address + ' ' + feature.text;
+      } else {
+         street = feature.text;
+      }
+
+      return {
+        formatted_address: feature.place_name,
+        street,
+        city,
+        state,
+        zip
+      };
+    }
+    return null;
+  } catch (error) {
+    logger.error('Reverse Geocoding error:', error);
+    return null;
+  }
+};
