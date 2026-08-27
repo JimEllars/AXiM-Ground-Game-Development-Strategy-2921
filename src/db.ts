@@ -35,6 +35,14 @@ export interface OfflineOptimizedRoute {
   updated_at: number;
 }
 
+export interface OfflineBreadcrumb {
+  id?: number;
+  shift_id: string;
+  latitude: number;
+  longitude: number;
+  timestamp: number;
+}
+
 export interface OfflineSetting {
   id: string; // e.g. "surveys" or "dispositions"
   data: any;
@@ -46,15 +54,18 @@ export class AppDB extends Dexie {
   settings!: Table<OfflineSetting, string>;
   optimized_routes!: Table<OfflineOptimizedRoute, number>;
   telemetryQueue!: Table<OfflineTelemetry, number>;
+  breadcrumbs!: Table<OfflineBreadcrumb, number>;
 
   constructor() {
     super('AximGroundGameDB');
-    this.version(3).stores({
+    this.version(4).stores({
       telemetryQueue: '++id',
       interactions: '++id, leadId, synced',
       territories: 'id, name',
       settings: 'id',
       optimized_routes: '++id, user_id, date'
+    ,
+      breadcrumbs: '++id, shift_id'
     });
 
     // Add middleware for encryption/decryption

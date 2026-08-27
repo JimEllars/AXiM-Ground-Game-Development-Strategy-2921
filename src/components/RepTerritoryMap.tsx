@@ -24,6 +24,8 @@ interface RepTerritoryMapProps {
 
 const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) => {
   const [popupInfo, setPopupInfo] = useState<any>(null);
+  const [breadcrumbs, setBreadcrumbs] = useState<number[][]>([]);
+  const [lastTrackedPos, setLastTrackedPos] = useState<{lat: number, lon: number, time: number} | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -306,6 +308,30 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
       interactiveLayerIds={['leads-points', 'clusters']}
       onClick={handleMapClick}
     >
+
+      <Source id="breadcrumbs" type="geojson" data={{
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: breadcrumbs
+        },
+        properties: {}
+      } as any}>
+        <Layer
+          id="breadcrumbs-line"
+          type="line"
+          paint={{
+            'line-color': 'rgba(59, 130, 246, 0.6)', // translucent blue
+            'line-width': 4,
+            'line-dasharray': [2, 2]
+          }}
+          layout={{
+            'line-join': 'round',
+            'line-cap': 'round'
+          }}
+        />
+      </Source>
+
       <Source id="territory" type="geojson" data={boundary}>
         <Layer {...territoryLayer} />
       </Source>
