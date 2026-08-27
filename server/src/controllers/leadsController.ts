@@ -546,3 +546,74 @@ export const exportLeads = catchAsync(async (req: AuthRequest, res: Response) =>
 
   res.json({ url });
 });
+
+import { reverseGeocode } from "../services/geocoding.js";
+import { broadcastToOrg } from "../utils/sse.js";
+
+export const quickDropLead = catchAsync(
+  async (req: AuthRequest, res: Response) => {
+    const user = req.user!;
+    const { latitude, longitude, status = 'NOT_HOME', notes = '' } = req.body;
+
+    if (latitude == null || longitude == null) {
+      return res.status(400).json({ error: "Latitude and longitude are required" });
+    }
+
+    // PostGIS deductive proxy check (~15 meters -> 0.00015 degrees)
+    const existingLead = await pool.query(
+      `SELECT id, status FROM leads
+       WHERE organization_id = $1
+         AND ST_DWithin(location, ST_SetSRID(ST_MakePoint($2, $3), 4326), 0.00015)
+       LIMIT 1`,
+      [user.organization_id, longitude, latitude]
+    );
+
+    let leadId;
+    let isNew = false;
+    let addressData = null;
+
+    if (existingLead.rows.length > 0) {
+      leadId = existingLead.rows[0].id;
+      await pool.query(
+        `UPDATE leads SET status = $1, updated_at = NOW() WHERE id = $2`,
+        [status, leadId]
+      );
+    } else {
+      isNew = true;
+      addressData = await reverseGeocode(latitude, longitude);
+
+      const insertResult = await pool.query(
+        `INSERT INTO leads (organization_id, status, location)
+         VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326))
+         RETURNING id`,
+        [user.organization_id, status, longitude, latitude]
+      );
+      leadId = insertResult.rows[0].id;
+
+      if (addressData) {
+         await pool.query(
+           `INSERT INTO lead_pii (lead_id, street_address, city, state, zip)
+            VALUES ($1, $2, $3, $4, $5)`,
+           [leadId, addressData.street || addressData.formatted_address, addressData.city, addressData.state, addressData.zip]
+         );
+      }
+    }
+
+    // Append interaction record
+    await pool.query(
+      `INSERT INTO interactions (lead_id, user_id, outcome, notes, organization_id)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [leadId, user.id, status, notes, user.organization_id]
+    );
+
+    // Sync if new
+    if (isNew) {
+       syncToNexusCRM(leadId, user.organization_id).catch(err => {
+         logger.error('Background sync to Nexus CRM failed for quick drop:', err);
+       });
+       broadcastToOrg(user.organization_id, 'TERRITORY_PINS_MUTATED', { leadId, longitude, latitude, status, isNew });
+    }
+
+    res.status(200).json({ message: "Lead processed via quick drop", leadId, isNew, addressData });
+  }
+);

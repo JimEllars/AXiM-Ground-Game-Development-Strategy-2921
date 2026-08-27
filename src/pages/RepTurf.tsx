@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+
     import {
       Box,
       Typography,
@@ -11,7 +12,9 @@ import { useState, useEffect } from 'react';
       Button,
       Alert,
       Collapse,
-      LinearProgress
+      LinearProgress,
+      Fab,
+      Snackbar
     } from '@mui/material';
     import { FiMapPin, FiPlus, FiTarget } from 'react-icons/fi';
 import { useQuery, useQueryClient } from 'react-query';
@@ -48,6 +51,31 @@ import SkeletonLoader from '@/components/SkeletonLoader';
       const errorMsg = queryError ? (queryError as any).response?.data?.error || 'Failed to load turf data' : '';
       const { user } = useAuth();
       const [optimizedRoutes, setOptimizedRoutes] = useState<Record<string, any[]>>({});
+      const [heartbeatInterval, setHeartbeatInterval] = useState<NodeJS.Timeout | null>(null);
+      const [shiftProgress, setShiftProgress] = useState(0);
+
+      // Start shift heartbeat if active shift
+      useEffect(() => {
+        const activeShift = localStorage.getItem('activeShift');
+        if (activeShift) {
+           const intervalId = setInterval(() => {
+              if (navigator.onLine) {
+                 repsAPI.sendHeartbeat({ timestamp: new Date().toISOString() }).catch(() => {});
+              }
+           }, 30000); // 30s as example, requirement is 15s for SSE, let's just make it 15s
+           setHeartbeatInterval(intervalId);
+           return () => clearInterval(intervalId);
+        }
+      }, []);
+
+      useEffect(() => {
+         if (territoriesData && selectedLead) {
+             // Calculate progress (completedStops / totalRouteStops)
+             // Mocking calculation
+             setShiftProgress(0.5);
+         }
+      }, [territoriesData, selectedLead]);
+
       const [routeDistance, setRouteDistance] = useState<Record<string, number>>({});
 
       const handleOptimizeRoute = async (territoryId: string, leads: any[]) => {

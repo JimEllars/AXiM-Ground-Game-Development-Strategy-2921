@@ -21,6 +21,21 @@ export interface JWTPayload {
 const tokenCache = new Map<string, { valid: boolean; user?: User; expiry: number }>();
 
 export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  const internalKey = process.env.AXIM_INTERNAL_API_KEY;
+  const providedKey = req.headers['x-axim-internal-api-key'];
+
+  if (internalKey && providedKey === internalKey) {
+    // Grant internal service authorization
+    req.user = {
+      id: 'system',
+      email: 'system@axim.local',
+      role: 'ADMIN',
+      organization_id: 'system',
+      is_active: true
+    } as User;
+    return next();
+  }
+
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 

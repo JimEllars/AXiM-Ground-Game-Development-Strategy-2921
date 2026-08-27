@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { requireRole } from '../auth.js';
+import { requireRole, authenticateToken } from '../auth.js';
 import { jest } from '@jest/globals';
 import { AuthRequest } from '../../types/index.js';
 
@@ -72,6 +72,44 @@ describe('auth middleware - requireRole', () => {
     expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({
       message: 'Insufficient permissions',
       statusCode: 403
+    }));
+  });
+});
+
+describe('auth middleware - authenticateToken internal key bypass', () => {
+  let mockReq: Partial<AuthRequest>;
+  let mockRes: Partial<Response>;
+  let mockNext: NextFunction;
+
+  beforeEach(() => {
+    process.env.AXIM_INTERNAL_API_KEY = 'test-secret';
+    mockReq = { headers: {} };
+    mockRes = {
+      status: jest.fn().mockReturnThis() as any,
+      json: jest.fn() as any,
+    };
+    mockNext = jest.fn();
+  });
+
+  afterEach(() => {
+    delete process.env.AXIM_INTERNAL_API_KEY;
+  });
+
+  it('should bypass auth and set system user if valid x-axim-internal-api-key provided', async () => {
+    mockReq.headers!['x-axim-internal-api-key'] = 'test-secret';
+    await authenticateToken(mockReq as AuthRequest, mockRes as Response, mockNext);
+    expect(mockNext).toHaveBeenCalledTimes(1);
+    expect(mockReq.user).toBeDefined();
+    expect(mockReq.user!.role).toBe('ADMIN');
+    expect(mockReq.user!.id).toBe('system');
+  });
+
+  it('should require token if x-axim-internal-api-key is invalid', async () => {
+    mockReq.headers!['x-axim-internal-api-key'] = 'wrong-secret';
+    await authenticateToken(mockReq as AuthRequest, mockRes as Response, mockNext);
+    expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Access token required',
+      statusCode: 401
     }));
   });
 });

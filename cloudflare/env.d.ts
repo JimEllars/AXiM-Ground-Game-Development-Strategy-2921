@@ -8,6 +8,7 @@ interface __BaseEnv_Env {
 	ORIGIN_AUTH_TOKEN: string;
 	EMAILIT_API_KEY: string;
 	EMAILIT_SUBSCRIBER_LIST_ID: string;
+		AXIM_INTERNAL_API_KEY: string;
 	DESKERA_WEBHOOK_SECRET: string;
 	EMAILIT_WEBHOOK_SECRET: string;
 }
@@ -22,6 +23,7 @@ declare namespace Cloudflare {
 		ORIGIN_AUTH_TOKEN: string;
 		EMAILIT_API_KEY: string;
 		EMAILIT_SUBSCRIBER_LIST_ID: string;
+		AXIM_INTERNAL_API_KEY: string;
 	}
 	interface ProductionEnv {
 		ASSETS: Fetcher;
@@ -30,6 +32,7 @@ declare namespace Cloudflare {
 		ORIGIN_AUTH_TOKEN: string;
 		EMAILIT_API_KEY: string;
 		EMAILIT_SUBSCRIBER_LIST_ID: string;
+		AXIM_INTERNAL_API_KEY: string;
 	}
 	interface Env extends __BaseEnv_Env {}
 }

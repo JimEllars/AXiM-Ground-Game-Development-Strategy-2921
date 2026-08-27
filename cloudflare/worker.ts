@@ -138,6 +138,9 @@ const proxyApi = async (request: Request, url: URL, env: Env): Promise<Response>
   headers.delete("x-forwarded-host");
   headers.delete("x-forwarded-proto");
   headers.set("x-axim-origin-token", env.ORIGIN_AUTH_TOKEN);
+  if (env.AXIM_INTERNAL_API_KEY) {
+    headers.set("x-axim-internal-api-key", env.AXIM_INTERNAL_API_KEY);
+  }
   headers.set("x-forwarded-host", url.host);
   headers.set("x-forwarded-proto", url.protocol.slice(0, -1));
 

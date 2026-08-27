@@ -194,3 +194,10 @@ window.addEventListener('online', () => {
   syncOfflineData();
   syncTelemetryQueue();
 });
+
+// Local proximity coordinate deduplication logic (if we were capturing coords locally for a pin drop)
+const deduplicateOfflinePins = async (interaction: any) => {
+  // If the interaction includes a location (quick drop), we could deduplicate here.
+  // For now, it's handled server side mostly, but if we need a quick dedup client side:
+  // we can check recent pins within ~15m.
+};

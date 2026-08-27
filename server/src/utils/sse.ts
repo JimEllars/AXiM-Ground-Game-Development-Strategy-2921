@@ -31,3 +31,14 @@ export const broadcastToOrg = (orgId: string, eventType: string, payload: any) =
     }
   }
 };
+
+// Heartbeat interval to maintain cellular TCP socket connections
+setInterval(() => {
+  for (const [clientId, client] of clients.entries()) {
+    try {
+      client.res.write(': keep-alive\n\n');
+    } catch (e) {
+      clients.delete(clientId);
+    }
+  }
+}, 15000);

@@ -5,7 +5,10 @@ import Map, { Source, Layer, Popup } from 'react-map-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Territory, Lead } from '@/types';
 import { parseLeadLocation } from '@/common/locationUtils';
-import { Box, Typography, Button, TextField, Chip, Stack } from '@mui/material';
+import { Box, Typography, Button, TextField, Chip, Stack, Fab } from '@mui/material';
+import { FiMapPin } from 'react-icons/fi';
+import { repsAPI } from '@/services/api';
+
 
 import { useDebounce } from '@/hooks/useDebounce';
 import { db } from '@/db';
@@ -239,6 +242,24 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
     }
   };
 
+
+  const handleQuickDrop = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        try {
+          const res = await api.post('/leads/quick-drop', {
+             latitude: pos.coords.latitude,
+             longitude: pos.coords.longitude,
+             status: 'NOT_HOME'
+          });
+          console.log("Quick drop success", res.data);
+        } catch (e) {
+          console.error("Quick drop failed", e);
+        }
+      });
+    }
+  };
+
   return (
 
     <MapErrorBoundary fallbackLeads={leads}>
@@ -267,7 +288,9 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
         </Stack>
       </Box>
 
+
     <Map transformRequest={(url, resourceType) => {
+
         if (resourceType === 'Tile' && url.includes('api.mapbox.com')) {
           const proxyUrl = import.meta.env.VITE_AXIM_PROXY_URL;
           if (proxyUrl) {
