@@ -248,3 +248,23 @@ export const getProfile = catchAsync(async (req: AuthRequest, res: Response, nex
       organizationId: freshUser.organization_id,
     });
 });
+
+
+export const refreshToken = catchAsync(async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const user = req.user;
+    if (!user) {
+        return next(new AppError('Not authenticated', 401));
+    }
+
+    const token = jwt.sign(
+        { id: user.id, email: user.email, role: user.role, organizationId: user.organization_id },
+        JWT_SECRET as string,
+        { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    res.status(200).json({
+        status: 'success',
+        token,
+        user
+    });
+});

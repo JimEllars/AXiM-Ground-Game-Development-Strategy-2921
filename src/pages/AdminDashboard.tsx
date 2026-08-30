@@ -48,6 +48,135 @@ const AdminDashboard: React.FC = () => {
 
 
     // Need to import mapRef somehow or store it
+
+  const leadsData = {
+    type: 'FeatureCollection' as const,
+    features: allLeads.reduce((acc: any[], lead: any) => {
+      const parsedLocation = parseLeadLocation(lead.location);
+      if (parsedLocation) {
+        acc.push({
+          type: 'Feature' as const,
+          geometry: {
+            type: 'Point',
+            coordinates: [parsedLocation.longitude, parsedLocation.latitude],
+          },
+          properties: {
+            id: lead.id,
+            status: lead.status,
+            firstName: lead.firstName || '',
+            lastName: lead.lastName || '',
+            streetAddress: lead.streetAddress || ''
+          },
+        });
+      }
+      return acc;
+    }, []),
+  };
+
+  const handleMapClick = (event: any) => {
+    const feature = event.features && event.features[0];
+    if (feature && feature.layer.id === 'clusters') {
+      const clusterId = feature.properties.cluster_id;
+      const map = mapRef?.getMap();
+      if (!map) return;
+      const clusterSource = map.getSource('leads');
+
+      clusterSource.getClusterExpansionZoom(clusterId, (err: any, zoom: any) => {
+        if (err) return;
+        map.easeTo({
+          center: feature.geometry.coordinates,
+          zoom: zoom,
+          duration: 500
+        });
+      });
+      return;
+    }
+
+    if (feature && feature.layer.id === 'leads-points') {
+      const coordinates = feature.geometry.coordinates.slice();
+      setSelectedLead({
+        id: feature.properties.id,
+        firstName: feature.properties.firstName,
+        lastName: feature.properties.lastName,
+        streetAddress: feature.properties.streetAddress,
+        status: feature.properties.status,
+        location: { type: 'Point', coordinates: [coordinates[0], coordinates[1]] }
+      });
+    } else {
+      setSelectedLead(null);
+    }
+  };
+
+  const clusterLayer = {
+    id: 'clusters',
+    type: 'circle' as const,
+    source: 'leads',
+    filter: ['has', 'point_count'],
+    paint: {
+      'circle-color': [
+        'step',
+        ['get', 'point_count'],
+        '#1976d2', // MUI Primary Main
+        50,
+        '#9c27b0', // MUI Secondary Main
+        200,
+        '#d32f2f'  // MUI Error Main
+      ],
+      'circle-radius': [
+        'step',
+        ['get', 'point_count'],
+        20,
+        50,
+        30,
+        200,
+        40
+      ],
+      'circle-stroke-width': 3,
+      'circle-stroke-color': '#ffffff'
+    }
+  };
+
+  const clusterCountLayer = {
+    id: 'cluster-count',
+    type: 'symbol' as const,
+    source: 'leads',
+    filter: ['has', 'point_count'],
+    layout: {
+      'text-field': '{point_count_abbreviated}',
+      'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+      'text-size': 12
+    },
+    paint: {
+      'text-color': '#ffffff'
+    }
+  };
+
+  const leadsLayer = {
+    id: 'leads-points',
+    type: 'circle' as const,
+    source: 'leads',
+    filter: ['!', ['has', 'point_count']],
+    paint: {
+        'circle-radius': 22,
+        'circle-color': [
+          'match',
+          ['get', 'status'],
+          'New', '#9E9E9E', // Unattempted
+          'Uncontacted', '#9E9E9E', // Unattempted
+          'Contacted', '#F59E0B', // Follow Up
+          'Follow-up', '#F59E0B', // Follow Up
+          'Follow Up', '#F59E0B', // Follow Up
+          'Left Flyer', '#F59E0B', // Follow Up
+          'Sold', '#10B981', // Qualified/Sale
+          'Qualified', '#10B981', // Qualified/Sale
+          'Completed', '#10B981', // Qualified/Sale
+          'Not Interested', '#EF4444', // Not Home
+          'Not Home', '#EF4444', // Not Home
+          '#9E9E9E' // Default
+        ]
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -223,6 +352,8 @@ const AdminDashboard: React.FC = () => {
               style={{ width: '100%', height: '100%' }}
               mapStyle="mapbox://styles/mapbox/streets-v11"
               mapboxAccessToken={MAPBOX_TOKEN}
+              interactiveLayerIds={['leads-points', 'clusters']}
+              onClick={handleMapClick}
             >
               {territories.map((territory: any) => (
                 <Source key={territory.id} id={`territory-${territory.id}`} type="geojson" data={territory.boundary}>
@@ -272,20 +403,11 @@ const AdminDashboard: React.FC = () => {
                   </style>
                 </Marker>
               ))}
-              {allLeads.map((lead: any) => {
-                const parsedLocation = parseLeadLocation(lead.location);
-                return parsedLocation && (
-                  <Marker
-                    key={lead.id}
-                    longitude={parsedLocation.longitude}
-                    latitude={parsedLocation.latitude}
-                    onClick={(e) => {
-                      e.originalEvent.stopPropagation();
-                      setSelectedLead(lead);
-                    }}
-                  />
-                );
-              })}
+              <Source id="leads" type="geojson" data={leadsData} cluster={true} clusterMaxZoom={14} clusterRadius={50}>
+                <Layer {...(clusterLayer as any)} />
+                <Layer {...(clusterCountLayer as any)} />
+                <Layer {...(leadsLayer as any)} />
+              </Source>
               {(() => {
                 const parsedLocation = parseLeadLocation(selectedLead?.location);
                 return parsedLocation && (
