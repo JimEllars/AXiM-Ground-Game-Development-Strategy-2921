@@ -11,7 +11,7 @@ import { useState } from 'react';
 
       Alert,
     } from '@mui/material';
-    import { FiSave, FiX, FiMic } from 'react-icons/fi';
+    import { FiSave, FiX, FiMic, FiCamera } from 'react-icons/fi';
 import { IconButton, Tooltip, Snackbar } from '@mui/material';
     import SafeIcon from '@/common/SafeIcon';
     import { interactionsAPI, settingsAPI } from '@/services/api';
@@ -38,7 +38,9 @@ import { IconButton, Tooltip, Snackbar } from '@mui/material';
       const [outcome, setOutcome] = useState('');
       const [notes, setNotes] = useState('');
       const [surveyAnswers, setSurveyAnswers] = useState<Record<string, any>>({});
+      const [photoPreview, setPhotoPreview] = useState<string | null>(null);
       const [submitting, setSubmitting] = useState(false);
+      const [photo, setPhoto] = useState<File | null>(null);
       const [error, setError] = useState('');
       const [micStatus, setMicStatus] = useState<{ open: boolean, message: string }>({ open: false, message: '' });
 
@@ -68,6 +70,16 @@ import { IconButton, Tooltip, Snackbar } from '@mui/material';
       const surveys = settingsData?.surveys || [];
       const currentDisposition = settingsData?.dispositions?.find((d: any) => d.name === outcome);
 
+
+      const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+          const file = e.target.files[0];
+          setPhoto(file);
+          const reader = new FileReader();
+          reader.onload = (event) => setPhotoPreview(event.target?.result as string);
+          reader.readAsDataURL(file);
+        }
+      };
 
       const handleMicClick = async () => {
         try {
@@ -101,20 +113,44 @@ import { IconButton, Tooltip, Snackbar } from '@mui/material';
             notes: notes.trim() || undefined,
             interactionDate,
             surveyData,
+            photoBlob: photo || undefined,
           };
 
           if (!navigator.onLine) {
-            await db.interactions.add({
+            const interactionId = await db.interactions.add({
               leadId: lead.id,
               outcome,
               notes: notes.trim() || '',
               interactionDate: interactionDate.toISOString(),
-              synced: false,
+              synced: 0 as any,
               surveyData,
             });
+            if (photo) {
+              await db.photos.add({
+                interaction_id: interactionId.toString(),
+                blob: photo,
+                mime_type: photo.type,
+                created_at: interactionDate.toISOString(),
+                synced: 0,
+              });
+            }
             onSubmit({ ...interaction, offline: true });
           } else {
-            await interactionsAPI.create([interaction]);
+
+            let photoUrl;
+            if (photo) {
+              const formData = new FormData();
+              formData.append('photo', photo);
+              try {
+                const uploadRes = await interactionsAPI.uploadPhoto(formData);
+                photoUrl = uploadRes.data.objectKey;
+              } catch (e) {
+                console.error("Photo upload failed online", e);
+              }
+            }
+            const onlineInteraction = { ...interaction, photoUrl };
+            await interactionsAPI.create([onlineInteraction]);
+
             onSubmit(interaction);
           }
         } catch (error: any) {
@@ -220,6 +256,28 @@ import { IconButton, Tooltip, Snackbar } from '@mui/material';
                  ))}
                </Box>
             ))}
+
+            <Box sx={{ mb: 2 }}>
+              <input
+                accept="image/*"
+                style={{ display: 'none' }}
+                id="photo-upload"
+                type="file"
+                capture="environment"
+                onChange={handlePhotoChange}
+              />
+              <label htmlFor="photo-upload">
+                <Button variant="outlined" component="span" startIcon={<SafeIcon icon={FiCamera} />} fullWidth>
+                  Capture Photo
+                </Button>
+              </label>
+              {photoPreview && (
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                  <img src={photoPreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px' }} />
+                  <Button size="small" color="error" onClick={() => { setPhoto(null); setPhotoPreview(null); }} sx={{ mt: 1 }}>Remove Photo</Button>
+                </Box>
+              )}
+            </Box>
             <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' }, mt: 3 }}>
               <Button type="submit" variant="contained" disabled={submitting} startIcon={<SafeIcon icon={FiSave} />} sx={{ py: 1.5, flex: 1, fontSize: '1rem' }}>
                 {submitting ? 'Saving...' : 'Save Interaction'}

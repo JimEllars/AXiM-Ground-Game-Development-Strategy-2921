@@ -204,6 +204,7 @@ export const interactionsAPI = {
     location?: { longitude: number; latitude: number };
   }>) => 
     api.post('/interactions', interactions),
+  uploadPhoto: (formData: FormData) => api.post('/interactions/upload-photo', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getAll: (params?: {
     leadId?: string;
     startDate?: string;

@@ -20,6 +20,7 @@ import teamRoutes from "./routes/teams.js";
 import settingsRoutes from "./routes/settings.js";
 import appointmentRoutes from "./routes/appointments.js";
 import webhookRoutes from "./routes/webhooks.js";
+import sseRoutes from "./routes/sse.js";
 
 const app = express();
 
@@ -116,6 +117,7 @@ app.use("/api/teams", teamRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/v1/webhooks", webhookRoutes);
+app.use("/api/sse", sseRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {

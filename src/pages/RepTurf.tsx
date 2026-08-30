@@ -18,7 +18,7 @@ import { useState, useEffect } from 'react';
     } from '@mui/material';
     import { FiMapPin, FiPlus, FiTarget } from 'react-icons/fi';
 import { useQuery, useQueryClient } from 'react-query';
-import { optimizeRoute, calculateTotalDistance } from '@/utils/routeOptimization';
+import { optimizeRoute, calculateTotalDistance, optimizeRouteByPriority } from '@/utils/routeOptimization';
 import { db } from '@/db';
 import { useAuth } from '@/contexts/AuthContext';
     import SafeIcon from '@/common/SafeIcon';
@@ -261,9 +261,19 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                       <Typography variant="h6">
                         Leads in {territory.name}
                       </Typography>
-                      <Button variant="outlined" size="small" onClick={() => handleOptimizeRoute(territory.id, territory.leads)}>
-                        Optimize Shift Route
-                      </Button>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button variant="outlined" size="small" onClick={() => handleOptimizeRoute(territory.id, territory.leads)}>
+                          Optimize Shift Route
+                        </Button>
+                        <Button variant="outlined" size="small" color="secondary" onClick={() => {
+                          const currentLocation = localStorage.getItem('lastLocation') ? JSON.parse(localStorage.getItem('lastLocation')!) : null;
+                          const optimized = optimizeRouteByPriority(territory.leads, currentLocation);
+                          setOptimizedRoutes(prev => ({ ...prev, [territory.id]: optimized }));
+                          setRouteDistance(prev => ({ ...prev, [territory.id]: calculateTotalDistance(optimized) }));
+                        }}>
+                          Sort Route by Priority
+                        </Button>
+                      </Box>
                     </Box>
                     {routeDistance[territory.id] > 0 && (
                       <Typography variant="body2" color="text.secondary" gutterBottom>

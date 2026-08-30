@@ -17,6 +17,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { FiMapPin, FiEdit2, FiSave, FiX, FiCalendar } from 'react-icons/fi';
 import SafeIcon from '@/common/SafeIcon';
 import { leadsAPI, interactionsAPI } from '@/services/api';
+import { calculateLeadPriorityScore, getPriorityBadgeProps } from '@/utils/leadScoring';
 import { syncOfflineData } from '@/syncEngine';
 
 import AppointmentForm from './AppointmentForm';
@@ -427,6 +428,10 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
               <Divider sx={{ my: 2 }} />
               <Typography variant="body1" gutterBottom>
                   <strong>Status:</strong> <Chip label={lead.status} size="small" />
+              {(() => {
+                const badge = getPriorityBadgeProps(calculateLeadPriorityScore(lead));
+                return <Chip label={badge.label} color={badge.color as any} size="small" sx={{ ml: 1 }} />;
+              })()}
               </Typography>
               {/* Enriched Lead Metadata Badges */}
               {(lead.credit_tier || lead.property_value_est || lead.commercial_uniform_fit) && (

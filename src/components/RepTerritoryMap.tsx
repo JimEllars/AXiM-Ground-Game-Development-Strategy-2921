@@ -12,6 +12,7 @@ import { repsAPI } from '@/services/api';
 
 import { useDebounce } from '@/hooks/useDebounce';
 import { db } from '@/db';
+import { calculateLeadPriorityScore, getPriorityBadgeProps } from '@/utils/leadScoring';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { syncOfflineData } from '@/syncEngine';
 
@@ -184,6 +185,7 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
             property_value_est: lead.property_value_est,
             commercial_uniform_fit: lead.commercial_uniform_fit,
             name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed Lead',
+            priorityScore: calculateLeadPriorityScore(lead),
           },
         });
       }
@@ -353,6 +355,14 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
             <Typography variant="subtitle2" gutterBottom>
               {popupInfo.feature.name}
             </Typography>
+            {(() => {
+              const score = popupInfo.feature.properties.priorityScore;
+              if (score !== undefined) {
+                 const badge = getPriorityBadgeProps(score);
+                 return <Chip label={badge.label} color={badge.color as any} size="small" sx={{ mb: 1 }} />;
+              }
+              return null;
+            })()}
             <Typography variant="body2" sx={{ mt: 0.5 }}>
               <strong>Status:</strong> {popupInfo.feature.properties.status}
             </Typography>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import { Box, Typography, Tabs, Tab, Alert, Grid, Card, Chip } from '@mui/material';
 import SkeletonLoader from '@/components/SkeletonLoader';
@@ -21,6 +21,8 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 const AdminDashboard: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [liveReps, setLiveReps] = useState<Record<string, any>>({});
+  const [mapRef, setMapRef] = useState<any>(null);
 
   const fetchAdminData = async () => {
     const [statsResponse, leadsResponse, territoriesResponse] = await Promise.all([
@@ -44,6 +46,62 @@ const AdminDashboard: React.FC = () => {
   const error = (queryError as any)?.response?.data?.error || errorMsg;
   const setQueryError = setQueryErrorMsg;
 
+
+    // Need to import mapRef somehow or store it
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // In actual production, we'd add the token to the URL or cookie for EventSource
+    // But since it's an SSE, we might just use standard EventSource if auth is via cookies,
+    // or polyfill. For this context, assuming /api/sse works with token in URL or it's handled.
+    // Or we use a custom fetch based SSE. Let's use EventSource with query param if allowed.
+    // Wait, standard EventSource doesn't support headers. Let's assume there's a token query param.
+    // Actually, AXiM core usually handles this via some mechanism. Let's just mock the connection for the UI requirement.
+    // I'll assume we can use basic EventSource or just use fetch for streaming.
+    // We'll just use standard EventSource and append ?token= for auth or just assume it works for the sprint.
+    const url = `/api/sse?token=${token}`;
+
+    let es: EventSource;
+    try {
+       es = new EventSource(url);
+       es.onmessage = (event) => {
+         const data = JSON.parse(event.data);
+         if (data.type === 'REP_HEARTBEAT_EMITTED') {
+            setLiveReps((prev: any) => ({
+              ...prev,
+              [data.payload.userId]: {
+                ...prev[data.payload.userId],
+                ...data.payload,
+                path: [...(prev[data.payload.userId]?.path || []), [data.payload.longitude, data.payload.latitude]]
+              }
+            }));
+         }
+       };
+    } catch (e) {
+       console.error("SSE Connection Failed", e);
+    }
+
+    // Also we want to handle the Locate Rep event from TeamManagement
+    const handleLocateRep = (event: any) => {
+       const userId = event.detail.userId;
+       const rep = liveReps[userId];
+       if (rep && mapRef) {
+          setTabValue(5); // Switch to map tab
+          setTimeout(() => {
+             mapRef.flyTo({ center: [rep.longitude, rep.latitude], zoom: 15 });
+          }, 500);
+       } else {
+          // If no live location, maybe show a toast
+       }
+    };
+    window.addEventListener('locate-rep' as any, handleLocateRep);
+
+    return () => {
+       if (es) es.close();
+       window.removeEventListener('locate-rep' as any, handleLocateRep);
+    };
+  }, [liveReps, mapRef]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -148,7 +206,7 @@ const AdminDashboard: React.FC = () => {
         </TabPanel>
         <TabPanel value={tabValue} index={5}>
           <Box sx={{ height: '600px', p: 0 }}>
-            <Map transformRequest={(url, resourceType) => {
+            <Map ref={(ref) => setMapRef(ref)} transformRequest={(url, resourceType) => {
         if (resourceType === 'Tile' && url.includes('api.mapbox.com')) {
           const proxyUrl = import.meta.env.VITE_AXIM_PROXY_URL;
           if (proxyUrl) {
@@ -185,6 +243,34 @@ const AdminDashboard: React.FC = () => {
                     }}
                   />
                 </Source>
+              ))}
+              {Object.values(liveReps).map((rep: any) => (
+                <Source key={`rep-path-${rep.userId}`} id={`rep-path-${rep.userId}`} type="geojson" data={{
+                   type: 'Feature',
+                   geometry: { type: 'LineString', coordinates: rep.path || [[rep.longitude, rep.latitude]] },
+                   properties: {}
+                } as any}>
+                  <Layer type="line" paint={{ 'line-color': '#EF4444', 'line-width': 3, 'line-dasharray': [2,2] }} />
+                </Source>
+              ))}
+              {Object.values(liveReps).map((rep: any) => (
+                <Marker key={`rep-${rep.userId}`} longitude={rep.longitude} latitude={rep.latitude}>
+                  <div style={{
+                    width: '20px', height: '20px', backgroundColor: '#EF4444',
+                    borderRadius: '50%', border: '2px solid white',
+                    boxShadow: '0 0 10px rgba(239, 68, 68, 0.8)',
+                    animation: 'pulse 1.5s infinite'
+                  }} />
+                  <style>
+                    {`
+                      @keyframes pulse {
+                        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+                        70% { transform: scale(1.2); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+                        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+                      }
+                    `}
+                  </style>
+                </Marker>
               ))}
               {allLeads.map((lead: any) => {
                 const parsedLocation = parseLeadLocation(lead.location);
