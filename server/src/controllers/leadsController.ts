@@ -608,9 +608,7 @@ export const quickDropLead = catchAsync(
 
     // Sync if new
     if (isNew) {
-       syncToNexusCRM(leadId, user.organization_id).catch(err => {
-         logger.error('Background sync to Nexus CRM failed for quick drop:', err);
-       });
+       try { syncToNexusCRM(leadId); } catch(err) { logger.error('Background sync to Nexus CRM failed for quick drop:', err); }
        broadcastToOrg(user.organization_id, 'TERRITORY_PINS_MUTATED', { leadId, longitude, latitude, status, isNew });
     }
 

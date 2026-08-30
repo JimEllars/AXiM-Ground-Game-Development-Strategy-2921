@@ -234,3 +234,38 @@ export const endShift = catchAsync(async (req: AuthRequest, res: Response) => {
 
   res.status(200).json(result.rows[0]);
 });
+
+
+export const heartbeatShift = catchAsync(async (req: AuthRequest, res: Response) => {
+  const user = req.user!;
+  const { shiftId, currentProgress, distanceTraveledMeters, pinsKnocked, breadcrumbs } = req.body;
+
+  const result = await pool.query(
+    `UPDATE rep_shifts
+     SET distance_meters = $1, pins_knocked = $2, updated_at = NOW()
+     WHERE id = $3 AND user_id = $4
+     RETURNING id, distance_meters, pins_knocked`,
+    [distanceTraveledMeters || 0, pinsKnocked || 0, shiftId, user.id]
+  );
+
+  if (result.rowCount === 0) {
+    return res.status(404).json({ error: 'Shift not found or not active' });
+  }
+
+  // Append telemetry
+  const logEntry = JSON.stringify({
+    timestamp: new Date().toISOString(),
+    type: 'shift_telemetry',
+    event: 'heartbeat',
+    user_id: user.id,
+    organization_id: user.organization_id,
+    shift_id: shiftId,
+    progress: currentProgress,
+    distance_meters: distanceTraveledMeters,
+    pins_knocked: pinsKnocked,
+    breadcrumbs: breadcrumbs || []
+  });
+  clientExceptionStream.write(logEntry + '\n');
+
+  res.status(200).json({ success: true, timestamp: Date.now() });
+});
