@@ -52,3 +52,7 @@
 - Implemented Offline Photo Upload Queue & Cloudflare R2 Direct Ingress logic in Dexie, LeadInteractionForm, and syncEngine. Added R2 upload-photo endpoint.
 - Implemented Predictive Lead Priority Scoring logic and integrated it into RepTerritoryMap and LeadDetails. Added "Sort Route by Priority" in RepTurf.
 - Added Manager Live GPS Trail & Territory Center Tool. Handled SSE 'REP_HEARTBEAT_EMITTED' events and rendering trails via AdminDashboard map. Integrated locate rep button in TeamManagement.
+# Phase 50 Micro-Sprint
+- Implemented Mapbox cluster decluttering in AdminDashboard.tsx to match RepTerritoryMap conventions.
+- Added background JWT token sliding refresh via a new backend endpoint and a 10-minute polling loop in AuthContext.tsx.
+- Hardened database seeding scripts in seedDatabase.ts to include mock rep_shifts and interactions (with survey_data) to ensure live mapping visualizations have immediate sample data on reset.

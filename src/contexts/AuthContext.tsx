@@ -68,11 +68,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     };
     getUser();
-
     return () => {
       window.removeEventListener('auth-unauthorized', handleUnauthorized);
     };
   }, []);
+
+  useEffect(() => {
+    let intervalId: any;
+    if (user) {
+      intervalId = setInterval(async () => {
+        if (navigator.onLine) {
+          try {
+            const token = localStorage.getItem('token');
+            if (token) {
+              const res = await authAPI.refreshToken();
+              if (res.data && res.data.token) {
+                localStorage.setItem('token', res.data.token);
+              }
+            }
+          } catch (err) {
+            console.error('Failed to refresh token in background', err);
+          }
+        }
+      }, 10 * 60 * 1000); // 10 minutes
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [user]);
+
+
 
   const login = async (email: string, password: string) => {
     try {
@@ -97,9 +123,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
   };
 
+
   return (
     <AuthContext.Provider value={{ user, loading, error, login, logout }}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
