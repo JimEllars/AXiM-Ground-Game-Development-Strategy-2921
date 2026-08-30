@@ -6,8 +6,8 @@ import {
 import { FiChevronDown, FiStar, FiTrendingUp, FiTarget, FiZap } from 'react-icons/fi';
 import SafeIcon from '../common/SafeIcon';
 import { db } from '../db';
-import { useQuery } from '@tanstack/react-query';
-import api from '../services/api';
+import { useQuery } from 'react-query';
+import { repsAPI } from '../services/api';
 
 interface MilestoneProps {
     todayInteractions: number;
@@ -26,12 +26,14 @@ const RepDailyMilestones: React.FC<MilestoneProps> = ({ todayInteractions, today
     const [justUnlocked, setJustUnlocked] = useState<string | null>(null);
 
     // Get today's qualified leads (First Strike)
-    const { data: repStatsData } = useQuery({
-        queryKey: ['repStats'],
-        queryFn: () => api.get('/stats/rep').then(res => res.data),
-    });
+    const today = new Date().toISOString().split('T')[0];
+    const { data: repStatsData } = useQuery(
+        ['repStats', today],
+        () => repsAPI.getStats({ startDate: today, endDate: today }).then(res => res.data)
+    );
 
-    const soldOrQualified = repStatsData?.summary?.outcomes?.Sold || repStatsData?.summary?.outcomes?.Qualified || 0;
+    const outcomes = repStatsData?.outcomeBreakdown || [];
+    const soldOrQualified = outcomes.find((o: any) => o.outcome === 'Sold' || o.outcome === 'Qualified')?.count || 0;
 
     useEffect(() => {
         // Load offline cached unlocked milestones

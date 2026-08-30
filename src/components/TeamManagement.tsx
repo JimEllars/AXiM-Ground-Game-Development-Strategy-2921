@@ -327,7 +327,54 @@ const TeamManagement: React.FC = () => {
         </Tabs>
       </Box>
 
+
+      {/* Live Field Activity Summary */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>Live Field Activity</Typography>
+        <Grid container spacing={2}>
+          {users.filter(u => u.activeShift).length === 0 ? (
+            <Grid item xs={12}>
+              <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, bgcolor: 'background.default' }}>
+                <Typography color="text.secondary">No reps currently active in the field.</Typography>
+              </Paper>
+            </Grid>
+          ) : (
+            users.filter(u => u.activeShift).map((activeUser) => {
+              const shiftStart = new Date(activeUser.activeShift.startTime);
+              const durationMinutes = Math.floor((Date.now() - shiftStart.getTime()) / 60000);
+              const hours = Math.floor(durationMinutes / 60);
+              const minutes = durationMinutes % 60;
+              const distanceKm = ((activeUser.activeShift.distanceMeters || 0) / 1000).toFixed(2);
+
+              return (
+                <Grid item xs={12} sm={6} md={4} key={activeUser.id}>
+                  <Card variant="outlined" sx={{ borderLeft: '4px solid #4caf50' }}>
+                    <CardContent sx={{ pb: '16px !important' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="subtitle1" fontWeight="bold">
+                          {activeUser.firstName} {activeUser.lastName}
+                        </Typography>
+                        <Chip label="On Shift" color="success" size="small" />
+                      </Box>
+                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <SafeIcon icon={FiMapPin} size={14} />
+                        {distanceKm} km walked
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                        <SafeIcon icon={FiZap} size={14} />
+                        Active for {hours}h {minutes}m
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              );
+            })
+          )}
+        </Grid>
+      </Box>
+
       {/* USERS TAB */}
+
       <TabPanel value={activeTab} index={0}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
           <Button

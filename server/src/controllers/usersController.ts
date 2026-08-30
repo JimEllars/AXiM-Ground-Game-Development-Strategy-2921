@@ -47,6 +47,10 @@ export const getUsers = catchAsync(async (req: AuthRequest, res: Response) => {
     createdAt: row.created_at,
     assignedTerritories: parseInt(row.assigned_territories),
     teamId: row.team_id,
+    activeShift: row.active_shift_start ? {
+      startTime: row.active_shift_start,
+      distanceMeters: row.active_shift_distance
+    } : null
   }));
 
   res.json(users);
