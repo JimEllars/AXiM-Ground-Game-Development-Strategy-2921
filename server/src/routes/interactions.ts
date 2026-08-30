@@ -37,3 +37,18 @@ router.get('/', authenticateToken, getInteractions);
 export default router;
 // Audio Upload Endpoint
 router.post('/upload-audio', authenticateToken, upload.single('audio'), uploadAudio);
+// Photo Upload Endpoint
+const uploadPhotoMulter = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10 MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only images are allowed.'));
+    }
+  }
+});
+router.post('/upload-photo', authenticateToken, uploadPhotoMulter.single('photo'), uploadAudio);

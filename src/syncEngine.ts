@@ -190,9 +190,40 @@ export const syncTelemetryQueue = async () => {
   }
 };
 
+
+export const syncOfflinePhotos = async () => {
+  if (!navigator.onLine || isSyncPaused) return;
+
+  try {
+    const offlinePhotos = await db.photos.where('synced').equals(0 as any).toArray();
+    if (offlinePhotos.length === 0) return;
+
+    logger.info(`Syncing ${offlinePhotos.length} offline photos.`);
+
+    for (const photo of offlinePhotos) {
+      if (isSyncPaused) break;
+      try {
+        const formData = new FormData();
+        formData.append('photo', photo.blob, `offline-photo-${photo.interaction_id}.jpg`);
+
+        const res = await interactionsAPI.uploadPhoto(formData);
+
+        if (photo.id !== undefined) {
+           await db.photos.update(photo.id, { synced: 1 as any });
+        }
+      } catch (err) {
+        logger.error('Failed to sync offline photo:', err);
+      }
+    }
+  } catch (error) {
+    logger.error('Failed to sync offline photos:', error);
+  }
+};
+
 window.addEventListener('online', () => {
   syncOfflineData();
   syncTelemetryQueue();
+  syncOfflinePhotos();
 });
 
 // Local proximity coordinate deduplication logic (if we were capturing coords locally for a pin drop)

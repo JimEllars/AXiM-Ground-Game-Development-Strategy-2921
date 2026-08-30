@@ -506,6 +506,9 @@ const TeamManagement: React.FC = () => {
                     </Typography>
                   </TableCell>
                   <TableCell>
+                    <IconButton size="small" onClick={() => window.dispatchEvent(new CustomEvent('locate-rep', { detail: { userId: user.id } }))} title="Locate Rep">
+                      <SafeIcon icon={FiMapPin} />
+                    </IconButton>
                     <IconButton size="small" onClick={() => handleEditUser(user)}>
                       <SafeIcon icon={FiEdit2} />
                     </IconButton>

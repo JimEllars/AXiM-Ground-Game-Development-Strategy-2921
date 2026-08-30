@@ -3,6 +3,7 @@ import { pool } from "../config/database.js";
 import { AuthRequest } from "../types/index.js";
 import catchAsync from "../utils/catchAsync.js";
 import { clientExceptionStream } from "../utils/logger.js";
+import { broadcastToOrg } from "../utils/sse.js";
 
 export const getMyTurf = catchAsync(async (req: AuthRequest, res: Response) => {
   const user = req.user!;
@@ -266,6 +267,19 @@ export const heartbeatShift = catchAsync(async (req: AuthRequest, res: Response)
     breadcrumbs: breadcrumbs || []
   });
   clientExceptionStream.write(logEntry + '\n');
+
+  // Emit SSE event for manager live trails
+  if (breadcrumbs && breadcrumbs.length > 0) {
+     const lastBreadcrumb = breadcrumbs[breadcrumbs.length - 1];
+     broadcastToOrg(user.organization_id, 'REP_HEARTBEAT_EMITTED', {
+       userId: user.id,
+       shiftId: shiftId,
+       latitude: lastBreadcrumb[1], // Assuming breadcrumbs is [longitude, latitude, timestamp]
+       longitude: lastBreadcrumb[0],
+       timestamp: lastBreadcrumb[2] || Date.now()
+     });
+  }
+
 
   res.status(200).json({ success: true, timestamp: Date.now() });
 });
