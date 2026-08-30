@@ -33,3 +33,17 @@
 - Hardened Milestone Widget query using react-query for 'repStats'
 - Implemented Shift Heartbeat POST API route and attached it to telemetry stream
 - Created Manager Live Monitoring Grid on TeamManagement page for active shift reporting
+
+# Phase 48 Micro-Sprint
+**Objective:** Ground Game — Nexus CRM Sync Activation, Support Self-Healing Uplink & Passport SSO Integration.
+
+**Completed Features:**
+- **Nexus CRM Direct Ingress Bridge**: Integrated AXiM Core CRM routing into the interactions controller to automatically sync leads and book appointments (via `syncLeadToNexus`).
+- **Support Edge Telemetry**: Enhanced Cloudflare Edge Support Worker to persist incidents and telemetry usage back to Supabase `groundgame_support_incidents` and `api_usage_logs` using Supabase service keys. Escalate unhandled crashes via central support webhook.
+- **Sync Queue UI Feedback**: Added real-time synced/offline/syncing badge to the `Navbar` component. Detailed offline pending interactions and flagged issues using cards in the `SyncQueueDrawer`.
+- **Passport SSO**: Integrated AXiM Passport redirect into the login screen and added token extraction logic within `AuthContext.tsx`. Registered new callback route `/auth/callback` inside `Router.tsx`.
+
+**Test Results:**
+- Application components successfully compiled (`npm run build`).
+- `groundgame-support-edge` successfully compiled.
+- Frontend and backend unit tests passed (`npm run test:run`).
