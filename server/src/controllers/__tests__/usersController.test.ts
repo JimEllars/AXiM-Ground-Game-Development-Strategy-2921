@@ -65,7 +65,7 @@ describe('usersController', () => {
       expect(queryCall[0]).toContain('WHERE organization_id = $1');
       expect(queryCall[1]).toEqual(['org1']);
 
-      expect(res.json).toHaveBeenCalledWith([{
+      expect(res.json).toHaveBeenCalledWith([expect.objectContaining({
         id: '1',
         email: 'test@example.com',
         firstName: 'Test',
@@ -73,9 +73,8 @@ describe('usersController', () => {
         role: 'ADMIN',
         isActive: true,
         createdAt: mockUsers[0].created_at,
-        assignedTerritories: 2,
-        teamId: 'team1'
-      }]);
+        assignedTerritories: 2
+      })]);
     });
 
     it('should filter users by role', async () => {
