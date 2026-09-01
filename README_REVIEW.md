@@ -56,3 +56,10 @@
 - Implemented Mapbox cluster decluttering in AdminDashboard.tsx to match RepTerritoryMap conventions.
 - Added background JWT token sliding refresh via a new backend endpoint and a 10-minute polling loop in AuthContext.tsx.
 - Hardened database seeding scripts in seedDatabase.ts to include mock rep_shifts and interactions (with survey_data) to ensure live mapping visualizations have immediate sample data on reset.
+
+
+### Current Sprint Completions
+* **Central Core Field Telemetry Ingress**: Integrated `dispatchFieldTelemetry` within `aximService.ts` and implemented coordinate privacy sanitization. Tracked events include `canvass.door_knocked`, `appointment.scheduled`, `lead.created`, and `shift.started`.
+* **Direct Nexus CRM Deal & Touchpoint Bridge**: Added `syncAppointmentToNexus` sequence in `nexusService.ts` for Contacts, Deals, and Touchpoints and hooked it into appointment workflows.
+* **EmailIt Appointment Confirmation Engine**: Built a robust mailer within `emailitService.ts` that prioritizes EmailIt API v1 with a 3500ms timeout circuit breaker, safely falling back to Resend API.
+* **Passport SSO Offline Session Persistence**: Upgraded `AuthContext.tsx` to utilize `idb-keyval` for caching Passport SSO tokens in IndexedDB, gracefully degrading to offline session tokens during network disruptions.
