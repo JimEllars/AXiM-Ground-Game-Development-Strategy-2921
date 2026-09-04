@@ -4,6 +4,7 @@ import logger from "../utils/logger.js";
 import { Response } from "express";
 import { pool } from "../config/database.js";
 import { AuthRequest } from "../types/index.js";
+import { broadcastToOrg } from "../utils/sse.js";
 import catchAsync from "../utils/catchAsync.js";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from 'uuid';
@@ -57,6 +58,16 @@ const user = req.user!;
     // Dispatch webhook for high value dispositions
     for (const interaction of validInteractions) {
       const outcome = interaction.outcome.toLowerCase();
+
+      // Broadcast SSE event
+      broadcastToOrg(user.organization_id, 'canvass.interaction_logged', {
+        leadId: interaction.leadId,
+        repId: user.id,
+        repName: `${user.first_name} ${user.last_name}`,
+        outcome: interaction.outcome,
+        timestamp: new Date().toISOString()
+      });
+
       if (outcome === 'appointment set' || outcome === 'sale' || outcome === 'sold' || outcome === 'completed') {
         // Find lead details locally for webhook
         const leadRes = await pool.query(`

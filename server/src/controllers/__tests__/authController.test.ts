@@ -66,6 +66,7 @@ describe('authController', () => {
             mockClient.query.mockImplementation((query) => {
   if (String(query).includes("SELECT id FROM users")) return Promise.resolve({ rows: [] });
   if (String(query).includes("INSERT INTO organizations")) return Promise.resolve({ rows: [{ id: "org123" }] });
+  if (String(query).includes("SELECT id FROM organizations")) return Promise.resolve({ rows: [] });
   if (String(query).includes("INSERT INTO users")) return Promise.resolve({ rows: [{ id: "user123", email: "admin@test.com", role: "ADMIN", organization_id: "org123" }] });
   return Promise.resolve();
 });

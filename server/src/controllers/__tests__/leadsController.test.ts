@@ -17,6 +17,7 @@ jest.unstable_mockModule('../../config/database.js', () => ({
 jest.unstable_mockModule('../../services/geocoding.js', () => ({
   geocodeAddress: jest.fn(),
   batchGeocode: jest.fn(),
+  reverseGeocode: jest.fn()
 }));
 
 jest.unstable_mockModule('../../services/aximService.js', () => ({

@@ -63,3 +63,11 @@
 * **Direct Nexus CRM Deal & Touchpoint Bridge**: Added `syncAppointmentToNexus` sequence in `nexusService.ts` for Contacts, Deals, and Touchpoints and hooked it into appointment workflows.
 * **EmailIt Appointment Confirmation Engine**: Built a robust mailer within `emailitService.ts` that prioritizes EmailIt API v1 with a 3500ms timeout circuit breaker, safely falling back to Resend API.
 * **Passport SSO Offline Session Persistence**: Upgraded `AuthContext.tsx` to utilize `idb-keyval` for caching Passport SSO tokens in IndexedDB, gracefully degrading to offline session tokens during network disruptions.
+
+
+## Phase 52 Micro-Sprint
+- Implemented voice debrief recording with MediaRecorder and R2 upload fallback
+- Added sequential numbered pins and route polylines to `RepTerritoryMap`
+- Integrated `optimizeCanvassRoute` for Turn-by-Turn waypoint routing
+- Wired up live SSE broadcasting for interactions (`canvass.interaction_logged`)
+- Created real-time team leaderboard and progress updates in `RepDashboard`

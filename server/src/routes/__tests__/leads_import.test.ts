@@ -11,6 +11,7 @@ type BatchGeocodeMock = jest.Mock<() => Promise<{ longitude: number; latitude: n
 // 1. Mock dependencies BEFORE importing modules that use them
 jest.unstable_mockModule('../../services/geocoding.js', () => ({
   batchGeocode: jest.fn(),
+  reverseGeocode: jest.fn(),
   geocodeAddress: jest.fn()
 }));
 
