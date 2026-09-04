@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
     import {
       Grid,
       Paper,
@@ -88,6 +88,51 @@ import AppointmentsList from '@/components/AppointmentsList';
         }
       );
 
+
+      const [liveInteractions, setLiveInteractions] = useState<any[]>([]);
+      const [liveStats, setLiveStats] = useState({ totalInteractions: 0 });
+
+      useEffect(() => {
+        if (statsData) {
+          setLiveStats({ totalInteractions: statsData.totalInteractions || 0 });
+        }
+      }, [statsData]);
+
+      useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        // Connect to SSE stream
+        const url = `${import.meta.env.VITE_API_URL || '/api'}/sse?token=${token}`;
+        let eventSource: EventSource;
+
+        try {
+            eventSource = new EventSource(url);
+
+            eventSource.onmessage = (event) => {
+               try {
+                 const data = JSON.parse(event.data);
+                 if (data.type === 'canvass.interaction_logged') {
+                    // Update live interactions feed
+                    setLiveInteractions(prev => [data.payload, ...prev].slice(0, 10)); // Keep last 10
+                    // Increment live stats
+                    setLiveStats(prev => ({ totalInteractions: prev.totalInteractions + 1 }));
+                 }
+               } catch (e) {
+                 // ignore parsing errors
+               }
+            };
+        } catch (error) {
+           console.error("SSE connection error", error);
+        }
+
+        return () => {
+           if (eventSource) {
+               eventSource.close();
+           }
+        };
+      }, []);
+
       const territories = turfData || [];
       const stats = statsData || {};
       const loading = isLoadingTurf || isLoadingStats;
@@ -110,11 +155,35 @@ import AppointmentsList from '@/components/AppointmentsList';
             </Alert>
           )}
           <Grid container spacing={3}>
+
+            {/* Live Activity Feed */}
+            {liveInteractions.length > 0 && (
+              <Grid item xs={12}>
+                <Paper sx={{ p: 3, mb: 3, bgcolor: 'primary.50' }}>
+                  <Typography variant="h6" color="primary.main" gutterBottom>
+                    Live Team Activity
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 1 }}>
+                    {liveInteractions.map((interaction, idx) => (
+                      <Chip
+                        key={idx}
+                        icon={<SafeIcon icon={FiUsers} />}
+                        label={`${interaction.repName} logged ${interaction.outcome} at ${new Date(interaction.timestamp).toLocaleTimeString()}`}
+                        color="primary"
+                        variant="outlined"
+                      />
+                    ))}
+                  </Box>
+                </Paper>
+              </Grid>
+            )}
+
             {/* Stats Cards */}
+
             <Grid item xs={12} sm={6} md={3}>
               <StatCard
                 title="Total Interactions"
-                value={stats.totalInteractions || 0}
+                value={liveStats.totalInteractions || 0}
                 icon={FiTarget}
                 color="#1E3A8A"
                 subtitle="All-time"

@@ -21,9 +21,10 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
 interface RepTerritoryMapProps {
   boundary: Territory['boundary'];
   leads: Lead[];
+  optimizedRoute?: (Lead & { sequenceNumber: number })[];
 }
 
-const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) => {
+const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads, optimizedRoute }) => {
   const [popupInfo, setPopupInfo] = useState<any>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<number[][]>([]);
   const [lastTrackedPos, setLastTrackedPos] = useState<{lat: number, lon: number, time: number} | null>(null);
@@ -167,11 +168,33 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
     return name.includes(term) || address.includes(term);
   });
 
+
+  const routeLineData = React.useMemo(() => {
+    if (!optimizedRoute || optimizedRoute.length < 2) return null;
+    const coordinates = optimizedRoute
+      .filter(l => l.location && l.location.coordinates)
+      .map(l => [l.location!.coordinates[0], l.location!.coordinates[1]]);
+
+    if (coordinates.length < 2) return null;
+
+    return {
+      type: 'Feature' as const,
+      geometry: {
+        type: 'LineString',
+        coordinates: coordinates
+      },
+      properties: {}
+    };
+  }, [optimizedRoute]);
+
   const leadsData = {
     type: 'FeatureCollection' as const,
     features: filteredLeads.reduce((acc: any[], lead) => {
       const parsedLocation = parseLeadLocation(lead.location);
       if (parsedLocation) {
+        // Find if this lead is in the optimized route to attach sequence number
+        const seqNum = optimizedRoute?.find(r => r.id === lead.id)?.sequenceNumber;
+
         acc.push({
           type: 'Feature' as const,
           geometry: {
@@ -186,12 +209,14 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
             commercial_uniform_fit: lead.commercial_uniform_fit,
             name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Unnamed Lead',
             priorityScore: calculateLeadPriorityScore(lead),
+            sequenceNumber: seqNum
           },
         });
       }
       return acc;
     }, []),
   };
+
 
   const handleMapClick = (event: any) => {
     const feature = event.features && event.features[0];
@@ -311,7 +336,29 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
       onClick={handleMapClick}
     >
 
+
+      {routeLineData && (
+        <Source id="optimized-route" type="geojson" data={routeLineData as any}>
+          <Layer
+            id="optimized-route-line"
+            type="line"
+            beforeId="leads-points"
+            paint={{
+              'line-color': '#2563EB',
+              'line-width': 3,
+              'line-dasharray': [2, 2],
+              'line-opacity': 0.75
+            }}
+            layout={{
+              'line-join': 'round',
+              'line-cap': 'round'
+            }}
+          />
+        </Source>
+      )}
+
       <Source id="breadcrumbs" type="geojson" data={{
+
         type: 'Feature',
         geometry: {
           type: 'LineString',
@@ -337,11 +384,31 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads }) =>
       <Source id="territory" type="geojson" data={boundary}>
         <Layer {...territoryLayer} />
       </Source>
+
       <Source id="leads" type="geojson" data={leadsData} cluster={true} clusterMaxZoom={14} clusterRadius={50}>
         <Layer {...(clusterLayer as any)} />
         <Layer {...(clusterCountLayer as any)} />
         <Layer {...(leadsLayer as any)} />
+        <Layer
+          id="leads-sequence-badges"
+          type="symbol"
+          source="leads"
+          filter={['has', 'sequenceNumber']}
+          layout={{
+            'text-field': ['get', 'sequenceNumber'],
+            'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+            'text-size': 14,
+            'text-offset': [0, -1.5],
+            'text-anchor': 'top',
+          }}
+          paint={{
+            'text-color': '#FFFFFF',
+            'text-halo-color': '#000000',
+            'text-halo-width': 2,
+          }}
+        />
       </Source>
+
 
       {popupInfo && (
         <Popup
