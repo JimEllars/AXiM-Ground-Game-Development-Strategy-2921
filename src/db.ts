@@ -10,6 +10,8 @@ export interface OfflineInteraction {
   interactionDate: string;
   synced: boolean | number;
   surveyData?: any;
+  supportReported?: boolean;
+  failCount?: number;
 }
 
 export interface OfflineTerritory {

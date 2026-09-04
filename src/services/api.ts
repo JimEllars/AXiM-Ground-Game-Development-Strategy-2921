@@ -119,6 +119,7 @@ export const authAPI = {
   }) => api.post('/auth/register-organization', data),
   getProfile: () => 
     api.get('/auth/profile'),
+  refreshToken: () => api.post('/auth/refresh-token'),
 };
 
 // Territories API

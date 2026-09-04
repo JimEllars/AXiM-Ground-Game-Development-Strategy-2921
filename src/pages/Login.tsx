@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
     import { Box, Paper, TextField, Button, Typography, Alert, Container, Avatar } from '@mui/material';
     import { FiUser, FiLock, FiLogIn } from 'react-icons/fi';
     import { useNavigate, Link } from 'react-router-dom';
@@ -9,6 +9,17 @@ import React, { useState } from 'react';
       const navigate = useNavigate();
       const { login, loading, error } = useAuth();
       const [formData, setFormData] = useState({ email: '', password: '' });
+
+
+      useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        if (token) {
+          localStorage.setItem('token', token);
+          window.history.replaceState({}, document.title, window.location.pathname);
+          window.location.assign('/dashboard');
+        }
+      }, []);
 
       const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -94,6 +105,16 @@ import React, { useState } from 'react';
                 >
                   {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  size="large"
+                  onClick={() => window.location.href = 'https://passport.axim.us.com/login?redirect=https://groundgame.axim.us.com/auth/callback'}
+                  sx={{ mt: 1, mb: 2, borderColor: '#1E3A8A', color: '#1E3A8A' }}
+                >
+                  Sign in with AXiM Passport
+                </Button>
+
                 <Box sx={{ textAlign: 'center', mt: 2 }}>
                   <Typography variant="body2">
                     Don't have an account?{' '}
