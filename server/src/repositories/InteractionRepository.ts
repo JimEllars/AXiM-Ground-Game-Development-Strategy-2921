@@ -25,6 +25,7 @@ export const createInteractions = async (
   const lonsArr: (number | null)[] = new Array(len);
   const latsArr: (number | null)[] = new Array(len);
   const surveysArr: (any | null)[] = new Array(len);
+  const clientMutationIdsArr: (string | null)[] = new Array(len);
 
   for (let i = 0; i < len; i++) {
     const interaction = interactionsData[i];
