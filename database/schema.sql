@@ -108,8 +108,7 @@ CREATE TABLE territory_assignments (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     territory_id UUID NOT NULL REFERENCES territories(id) ON DELETE CASCADE,
     assigned_by UUID NOT NULL REFERENCES users(id),
-    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    -- UNIQUE(user_id, territory_id)
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Interactions/activities table
