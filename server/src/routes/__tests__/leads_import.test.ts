@@ -86,6 +86,7 @@ Jane,Smith,456 Oak Ave,Los Angeles,CA,90001,Contacted`;
 
     const res = await request(app)
       .post('/api/leads/bulk-import')
+      .set('CF-Connecting-IP', '10.0.0.1')
       .set('Authorization', `Bearer ${token}`)
       .attach('file', buffer, 'leads.csv');
 
