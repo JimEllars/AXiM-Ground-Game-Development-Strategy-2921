@@ -52,6 +52,11 @@ export interface OfflinePhoto {
   synced: number;
 }
 
+export interface OfflineAuth {
+  id: string;
+  user: any;
+}
+
 export interface OfflineSetting {
   id: string; // e.g. "surveys" or "dispositions"
   data: any;
@@ -61,6 +66,7 @@ export class AppDB extends Dexie {
   interactions!: Table<OfflineInteraction, number>;
   territories!: Table<OfflineTerritory, string>;
   settings!: Table<OfflineSetting, string>;
+  auth!: Table<OfflineAuth, string>;
   optimized_routes!: Table<OfflineOptimizedRoute, number>;
   telemetryQueue!: Table<OfflineTelemetry, number>;
   breadcrumbs!: Table<OfflineBreadcrumb, number>;
@@ -73,6 +79,7 @@ export class AppDB extends Dexie {
       interactions: '++id, leadId, synced',
       territories: 'id, name',
       settings: 'id',
+      auth: 'id',
       optimized_routes: '++id, user_id, date'
     ,
       breadcrumbs: '++id, shift_id',

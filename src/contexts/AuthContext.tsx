@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { authAPI } from '@/services/api';
+import { db } from '@/db';
 
 interface User {
   id: string;
