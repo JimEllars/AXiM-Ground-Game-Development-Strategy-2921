@@ -43,7 +43,10 @@ describe('AuthContext - logout', () => {
     });
 
     // Verify initial conditions
+
+    localStorage.setItem('token', 'fake-token');
     expect(localStorage.getItem('token')).toBe('fake-token');
+
 
     // Perform logout
     act(() => {

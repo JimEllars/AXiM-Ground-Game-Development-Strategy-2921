@@ -109,18 +109,20 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads, opti
         'circle-color': [
           'match',
           ['get', 'status'],
-          'New', '#9E9E9E', // Unattempted
-          'Uncontacted', '#9E9E9E', // Unattempted
-          'Contacted', '#F59E0B', // Follow Up
-          'Follow-up', '#F59E0B', // Follow Up
-          'Follow Up', '#F59E0B', // Follow Up
-          'Left Flyer', '#F59E0B', // Follow Up
-          'Sold', '#10B981', // Qualified/Sale
-          'Qualified', '#10B981', // Qualified/Sale
-          'Completed', '#10B981', // Qualified/Sale
-          'Not Interested', '#EF4444', // Not Home (or similar disposition)
-          'Not Home', '#EF4444', // Not Home
-          '#9E9E9E' // Default
+          'New', '#64748b', // Uncontacted
+          'Uncontacted', '#64748b', // Uncontacted
+          'Contacted', '#10b981', // High Propensity Lead / Green
+          'High Propensity Lead', '#10b981', // High Propensity Lead / Green
+          'Completed', '#10b981', // Green
+          'Callback', '#f59e0b', // Callback / Orange
+          'Callback Scheduled', '#f59e0b', // Callback / Orange
+          'Follow-up', '#f59e0b',
+          'Follow Up', '#f59e0b',
+          'Left Flyer', '#64748b', // Gray
+          'Do Not Knock', '#ef4444', // Red
+          'Not Interested', '#64748b', // Gray
+          'Not Home', '#64748b', // Gray
+          '#64748b' // Default
         ]
     }
   };

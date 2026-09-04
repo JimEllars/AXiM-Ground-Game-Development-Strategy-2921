@@ -279,10 +279,10 @@ import { IconButton, Tooltip, Snackbar } from '@mui/material';
               )}
             </Box>
             <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' }, mt: 3 }}>
-              <Button type="submit" variant="contained" disabled={submitting} startIcon={<SafeIcon icon={FiSave} />} sx={{ py: 1.5, flex: 1, fontSize: '1rem' }}>
+              <Button type="submit" variant="contained" disabled={submitting} startIcon={<SafeIcon icon={FiSave} />} sx={{ py: 1.5, flex: 1, fontSize: '1.1rem', minHeight: '48px' }} onClick={() => { if(navigator.vibrate) navigator.vibrate(50); }}>
                 {submitting ? 'Saving...' : 'Save Interaction'}
               </Button>
-              <Button variant="outlined" onClick={onCancel} startIcon={<SafeIcon icon={FiX} />} sx={{ py: 1.5, flex: 1, fontSize: '1rem' }}>
+              <Button variant="outlined" onClick={(e) => { if(navigator.vibrate) navigator.vibrate(50); onCancel(e); }} startIcon={<SafeIcon icon={FiX} />} sx={{ py: 1.5, flex: 1, fontSize: '1.1rem', minHeight: '48px' }}>
                 Cancel
               </Button>
             </Box>

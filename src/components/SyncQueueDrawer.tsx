@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Drawer, Box, Typography, Button, List, ListItem, ListItemText, Divider, IconButton, Alert, CircularProgress } from '@mui/material';
-import { FiX, FiRefreshCw } from 'react-icons/fi';
+import { FiX, FiRefreshCw, FiClock, FiAlertCircle } from 'react-icons/fi';
+import { FaSpinner } from 'react-icons/fa';
 import SafeIcon from '@/common/SafeIcon';
 import { db } from '@/db';
 import { syncOfflineData } from '@/syncEngine';
@@ -78,18 +79,42 @@ const SyncQueueDrawer: React.FC<SyncQueueDrawerProps> = ({ open, onClose }) => {
         <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
           <Typography variant="subtitle1" fontWeight="bold">Pending Interactions ({offlineInteractions.length})</Typography>
           <List dense>
-            {offlineInteractions.map(item => (
+            {offlineInteractions.map(item => {
+              let Icon = FiClock;
+              let iconColor = 'warning.main';
+              let statusText = 'Pending';
+
+              if (item.synced === -1) {
+                Icon = FiAlertCircle;
+                iconColor = 'error.main';
+                statusText = 'Failed / Conflict';
+                if (item.supportReported) statusText += ' (Reported to Support)';
+              } else if (isSyncing) {
+                Icon = FiRefreshCw;
+                iconColor = 'info.main';
+                statusText = 'In-Flight';
+              }
+
+              return (
               <ListItem key={item.id}>
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  <SafeIcon icon={Icon} style={{ color: iconColor, animation: isSyncing && item.synced !== -1 ? 'spin 2s linear infinite' : 'none' }} />
+                </ListItemIcon>
                 <ListItemText
-                  primary={`Lead: ${item.leadId}`}
+                  primary={`Lead: ${item.leadId} (${statusText})`}
                   secondary={`Outcome: ${item.outcome} | Date: ${new Date(item.interactionDate).toLocaleString()}`}
                 />
               </ListItem>
-            ))}
+            )})}
             {offlineInteractions.length === 0 && (
               <ListItem><ListItemText secondary="No pending interactions" /></ListItem>
             )}
           </List>
+          <style>{`
+            @keyframes spin {
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
         </Box>
 
         <Box sx={{ mt: 2 }}>

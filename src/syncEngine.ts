@@ -104,9 +104,28 @@ export const syncOfflineData = async () => {
           await db.interactions.bulkUpdate(idsToUpdate.map(id => ({ key: id, changes: { synced: 1 as any } })));
         } catch (apiErr) {
            logger.error('API batch sync failure', apiErr);
-           // Prevent halt on entire queue. The batch failed, we skip this batch and move on, or halt if severe?
-           // The instructions specify to wrap the block to prevent halting the entire sync queue.
-           // API failures shouldn't delete data, we just leave them synced=0.
+           for (const item of reconciledBatch) {
+              const currentItem = await db.interactions.get(item.id!);
+              if (currentItem) {
+                const failCount = (currentItem as any).failCount || 0;
+                if (failCount >= 2) {
+                   try {
+                     fetch('/api/v1/field-fault', {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify({
+                          type: 'sync_queue_stagnation',
+                          leadId: item.leadId,
+                          error: String(apiErr)
+                       })
+                     }).catch(() => {});
+                     await db.interactions.update(item.id!, { synced: -1 as any, supportReported: true });
+                   } catch(e) {}
+                } else {
+                   await db.interactions.update(item.id!, { failCount: failCount + 1 });
+                }
+              }
+           }
         }
       }
 
