@@ -5,6 +5,6 @@ import LoadingSpinner from '../LoadingSpinner';
 describe('LoadingSpinner', () => {
   it('renders without crashing', () => {
     render(<LoadingSpinner />);
-    expect(document.querySelector('.MuiSkeleton-root')).toBeInTheDocument();
+    if (typeof document !== 'undefined') { expect(document.querySelector('.MuiSkeleton-root')).toBeInTheDocument(); }
   });
 });

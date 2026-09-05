@@ -12,12 +12,22 @@ const api = axios.create({
 
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   // Store start time for latency tracing
   (config as any).metadata = { startTime: new Date() };
+
+  if (config.data && config.data.idempotencyKey) {
+    config.headers['X-Idempotency-Key'] = config.data.idempotencyKey;
+  }
+  if (Array.isArray(config.data)) {
+      const idempotencyKey = config.data[0]?.idempotencyKey;
+      if (idempotencyKey) {
+        config.headers['X-Idempotency-Key'] = idempotencyKey;
+      }
+  }
   return config;
 });
 
@@ -36,7 +46,7 @@ api.interceptors.response.use(
           path = path.replace(/\/\d+/g, '/:id');
 
           // Using a non-blocking background fetch so we don't interfere with the return loop
-          const token = localStorage.getItem('token');
+          const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
           if (token && path.indexOf('telemetry') === -1) {
             fetch(`${API_BASE_URL}/analytics/telemetry`, {
               method: 'POST',
@@ -63,16 +73,37 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+
     // Check if it's a genuine 401 error
-    if (error.response && error.response.status === 401) {
-      logger.error('Authentication Error: Redirecting to login.');
-      localStorage.removeItem('token');
-      // Dispatch event to clear auth state and stop sync
-      window.dispatchEvent(new CustomEvent('auth-unauthorized'));
-      // Use location.assign for a cleaner redirect
-      if (window.location.pathname !== '/login') {
-        window.location.assign('/login');
+    if (error.response && error.response.status === 401 && !error.config?._retry) {
+      const originalRequest = error.config || {};
+      if (originalRequest.url === '/auth/refresh-token' || originalRequest.url === '/auth/login') {
+         logger.error('Authentication Error: Redirecting to login.');
+         if (typeof localStorage !== 'undefined') if (typeof localStorage !== 'undefined') localStorage.removeItem('token');
+         window.dispatchEvent(new CustomEvent('auth-unauthorized'));
+         if (window.location.pathname !== '/login') {
+           window.location.assign('/login');
+         }
+         return Promise.reject(error);
       }
+
+      originalRequest._retry = true;
+      return api.post('/auth/refresh-token').then((res) => {
+        if (res.data && res.data.token) {
+          if (typeof localStorage !== 'undefined') localStorage.setItem('token', res.data.token);
+          if (!originalRequest.headers) originalRequest.headers = {};
+          originalRequest.headers.Authorization = `Bearer ${res.data.token}`;
+          return api(originalRequest);
+        }
+      }).catch((refreshError) => {
+          logger.error('Authentication Error: Redirecting to login.');
+          if (typeof localStorage !== 'undefined') if (typeof localStorage !== 'undefined') localStorage.removeItem('token');
+          window.dispatchEvent(new CustomEvent('auth-unauthorized'));
+          if (window.location.pathname !== '/login') {
+            window.location.assign('/login');
+          }
+          return Promise.reject(refreshError);
+      });
     }
     // Graceful Degradation for 502, 503, 504 errors
     if (error.response && error.response.status === 429) {

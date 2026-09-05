@@ -3,6 +3,7 @@ import { Lead } from './types';
 import { encryptString, decryptString } from './utils/crypto';
 
 export interface OfflineInteraction {
+  idempotencyKey?: string;
   id?: number;
   leadId: string;
   outcome: string;

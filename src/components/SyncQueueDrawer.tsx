@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Drawer, Box, Typography, Button, List, ListItem, ListItemText, Divider, IconButton, Alert, CircularProgress } from '@mui/material';
+import { Drawer, Box, Typography, Button, List, ListItem, ListItemText, ListItemIcon, Divider, IconButton, Alert, CircularProgress } from '@mui/material';
 import { FiX, FiRefreshCw, FiClock, FiAlertCircle } from 'react-icons/fi';
 import { FaSpinner } from 'react-icons/fa';
 import SafeIcon from '@/common/SafeIcon';
@@ -15,6 +15,28 @@ const SyncQueueDrawer: React.FC<SyncQueueDrawerProps> = ({ open, onClose }) => {
   const [offlineInteractions, setOfflineInteractions] = useState<any[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [lastSync, setLastSync] = useState<Date | null>(null);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleSyncComplete = () => {
+      fetchQueue();
+      setLastSync(new Date());
+    };
+    window.addEventListener('offline-sync-complete', handleSyncComplete);
+    return () => window.removeEventListener('offline-sync-complete', handleSyncComplete);
+  }, []);
 
   const fetchQueue = async () => {
     try {
@@ -31,13 +53,6 @@ const SyncQueueDrawer: React.FC<SyncQueueDrawerProps> = ({ open, onClose }) => {
     }
   }, [open]);
 
-  useEffect(() => {
-    const handleSyncComplete = () => {
-      fetchQueue();
-    };
-    window.addEventListener('offline-sync-complete', handleSyncComplete);
-    return () => window.removeEventListener('offline-sync-complete', handleSyncComplete);
-  }, []);
 
   const handleForceSync = async () => {
     setIsSyncing(true);
@@ -66,7 +81,17 @@ const SyncQueueDrawer: React.FC<SyncQueueDrawerProps> = ({ open, onClose }) => {
     <Drawer anchor="right" open={open} onClose={onClose}>
       <Box sx={{ width: 350, p: 2, display: 'flex', flexDirection: 'column', height: '100%' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Offline Sync Queue</Typography>
+          <Box>
+            <Typography variant="h6">Offline Sync Queue</Typography>
+            <Typography variant="caption" color={isOnline ? 'success.main' : 'error.main'}>
+              Edge Status: {isOnline ? 'Online' : 'Offline'}
+            </Typography>
+            {lastSync && (
+              <Typography variant="caption" display="block" color="text.secondary">
+                Last sync: {lastSync?.toLocaleTimeString()}
+              </Typography>
+            )}
+          </Box>
           <IconButton onClick={onClose}><SafeIcon icon={FiX} /></IconButton>
         </Box>
 

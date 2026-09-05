@@ -236,9 +236,15 @@ export default {
     }
 
 
-    let response = isApiRequest
-      ? await proxyApi(request, url, env)
-      : await env.ASSETS.fetch(request);
+    let response: Response;
+    if (isApiRequest && (url.pathname.endsWith("/analytics/telemetry") || url.pathname.endsWith("/analytics/client-error")) && request.method === "POST") {
+      ctx.waitUntil(proxyApi(request.clone(), url, env));
+      response = new Response(JSON.stringify({ status: "accepted" }), { status: 202, headers: { "Content-Type": "application/json" } });
+    } else {
+      response = isApiRequest
+        ? await proxyApi(request, url, env)
+        : await env.ASSETS.fetch(request);
+    }
 
     const geoMatchAfter = url.pathname.match(/^\/api\/v1\/territories\/([^\/]+)\/geo$/);
     if (isApiRequest && geoMatchAfter && request.method === "GET" && response.ok) {

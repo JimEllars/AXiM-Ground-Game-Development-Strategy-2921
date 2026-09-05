@@ -117,7 +117,7 @@ import { IconButton, Tooltip, Snackbar } from '@mui/material';
           };
 
           if (!navigator.onLine) {
-            const interactionId = await db.interactions.add({
+            const interactionId = await db.interactions.add({ idempotencyKey: crypto.randomUUID(),
               leadId: lead.id,
               outcome,
               notes: notes.trim() || '',
