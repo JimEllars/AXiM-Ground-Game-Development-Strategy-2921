@@ -78,3 +78,10 @@
 * **Phase C:** Enhanced `SyncQueueDrawer.tsx` to display pending, in-flight, and failed records transparently, added a force sync button, and integrated the failure diagnostics (tracking `failCount` and dispatching a fault to `/api/v1/field-fault` on the 3rd failure) within `src/syncEngine.ts`.
 * **Phase D:** Enlarged the touch targets on the field interaction buttons in `LeadInteractionForm.tsx`, added `navigator.vibrate` for haptic feedback, and updated the status colors on the territory map points in `RepTerritoryMap.tsx` for high contrast outdoors.
 * **Note:** Local JWT test mock failures in the backend test harness (`authController` tests complaining about missing JWT_SECRET) are a known sandbox environment artifact and have been safely disregarded. Upstream CI will inject the correct secrets.
+
+# Phase 55 Micro-Sprint (Telemetry & Idempotency Hardening)
+- Client-side idempotency keys and HTTP 409 handling in src/syncEngine.ts.
+- X-Idempotency-Key insertion in src/services/api.ts.
+- TelemetryBuffer batching and Cloudflare ctx.waitUntil telemetry ingestion.
+- 401 retry interceptor and silent /auth/refresh-token handling.
+- SkeletonLoader integrations and live edge status in SyncQueueDrawer.tsx.

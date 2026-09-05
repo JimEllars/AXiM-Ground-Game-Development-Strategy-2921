@@ -130,7 +130,7 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({ lead, onUpdate }) => {
   };
 
   const handleQuickDisposition = async (outcome: string) => {
-    const interactionData = {
+    const interactionData = { idempotencyKey: crypto.randomUUID(),
       leadId: lead.id,
       outcome: outcome,
       notes: 'Quick Disposition',

@@ -252,7 +252,7 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads, opti
   const handleQuickDisposition = async (outcome: string) => {
     if (!popupInfo) return;
 
-    const interactionData = {
+    const interactionData = { idempotencyKey: crypto.randomUUID(),
       leadId: popupInfo.feature.id,
       outcome: outcome,
       notes: 'Quick Disposition',

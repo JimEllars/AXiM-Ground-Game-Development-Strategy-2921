@@ -1,3 +1,13 @@
+import { z } from 'zod';
+const TelemetrySchema = z.object({
+      error: z.string().optional(),
+      message: z.string().optional(),
+      type: z.string().optional(),
+      stack: z.string().optional(),
+      componentStack: z.string().optional(),
+      level: z.string().optional(),
+      timestamp: z.string().optional(),
+    }).passthrough();
 import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
@@ -41,9 +51,16 @@ export const processTelemetry = async () => {
       return;
     }
 
+
     const payload = lines.map(line => {
       try {
-        return JSON.parse(line);
+        const parsed = JSON.parse(line);
+        const validated = TelemetrySchema.safeParse(parsed);
+        if (validated.success) {
+          return validated.data;
+        } else {
+          return { error: 'Schema Validation Error', raw: line, details: validated.error.issues };
+        }
       } catch (e) {
         return { error: 'Parse Error', raw: line };
       }

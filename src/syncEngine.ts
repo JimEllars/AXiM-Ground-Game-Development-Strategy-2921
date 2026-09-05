@@ -64,6 +64,7 @@ export const syncOfflineData = async () => {
           }
 
           reconciledBatch.push({
+            idempotencyKey: item.idempotencyKey,
             id: item.id,
             leadId: item.leadId,
             outcome: item.outcome,
@@ -90,6 +91,7 @@ export const syncOfflineData = async () => {
 
       if (reconciledBatch.length > 0) {
         const payload = reconciledBatch.map(item => ({
+          idempotencyKey: item.idempotencyKey,
           leadId: item.leadId,
           outcome: item.outcome,
           notes: item.notes,
@@ -104,6 +106,12 @@ export const syncOfflineData = async () => {
           await db.interactions.bulkUpdate(idsToUpdate.map(id => ({ key: id, changes: { synced: 1 as any } })));
         } catch (apiErr) {
            logger.error('API batch sync failure', apiErr);
+           // Handle HTTP 409 and HTTP 200 responses identically for synced items
+           if (apiErr.response && apiErr.response.status === 409) {
+             const idsToUpdate = reconciledBatch.map(item => item.id!);
+             await db.interactions.bulkUpdate(idsToUpdate.map(id => ({ key: id, changes: { synced: 1 as any } })));
+             continue; // Skip the failCount increment
+           }
            for (const item of reconciledBatch) {
               const currentItem = await db.interactions.get(item.id!);
               if (currentItem) {

@@ -61,6 +61,7 @@ import AppointmentsList from '@/components/AppointmentsList';
           const interactionDate = new Date();
           if (!navigator.onLine) {
             await db.interactions.add({
+               idempotencyKey: crypto.randomUUID(),
                leadId: data.leadId,
                outcome: data.outcome,
                notes: '',
