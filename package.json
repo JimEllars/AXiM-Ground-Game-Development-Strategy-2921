@@ -36,6 +36,7 @@
     "@turf/boolean-point-in-polygon": "^7.4.0",
     "@turf/helpers": "^7.4.0",
     "@types/crypto-js": "^4.2.2",
+    "aws4fetch": "^1.0.20",
     "axios": "^1.7.2",
     "crypto-js": "^4.2.0",
     "dexie": "^4.4.2",
