@@ -321,8 +321,8 @@ describe('API Services', () => {
       const mockResponse = { data: { success: true } };
       mockAxiosInstance.post.mockResolvedValue(mockResponse);
       const data = [{ leadId: '1', outcome: 'contacted' }];
-      const result = await interactionsAPI.create(data);
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/interactions', data);
+      const result = await interactionsAPI.create(data, { headers: { 'X-Idempotency-Key': '123' } });
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/interactions', data, { headers: { 'X-Idempotency-Key': '123' } });
       expect(result).toEqual(mockResponse);
     });
 

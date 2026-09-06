@@ -101,7 +101,7 @@ export const syncOfflineData = async () => {
 
         logger.info(`Syncing interactions batch ${Math.floor(i / batchSize) + 1} payload: ${JSON.stringify(payload)}`);
         try {
-          await interactionsAPI.create(payload);
+          await interactionsAPI.create(payload, { headers: { 'X-Idempotency-Key': crypto.randomUUID() } });
           const idsToUpdate = reconciledBatch.map(item => item.id!);
           await db.interactions.bulkUpdate(idsToUpdate.map(id => ({ key: id, changes: { synced: 1 as any } })));
         } catch (apiErr) {

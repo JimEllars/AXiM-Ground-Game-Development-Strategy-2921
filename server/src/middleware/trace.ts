@@ -18,7 +18,10 @@ export const traceMiddleware = (req: Request, res: Response, next: NextFunction)
         statusCode: res.statusCode,
         durationMs: duration,
         payloadSize,
-        type: 'api_trace'
+        type: 'api_trace',
+        cfRay: req.headers['cf-ray'] || 'local-dev',
+        cfIpCountry: req.headers['cf-ipcountry'] || 'US',
+        cfConnectingIp: req.headers['cf-connecting-ip'] || req.ip || 'local-dev'
       });
     });
     next();

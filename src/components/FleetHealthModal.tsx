@@ -16,10 +16,24 @@ import {
   Chip
 } from '@mui/material';
 
-export default function FleetHealthModal({ open, onClose, fleetData = [] }) {
-  const [selectedDevices, setSelectedDevices] = useState([]);
+export interface FleetDeviceData {
+  device_id: string;
+  rep_name: string;
+  battery: number;
+  latency: number;
+  incident_status: 'normal' | 'escalated_to_central_support' | string;
+}
 
-  const handleSelectAll = (e) => {
+export interface FleetHealthModalProps {
+  open: boolean;
+  onClose: () => void;
+  fleetData?: FleetDeviceData[];
+}
+
+export default function FleetHealthModal({ open, onClose, fleetData = [] }: FleetHealthModalProps) {
+  const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       setSelectedDevices(fleetData.map(d => d.device_id));
     } else {
@@ -27,7 +41,7 @@ export default function FleetHealthModal({ open, onClose, fleetData = [] }) {
     }
   };
 
-  const handleSelectOne = (e, id) => {
+  const handleSelectOne = (e: React.ChangeEvent<HTMLInputElement>, id: string) => {
     if (e.target.checked) {
       setSelectedDevices(prev => [...prev, id]);
     } else {
@@ -35,7 +49,7 @@ export default function FleetHealthModal({ open, onClose, fleetData = [] }) {
     }
   };
 
-  const handleBulkAction = (action) => {
+  const handleBulkAction = (action: string) => {
     // In a real app, this would dispatch to the command queue API
     console.log(`Dispatching ${action} to devices:`, selectedDevices);
     // e.g. dispatchToCommandQueue({ devices: selectedDevices, command: action })
