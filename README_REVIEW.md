@@ -85,3 +85,9 @@
 - TelemetryBuffer batching and Cloudflare ctx.waitUntil telemetry ingestion.
 - 401 retry interceptor and silent /auth/refresh-token handling.
 - SkeletonLoader integrations and live edge status in SyncQueueDrawer.tsx.
+
+# Phase 55 Micro-Sprint (Telemetry & Idempotency Hardening - Continuation)
+- Implemented Cloudflare Edge pass-through for Server-Sent Events (SSE) subscriptions, disabling edge micro-caching (X-Accel-Buffering, Cache-Control).
+- Activated fleet telemetry ingestion via `analyticsAPI.getHealthMetrics` feeding live data directly into `FleetHealthModal.tsx` and the dashboard header.
+- Resilient offline session sync handling via `auth-authorized` event to gracefully resume `syncOfflineData` post-401 token refresh loops.
+- Mobile UI scannability enhancements: guaranteed 44px mobile touch targets across `SyncQueueDrawer.tsx`, cleaner visual borders in `RepTurf.tsx`, and `React.memo` wrapping in `RepTerritoryMap.tsx` for optimal mobile rendering.
