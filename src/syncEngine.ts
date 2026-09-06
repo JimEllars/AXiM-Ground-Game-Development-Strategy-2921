@@ -14,7 +14,10 @@ export const syncOfflineData = async () => {
   if (!navigator.onLine || isSyncPaused) return;
 
   try {
-    const offlineInteractions = await db.interactions.where('synced').equals(0 as any).toArray();
+    // Exclude permanently failed or duplicate
+    const offlineInteractions = await db.interactions
+      .filter(item => item.synced === 0 || item.synced === 'retrying')
+      .toArray();
 
     if (offlineInteractions.length === 0) return;
 
@@ -34,8 +37,6 @@ export const syncOfflineData = async () => {
         try {
           // Delta Map Check (Simulated for Interactions/Leads)
           const localUpdatedAt = new Date(item.interactionDate).getTime();
-          // Assuming we fetched remoteUpdatedAt from server:
-          // const remoteUpdatedAt = await fetchRemoteUpdatedAt(item.leadId);
           const remoteUpdatedAt = localUpdatedAt; // Placeholder
 
           if (remoteUpdatedAt > localUpdatedAt) {
@@ -51,9 +52,7 @@ export const syncOfflineData = async () => {
                logger.error('Failed to report sync telemetry notice');
             }
 
-            if (item.id !== undefined) {
-               await db.interactions.delete(item.id);
-            }
+            // DO NOT DELETE - We just log. It'll get retried or overridden based on backend
           }
 
           if (!item.leadId || !item.outcome) {
@@ -104,14 +103,16 @@ export const syncOfflineData = async () => {
           await interactionsAPI.create(payload, { headers: { 'X-Idempotency-Key': crypto.randomUUID() } });
           const idsToUpdate = reconciledBatch.map(item => item.id!);
           await db.interactions.bulkUpdate(idsToUpdate.map(id => ({ key: id, changes: { synced: 1 as any } })));
-        } catch (apiErr) {
+        } catch (apiErr: any) {
            logger.error('API batch sync failure', apiErr);
-           // Handle HTTP 409 and HTTP 200 responses identically for synced items
+
            if (apiErr.response && apiErr.response.status === 409) {
+             // Idempotency conflict - treat as duplicate / already success
              const idsToUpdate = reconciledBatch.map(item => item.id!);
-             await db.interactions.bulkUpdate(idsToUpdate.map(id => ({ key: id, changes: { synced: 1 as any } })));
-             continue; // Skip the failCount increment
+             await db.interactions.bulkUpdate(idsToUpdate.map(id => ({ key: id, changes: { synced: 'duplicate' as any } })));
+             continue;
            }
+
            for (const item of reconciledBatch) {
               const currentItem = await db.interactions.get(item.id!);
               if (currentItem) {
@@ -127,10 +128,10 @@ export const syncOfflineData = async () => {
                           error: String(apiErr)
                        })
                      }).catch(() => {});
-                     await db.interactions.update(item.id!, { synced: -1 as any, supportReported: true });
+                     await db.interactions.update(item.id!, { synced: 'failed' as any, supportReported: true });
                    } catch(e) {}
                 } else {
-                   await db.interactions.update(item.id!, { failCount: failCount + 1 });
+                   await db.interactions.update(item.id!, { synced: 'retrying' as any, failCount: failCount + 1 });
                 }
               }
            }
@@ -138,8 +139,8 @@ export const syncOfflineData = async () => {
       }
 
       if (poisonIds.length > 0) {
-         // Mark poison pills so they don't clog up the retry queue endlessly
-         await db.interactions.bulkUpdate(poisonIds.map(id => ({ key: id, changes: { synced: -1 as any } })));
+         // Mark poison pills as permanently failed
+         await db.interactions.bulkUpdate(poisonIds.map(id => ({ key: id, changes: { synced: 'failed' as any } })));
       }
 
       if (i + batchSize < offlineInteractions.length) {
@@ -148,12 +149,9 @@ export const syncOfflineData = async () => {
     }
 
     if (!isSyncPaused) {
-      logger.info(`Successfully synced interactions in total.`);
-
-      // Trigger pruning of stale data after successful sync
+      logger.info(`Successfully processed interactions batch.`);
       await pruneSyncedData();
 
-      // Dispatch an event so the UI can listen and show a single toast notification
       window.dispatchEvent(new CustomEvent('offline-sync-complete', {
         detail: { count: offlineInteractions.length }
       }));
@@ -169,11 +167,10 @@ export const pruneSyncedData = async () => {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    // We fetch and filter because interactionDate might be stored as string or Date
-    // and might not be indexed in a way to do a direct Date comparison via where().
     const staleRecords = await db.interactions
       .filter((interaction) => {
-        if (!interaction.synced || interaction.synced === -1) return false;
+        // Only prune successfully synced or duplicate items
+        if (interaction.synced !== 1 && interaction.synced !== 'duplicate') return false;
         const interactionDate = new Date(interaction.interactionDate);
         return interactionDate < sevenDaysAgo;
       })
@@ -253,9 +250,4 @@ window.addEventListener('online', () => {
   syncOfflinePhotos();
 });
 
-// Local proximity coordinate deduplication logic (if we were capturing coords locally for a pin drop)
-const deduplicateOfflinePins = async (interaction: any) => {
-  // If the interaction includes a location (quick drop), we could deduplicate here.
-  // For now, it's handled server side mostly, but if we need a quick dedup client side:
-  // we can check recent pins within ~15m.
-};
+const deduplicateOfflinePins = async (interaction: any) => {};
