@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { Box, Typography, Button } from '@mui/material';
-import FleetHealthModal from './FleetHealthModal';
+import FleetHealthModal, { FleetDeviceData } from './FleetHealthModal';
 
-export default function DashboardHeader({ title, fleetData }) {
+export interface DashboardHeaderProps {
+  title: string;
+  fleetData?: FleetDeviceData[];
+}
+
+export default function DashboardHeader({ title, fleetData }: DashboardHeaderProps) {
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
