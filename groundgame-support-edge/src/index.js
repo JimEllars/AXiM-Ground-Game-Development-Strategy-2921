@@ -78,9 +78,34 @@ export default {
                         battery,
                         latency,
                         incident_status,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
+                        cf_ray: request.headers.get('cf-ray'),
+                        cf_ipcountry: request.headers.get('cf-ipcountry'),
+                        cf_connecting_ip: request.headers.get('cf-connecting-ip')
                     })
                 }).catch(e => console.error('Failed to dispatch alert', e)));
+            }
+            else {
+                // Send lightweight telemetry for non-critical
+                const telemetryEndpoint = env.CENTRAL_SUPPORT_WEBHOOK_URL.replace('/telemetry/rca_trigger', '/telemetry/edge');
+                ctx.waitUntil(fetch(telemetryEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Axim-Internal-Service-Key': env.AXIM_INTERNAL_SERVICE_KEY
+                    },
+                    body: JSON.stringify({
+                        event: 'edge_pulse',
+                        device_id,
+                        operator_id,
+                        battery,
+                        latency,
+                        cf_ray: request.headers.get('cf-ray'),
+                        cf_ipcountry: request.headers.get('cf-ipcountry'),
+                        cf_connecting_ip: request.headers.get('cf-connecting-ip'),
+                        timestamp: new Date().toISOString()
+                    })
+                }).catch(e => console.error('Failed to dispatch telemetry pulse', e)));
             }
             return createGzipResponse({ success: true, queued: isCritical }, 200);
         }

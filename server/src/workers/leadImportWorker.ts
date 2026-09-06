@@ -26,6 +26,8 @@ interface ProcessedLead {
   latitude: number | null;
 }
 
+const CHUNK_SIZE = 1000;
+
 export const leadImportWorker = new Worker<LeadImportJobData>(
   'lead-import-queue',
   async (job: Job) => {
@@ -75,166 +77,180 @@ export const leadImportWorker = new Worker<LeadImportJobData>(
       .filter(Boolean);
 
     if (validationErrors.length > 0) {
-      throw new Error(`CSV validation failed: ${JSON.stringify(validationErrors)}`);
+      logger.warn(`Skipping invalid rows. Errors: ${JSON.stringify(validationErrors.slice(0, 10))}...`);
     }
 
-    // 3. Geocode Addresses
-    const addresses = validatedRows.map((row) => {
-      if (!row) return '';
-      const parts = [row.street_address, row.city, row.state, row.zip].filter(Boolean);
-      return parts.join(', ');
-    });
-
-    const validAddresses = addresses.map(a => a.length > 10 ? a : '');
-    const geocodeResults = await batchGeocode(validAddresses);
-
-    // 4. Prepare Leads for DB
-    const leadsToProcess: ProcessedLead[] = validatedRows.map((row, index) => {
-      const geocode = geocodeResults[index];
-      return {
-        first_name: row!.first_name || null,
-        last_name: row!.last_name || null,
-        street_address: row!.street_address,
-        city: row!.city || null,
-        state: row!.state || null,
-        zip: row!.zip || null,
-        phone: row!.phone || null,
-        email: row!.email || null,
-        status: row!.status || 'New',
-        notes: row!.notes || null,
-        longitude: geocode?.longitude || null,
-        latitude: geocode?.latitude || null,
-      };
-    });
-
-    // 5. Database Transaction with Temp Table
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
-      await client.query(`
-        CREATE TEMP TABLE temp_leads_staging (
-          first_name VARCHAR(100),
-          last_name VARCHAR(100),
-          street_address TEXT NOT NULL,
-          city VARCHAR(100),
-          state VARCHAR(50),
-          zip VARCHAR(20),
-          phone VARCHAR(20),
-          email VARCHAR(255),
-          status VARCHAR(50),
-          notes TEXT,
-          longitude DOUBLE PRECISION,
-          latitude DOUBLE PRECISION
-        ) ON COMMIT DROP;
-      `);
-
-      // Use unnest for efficient bulk insertion into the temporary table
-      if (leadsToProcess.length > 0) {
-        const columns: (keyof ProcessedLead)[] = [
-          'first_name',
-          'last_name',
-          'street_address',
-          'city',
-          'state',
-          'zip',
-          'phone',
-          'email',
-          'status',
-          'notes',
-          'longitude',
-          'latitude',
-        ];
-        const params = columns.map((col) => leadsToProcess.map((lead) => lead[col]));
-        const types = [
-          'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'float8[]', 'float8[]',
-        ];
-
-        const tempInsertQuery = `
-          INSERT INTO temp_leads_staging (${columns.join(', ')})
-          SELECT * FROM unnest(${types.map((type, i) => `$${i + 1}::${type}`).join(', ')})
-        `;
-        await client.query(tempInsertQuery, params);
-      }
-
-      // Identify leads that are not duplicates for the current organization
-      const nonDuplicateLeadsQuery = `
-        SELECT t.* FROM temp_leads_staging t
-        WHERE NOT EXISTS (
-          SELECT 1 FROM leads l
-          JOIN lead_pii pii ON l.id = pii.lead_id
-          WHERE l.organization_id = $1 AND pii.street_address = t.street_address
-        );
-      `;
-      const newLeadsResult = await client.query(nonDuplicateLeadsQuery, [organizationId]);
-      const newLeadsData = newLeadsResult.rows as ProcessedLead[];
-
-      let leadInsertResult: { rows: any[]; rowCount: number | null } = { rows: [], rowCount: 0 };
-
-      if (newLeadsData.length > 0) {
-        // Insert into the main 'leads' table
-        const leadValues = newLeadsData.flatMap((lead) => [
-          organizationId,
-          lead.status,
-          lead.notes,
-          lead.longitude,
-          lead.latitude,
-        ]);
-
-        const leadPlaceholders = newLeadsData
-          .map((_, i) => {
-            const base = i * 5;
-            const location = `CASE WHEN $${base + 4}::float8 IS NOT NULL AND $${base + 5}::float8 IS NOT NULL THEN ST_SetSRID(ST_MakePoint($${base + 4}::float8, $${base + 5}::float8), 4326) ELSE NULL END`;
-            return `($${base + 1}::uuid, $${base + 2}::text, $${base + 3}::text, ${location})`;
-          })
-          .join(', ');
-
-        const insertLeadsQuery = `
-          INSERT INTO leads (organization_id, status, notes, location)
-          VALUES ${leadPlaceholders}
-          RETURNING id, location;
-        `;
-        leadInsertResult = await client.query(insertLeadsQuery, leadValues);
-
-        // Prepare data for the PII table insertion using unnest
-        const piiColumns = [
-          'lead_id', 'first_name', 'last_name', 'street_address', 'city', 'state', 'zip', 'phone', 'email',
-        ];
-        const piiParams = [
-          leadInsertResult.rows.map((row) => row.id),
-          ...piiColumns.slice(1).map((col) => newLeadsData.map((lead) => lead[col as keyof ProcessedLead])),
-        ];
-        const piiTypes = [
-          'uuid[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]',
-        ];
-
-        const piiInsertQuery = `
-          INSERT INTO lead_pii (${piiColumns.join(', ')})
-          SELECT * FROM unnest(${piiTypes.map((type, i) => `$${i + 1}::${type}`).join(', ')})
-        `;
-        await client.query(piiInsertQuery, piiParams);
-      }
-
-      await client.query('COMMIT');
-
-      const successCount = leadInsertResult.rowCount || 0;
-      const geocodedCount = leadInsertResult.rows.filter((row) => row.location).length;
-      const duplicates = leadsToProcess.length - successCount;
-
-      return {
-        message: 'Leads uploaded successfully',
-        totalLeads: successCount,
-        geocodedLeads: geocodedCount,
-        geocodingRate: successCount > 0 ? `${Math.round((geocodedCount / successCount) * 100)}%` : 'N/A',
-        duplicates: duplicates,
-      };
-
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
+    if (validatedRows.length === 0) {
+      throw new Error('No valid rows found in CSV after validation.');
     }
+
+    // Process in chunks to prevent DB connection limits and memory overflow
+    let totalSuccess = 0;
+    let totalGeocoded = 0;
+    let totalDuplicates = 0;
+
+    for (let chunkStart = 0; chunkStart < validatedRows.length; chunkStart += CHUNK_SIZE) {
+      const chunkRows = validatedRows.slice(chunkStart, chunkStart + CHUNK_SIZE);
+
+      // 3. Geocode Addresses
+      const addresses = chunkRows.map((row) => {
+        if (!row) return '';
+        const parts = [row.street_address, row.city, row.state, row.zip].filter(Boolean);
+        return parts.join(', ');
+      });
+
+      const validAddresses = addresses.map(a => a.length > 10 ? a : '');
+      const geocodeResults = await batchGeocode(validAddresses);
+
+      // 4. Prepare Leads for DB
+      const leadsToProcess: ProcessedLead[] = chunkRows.map((row, index) => {
+        const geocode = geocodeResults[index];
+        return {
+          first_name: row!.first_name || null,
+          last_name: row!.last_name || null,
+          street_address: row!.street_address,
+          city: row!.city || null,
+          state: row!.state || null,
+          zip: row!.zip || null,
+          phone: row!.phone || null,
+          email: row!.email || null,
+          status: row!.status || 'New',
+          notes: row!.notes || null,
+          longitude: geocode?.longitude || null,
+          latitude: geocode?.latitude || null,
+        };
+      });
+
+      // 5. Database Transaction with Temp Table per chunk
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        await client.query(`
+          CREATE TEMP TABLE temp_leads_staging (
+            first_name VARCHAR(100),
+            last_name VARCHAR(100),
+            street_address TEXT NOT NULL,
+            city VARCHAR(100),
+            state VARCHAR(50),
+            zip VARCHAR(20),
+            phone VARCHAR(20),
+            email VARCHAR(255),
+            status VARCHAR(50),
+            notes TEXT,
+            longitude DOUBLE PRECISION,
+            latitude DOUBLE PRECISION
+          ) ON COMMIT DROP;
+        `);
+
+        if (leadsToProcess.length > 0) {
+          const columns: (keyof ProcessedLead)[] = [
+            'first_name',
+            'last_name',
+            'street_address',
+            'city',
+            'state',
+            'zip',
+            'phone',
+            'email',
+            'status',
+            'notes',
+            'longitude',
+            'latitude',
+          ];
+          const params = columns.map((col) => leadsToProcess.map((lead) => lead[col]));
+          const types = [
+            'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'float8[]', 'float8[]',
+          ];
+
+          const tempInsertQuery = `
+            INSERT INTO temp_leads_staging (${columns.join(', ')})
+            SELECT * FROM unnest(${types.map((type, i) => `$${i + 1}::${type}`).join(', ')})
+          `;
+          await client.query(tempInsertQuery, params);
+        }
+
+        const nonDuplicateLeadsQuery = `
+          SELECT t.* FROM temp_leads_staging t
+          WHERE NOT EXISTS (
+            SELECT 1 FROM leads l
+            JOIN lead_pii pii ON l.id = pii.lead_id
+            WHERE l.organization_id = $1 AND pii.street_address = t.street_address
+          );
+        `;
+        const newLeadsResult = await client.query(nonDuplicateLeadsQuery, [organizationId]);
+        const newLeadsData = newLeadsResult.rows as ProcessedLead[];
+
+        let leadInsertResult: { rows: any[]; rowCount: number | null } = { rows: [], rowCount: 0 };
+
+        if (newLeadsData.length > 0) {
+          const leadValues = newLeadsData.flatMap((lead) => [
+            organizationId,
+            lead.status,
+            lead.notes,
+            lead.longitude,
+            lead.latitude,
+          ]);
+
+          const leadPlaceholders = newLeadsData
+            .map((_, i) => {
+              const base = i * 5;
+              const location = `CASE WHEN $${base + 4}::float8 IS NOT NULL AND $${base + 5}::float8 IS NOT NULL THEN ST_SetSRID(ST_MakePoint($${base + 4}::float8, $${base + 5}::float8), 4326) ELSE NULL END`;
+              return `($${base + 1}::uuid, $${base + 2}::text, $${base + 3}::text, ${location})`;
+            })
+            .join(', ');
+
+          const insertLeadsQuery = `
+            INSERT INTO leads (organization_id, status, notes, location)
+            VALUES ${leadPlaceholders}
+            RETURNING id, location;
+          `;
+          leadInsertResult = await client.query(insertLeadsQuery, leadValues);
+
+          const piiColumns = [
+            'lead_id', 'first_name', 'last_name', 'street_address', 'city', 'state', 'zip', 'phone', 'email',
+          ];
+          const piiParams = [
+            leadInsertResult.rows.map((row) => row.id),
+            ...piiColumns.slice(1).map((col) => newLeadsData.map((lead) => lead[col as keyof ProcessedLead])),
+          ];
+          const piiTypes = [
+            'uuid[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]', 'text[]',
+          ];
+
+          const piiInsertQuery = `
+            INSERT INTO lead_pii (${piiColumns.join(', ')})
+            SELECT * FROM unnest(${piiTypes.map((type, i) => `$${i + 1}::${type}`).join(', ')})
+          `;
+          await client.query(piiInsertQuery, piiParams);
+        }
+
+        await client.query('COMMIT');
+
+        const successCount = leadInsertResult.rowCount || 0;
+        const geocodedCount = leadInsertResult.rows.filter((row) => row.location).length;
+        const duplicates = leadsToProcess.length - successCount;
+
+        totalSuccess += successCount;
+        totalGeocoded += geocodedCount;
+        totalDuplicates += duplicates;
+
+      } catch (error) {
+        await client.query('ROLLBACK');
+        logger.error(`Error processing chunk starting at ${chunkStart}:`, error);
+        // We continue with other chunks even if one fails
+      } finally {
+        client.release();
+      }
+    } // end chunk loop
+
+    return {
+      message: 'Leads uploaded successfully',
+      totalLeads: totalSuccess,
+      geocodedLeads: totalGeocoded,
+      geocodingRate: totalSuccess > 0 ? `${Math.round((totalGeocoded / totalSuccess) * 100)}%` : 'N/A',
+      duplicates: totalDuplicates,
+    };
   },
   { connection }
 );
