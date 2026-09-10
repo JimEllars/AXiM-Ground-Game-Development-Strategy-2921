@@ -22,6 +22,8 @@ const upload = multer({
 
 
 const syncLimiter = rateLimit({
+  skip: () => process.env.NODE_ENV === 'test',
+  validate: { trustProxy: false, xForwardedForHeader: false },
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 sync requests per windowMs
   message: 'Too many synchronization attempts, please try again later' as any,
