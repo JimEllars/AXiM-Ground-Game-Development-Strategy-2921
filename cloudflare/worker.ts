@@ -1,4 +1,3 @@
-
 const verifyHmacSignature = async (
   request: Request,
   secret: string,
@@ -18,7 +17,6 @@ const verifyHmacSignature = async (
       ["verify", "sign"]
     );
 
-    // Some webhooks pass 'Bearer <hash>' or just '<hash>'
     const actualSignatureHex = signatureHex.startsWith('Bearer ')
       ? signatureHex.slice(7)
       : signatureHex;
@@ -28,7 +26,6 @@ const verifyHmacSignature = async (
       signatureBuffer[i / 2] = parseInt(actualSignatureHex.substring(i, i + 2), 16);
     }
 
-    // Verify using crypto.subtle (if length matches)
     try {
       return await crypto.subtle.verify(
         "HMAC",
@@ -37,8 +34,6 @@ const verifyHmacSignature = async (
         encoder.encode(bodyClone)
       );
     } catch {
-       // if length doesn't match for some reason, verify will throw.
-       // fallback to manual comparison to allow just 'Bearer <secret>' mode like in Express
        if (actualSignatureHex === secret) return true;
        return false;
     }
@@ -53,7 +48,7 @@ const isMapboxRequest = (request: Request, url: URL): boolean =>
   (request.method === "GET" || request.method === "HEAD") &&
   MAPBOX_PATHS.some((prefix) => url.pathname.startsWith(prefix));
 
-const secureResponse = (response: Response, isApiResponse: boolean): Response => {
+const secureResponse = (response: Response, isApiResponse: boolean, isSseResponse?: boolean): Response => {
   const headers = new Headers(response.headers);
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("X-Frame-Options", "DENY");
@@ -61,8 +56,15 @@ const secureResponse = (response: Response, isApiResponse: boolean): Response =>
   headers.set("Permissions-Policy", "camera=(), microphone=(), payment=()");
   headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
 
-  if (isApiResponse) {
+  if (isSseResponse) {
+    headers.set("Cache-Control", "no-cache, no-transform");
+    headers.set("Content-Type", "text/event-stream");
+    headers.set("Connection", "keep-alive");
+  } else if (isApiResponse) {
     headers.set("Cache-Control", "private, no-store");
+  } else {
+    // Static assets
+    headers.set("Cache-Control", "public, max-age=31536000, immutable");
   }
 
   return new Response(response.body, {
@@ -135,10 +137,16 @@ const proxyApi = async (request: Request, url: URL, env: Env): Promise<Response>
   if (request.headers.get('cf-ipcountry')) headers.set('cf-ipcountry', request.headers.get('cf-ipcountry') || '');
   if (request.headers.get('cf-ray')) headers.set('cf-ray', request.headers.get('cf-ray') || '');
   headers.delete("x-axim-origin-token");
+  headers.delete("x-axim-origin-secret");
   headers.delete("x-forwarded-for");
   headers.delete("x-forwarded-host");
   headers.delete("x-forwarded-proto");
+
+  // Send shared secret headers defined in env
   headers.set("x-axim-origin-token", env.ORIGIN_AUTH_TOKEN);
+  if (env.ORIGIN_AUTH_TOKEN) { // also set secret as requested
+    headers.set("x-axim-origin-secret", env.ORIGIN_AUTH_TOKEN);
+  }
   if (env.AXIM_INTERNAL_API_KEY) {
     headers.set("x-axim-internal-api-key", env.AXIM_INTERNAL_API_KEY);
   }
@@ -170,14 +178,10 @@ const proxyApi = async (request: Request, url: URL, env: Env): Promise<Response>
 };
 
 export default {
-
   async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url);
     if (url.protocol !== "https:" && env.ENVIRONMENT !== "development") {
       return new Response("Strict HTTPS is required.", { status: 403 });
-    }
-
-    if (url.pathname === "/api/v1/leads/import" && request.method === "POST") {
     }
 
     if (isMapboxRequest(request, url)) {
@@ -195,10 +199,8 @@ export default {
       }
     }
 
-
-
-    const isApiRequest =
-      url.pathname === "/api" || url.pathname.startsWith("/api/");
+    const isApiRequest = url.pathname === "/api" || url.pathname.startsWith("/api/");
+    const isSseRequest = isApiRequest && url.pathname.includes("/sse");
 
     if (isApiRequest && request.method === "POST" && url.pathname.startsWith("/api/v1/webhooks/")) {
        let secret = "";
@@ -213,14 +215,12 @@ export default {
        }
 
        if (secret) {
-          // Check standard authorization header first for simplicity mode
           const authHeader = request.headers.get("authorization");
           let isValid = false;
 
           if (authHeader === `Bearer ${secret}` || authHeader === secret) {
              isValid = true;
           } else {
-             // Or verify proper HMAC SHA-256 signature
              isValid = await verifyHmacSignature(request, secret, headerName);
              if (!isValid && request.headers.get("authorization")) {
                 isValid = await verifyHmacSignature(request, secret, "authorization");
@@ -254,7 +254,6 @@ export default {
       ctx.waitUntil(caches.default.put(request, response.clone()));
     }
 
-    return secureResponse(response, isApiRequest);
-
+    return secureResponse(response, isApiRequest, isSseRequest);
   },
 } satisfies ExportedHandler<Env>;

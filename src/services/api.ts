@@ -205,7 +205,7 @@ export const leadsAPI = {
     state: string;
     zip: string;
   }>) =>
-    api.put(`/leads/${id}`, data),
+    api.put(`/leads/${id}`, data, { headers: { 'Idempotency-Key': crypto.randomUUID() } }),
   deleteMany: (ids: string[]) =>
     api.post('/leads/delete-many', { ids }),
   getInsights: (id: string) =>
@@ -235,7 +235,7 @@ export const interactionsAPI = {
     interactionDate?: Date;
     location?: { longitude: number; latitude: number };
   }>, options?: { headers?: Record<string, string> }) =>
-    api.post('/interactions', interactions, options),
+    api.post('/interactions', interactions, { ...options, headers: { 'Idempotency-Key': crypto.randomUUID(), ...options?.headers } }),
   uploadPhoto: (formData: FormData) => api.post('/interactions/upload-photo', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getAll: (params?: {
     leadId?: string;
@@ -314,9 +314,9 @@ export const appointmentsAPI = {
   getAll: (params?: { startDate?: string; endDate?: string; status?: string }) =>
     api.get('/appointments', { params }),
   create: (data: { leadId: string; userId: string; scheduledAt: string; notes?: string }) =>
-    api.post('/appointments', data),
+    api.post('/appointments', data, { headers: { 'Idempotency-Key': crypto.randomUUID() } }),
   update: (id: string, data: { status?: string; scheduledAt?: string; notes?: string }) =>
-    api.put(`/appointments/${id}`, data),
+    api.put(`/appointments/${id}`, data, { headers: { 'Idempotency-Key': crypto.randomUUID() } }),
   delete: (id: string) => api.delete(`/appointments/${id}`),
 };
 

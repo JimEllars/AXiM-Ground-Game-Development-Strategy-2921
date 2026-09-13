@@ -263,7 +263,11 @@ describe('API Services', () => {
       const mockResponse = { data: { id: '1' } };
       mockAxiosInstance.put.mockResolvedValue(mockResponse);
       const result = await leadsAPI.update('1', { status: 'contacted' });
-      expect(mockAxiosInstance.put).toHaveBeenCalledWith('/leads/1', { status: 'contacted' });
+      expect(mockAxiosInstance.put).toHaveBeenCalledWith('/leads/1', { status: 'contacted' }, expect.objectContaining({
+        headers: expect.objectContaining({
+          'Idempotency-Key': expect.any(String)
+        })
+      }));
       expect(result).toEqual(mockResponse);
     });
 
@@ -322,7 +326,12 @@ describe('API Services', () => {
       mockAxiosInstance.post.mockResolvedValue(mockResponse);
       const data = [{ leadId: '1', outcome: 'contacted' }];
       const result = await interactionsAPI.create(data, { headers: { 'X-Idempotency-Key': '123' } });
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/interactions', data, { headers: { 'X-Idempotency-Key': '123' } });
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/interactions', data, expect.objectContaining({
+        headers: expect.objectContaining({
+          'Idempotency-Key': expect.any(String),
+          'X-Idempotency-Key': '123'
+        })
+      }));
       expect(result).toEqual(mockResponse);
     });
 
@@ -420,13 +429,21 @@ describe('API Services', () => {
       const data = { leadId: '1', userId: '2', scheduledAt: '2023-01-01T10:00:00Z', notes: 'test' };
       mockAxiosInstance.post.mockResolvedValueOnce({ data: { id: '1' } });
       await appointmentsAPI.create(data);
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/appointments', data);
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/appointments', data, expect.objectContaining({
+        headers: expect.objectContaining({
+          'Idempotency-Key': expect.any(String)
+        })
+      }));
     });
 
     it('update calls PUT /appointments/:id', async () => {
       mockAxiosInstance.put.mockResolvedValueOnce({ data: { id: '1' } });
       await appointmentsAPI.update('1', { status: 'Completed' });
-      expect(mockAxiosInstance.put).toHaveBeenCalledWith('/appointments/1', { status: 'Completed' });
+      expect(mockAxiosInstance.put).toHaveBeenCalledWith('/appointments/1', { status: 'Completed' }, expect.objectContaining({
+        headers: expect.objectContaining({
+          'Idempotency-Key': expect.any(String)
+        })
+      }));
     });
 
     it('delete calls DELETE /appointments/:id', async () => {

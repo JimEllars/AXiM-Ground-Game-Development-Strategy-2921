@@ -10,6 +10,17 @@ window.addEventListener('auth-unauthorized', () => {
   isSyncPaused = true;
 });
 
+export const getPendingSyncCount = async (): Promise<number> => {
+  try {
+    const offlineInteractions = await db.interactions
+      .filter(item => item.synced === 0 || item.synced === 'retrying')
+      .count();
+    return offlineInteractions;
+  } catch (error) {
+    return 0;
+  }
+};
+
 export const syncOfflineData = async () => {
   if (!navigator.onLine || isSyncPaused) return;
 
