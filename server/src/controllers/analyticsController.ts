@@ -1,3 +1,4 @@
+import { telemetryQueue } from '../config/queue.js';
 import { Request, Response } from 'express';
 import { pool } from '../config/database.js';
 import logger, { clientExceptionStream } from '../utils/logger.js';
@@ -408,4 +409,31 @@ export const reportClientError = catchAsync(async (req: AuthRequest, res: Respon
   }
 
   res.status(202).json({ status: 'Accepted' });
+});
+
+export const reportTelemetryEvent = catchAsync(async (req: AuthRequest, res: Response) => {
+  const user = req.user;
+  const events = Array.isArray(req.body.events) ? req.body.events : [req.body];
+
+  if (!events || events.length === 0) {
+    return res.status(400).json({ error: 'Invalid payload, expected array of events' });
+  }
+
+  const enrichedEvents = events.map((e: any) => ({
+    ...e,
+    device_id: req.headers['user-agent'] || 'unknown',
+    operator_id: user?.id || null,
+    cf_ray: req.headers['cf-ray'] || null,
+    cf_ipcountry: req.headers['cf-ipcountry'] || null,
+    cf_connecting_ip: req.headers['cf-connecting-ip'] || null,
+    timestamp: e.timestamp || new Date().toISOString()
+  }));
+
+  try {
+    await telemetryQueue.add('process-telemetry', { events: enrichedEvents });
+    res.status(202).json({ status: 'Accepted' });
+  } catch(error) {
+    logger.error('Failed to enqueue telemetry event:', error);
+    res.status(500).json({ status: 'Error', message: 'Failed to queue telemetry' });
+  }
 });

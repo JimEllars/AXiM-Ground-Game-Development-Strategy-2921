@@ -1,3 +1,4 @@
+import { checkIdempotency, saveIdempotency } from "../utils/idempotency.js";
 import { createInteractions as repoCreateInteractions, getInteractions as repoGetInteractions } from "../repositories/InteractionRepository.js";
 import { dispatchLeadConversion } from "../services/aximService.js";
 import logger from "../utils/logger.js";
@@ -13,6 +14,15 @@ export const createInteractions = catchAsync(
   async (req: AuthRequest, res: Response) => {
 const user = req.user!;
     const interactions = req.body;
+
+    const idempotencyKey = req.headers['idempotency-key'] as string;
+    if (idempotencyKey) {
+      const existing = await checkIdempotency(idempotencyKey, user.organization_id);
+      if (existing) {
+        return res.status(existing.response_status).json(existing.response_body);
+      }
+    }
+
 
     if (!Array.isArray(interactions) || interactions.length === 0) {
       return res
@@ -83,14 +93,20 @@ const user = req.user!;
       }
     }
 
-    res.json({
+    const responseBody = {
       message: "Interactions created successfully",
       count: result.rows?.length || 0,
       interactions: (result.rows || []).map((row: any) => ({
         id: row.id,
         interactionDate: row.interaction_date,
       })),
-    });
+    };
+
+    if (idempotencyKey) {
+       await saveIdempotency(idempotencyKey, user.organization_id, 200, responseBody);
+    }
+
+    res.json(responseBody);
   },
 );
 

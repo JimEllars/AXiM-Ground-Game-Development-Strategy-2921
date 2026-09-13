@@ -11,7 +11,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'card', count = 
     switch (type) {
       case 'card':
         return (
-          <Box key={index} sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1, mb: 2 }}>
+          <Box key={index} sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 1, mb: 2, minHeight: 180 }}>
             <Skeleton variant="text" width="60%" height={30} />
             <Skeleton variant="text" width="40%" />
             <Skeleton variant="rectangular" height={100} sx={{ mt: 2 }} />
@@ -19,7 +19,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ type = 'card', count = 
         );
       case 'list':
         return (
-          <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+          <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2, minHeight: 60 }}>
             <Skeleton variant="circular" width={40} height={40} />
             <Box sx={{ flex: 1 }}>
               <Skeleton variant="text" width="100%" />

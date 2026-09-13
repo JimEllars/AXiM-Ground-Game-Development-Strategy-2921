@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAnalytics, getPerformanceMetrics, reportTelemetry, getHealthMetrics, reportClientError } from '../controllers/analyticsController.js';
+import { getAnalytics, getPerformanceMetrics, reportTelemetry, getHealthMetrics, reportClientError , reportTelemetryEvent } from '../controllers/analyticsController.js';
 import { requireCloudflareIP } from '../middleware/cloudflare.js';
 import { authenticateToken, requireRole } from '../middleware/auth.js';
 
@@ -16,3 +16,6 @@ router.post('/telemetry', requireCloudflareIP, authenticateToken, reportTelemetr
 
 // Client error endpoint
 router.post('/client-error', authenticateToken, reportClientError);
+
+// New edge-telemetry pipeline via bullmq
+router.post('/telemetry/event', requireCloudflareIP, authenticateToken, reportTelemetryEvent);
