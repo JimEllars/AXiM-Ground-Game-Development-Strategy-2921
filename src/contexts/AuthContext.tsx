@@ -84,11 +84,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setError(null);
             } catch (e) {
               setError('Failed to load user profile (offline decode failed)');
-              localStorage.removeItem('token');
+              // Do not clear token for 5xx/offline
+
             }
           } else {
             setError(err.response?.data?.error || 'Failed to load user profile');
-            localStorage.removeItem('token');
+            if (![502, 503, 504].includes(err.response?.status)) localStorage.removeItem('token');
           }
         } finally {
           setLoading(false);

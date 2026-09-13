@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Button, Badge } from '@mui/material';
+import { Box, Typography, Button, Badge, Chip } from '@mui/material';
 import FleetHealthModal, { FleetDeviceData } from './FleetHealthModal';
 import { useSSE } from '@/hooks/useSSE';
+import { getPendingSyncCount } from '@/syncEngine';
+
 
 export interface DashboardHeaderProps {
   title: string;
@@ -15,7 +17,24 @@ export default function DashboardHeader({ title, fleetData }: DashboardHeaderPro
     { device_id: 'DEV-002', rep_name: 'Bob J.', battery: 85, latency: 600, incident_status: 'normal' },
     { device_id: 'DEV-003', rep_name: 'Charlie M.', battery: 50, latency: 30, incident_status: 'escalated_to_central_support' }
   ]);
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('disconnected');
+    const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'reconnecting'>('disconnected');
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
+  const fetchSyncCount = async () => {
+    try {
+      const count = await getPendingSyncCount();
+      setPendingSyncCount(count);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchSyncCount();
+    const interval = setInterval(fetchSyncCount, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
 
   // Ensure config.ts API_URL or a proxy path is used
   const sseUrl = import.meta.env.VITE_API_BASE_URL
@@ -56,17 +75,16 @@ export default function DashboardHeader({ title, fleetData }: DashboardHeaderPro
 
   return (
     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Typography variant="h4">{title}</Typography>
-        <Box
-          sx={{
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            bgcolor: connectionStatus === 'connected' ? 'success.main' : 'error.main'
-          }}
-          title={connectionStatus === 'connected' ? 'Live Connection Active' : 'Live Connection Lost'}
+        <Chip
+          label={connectionStatus === 'connected' ? 'Online (Edge Connected)' : connectionStatus === 'reconnecting' ? 'Reconnecting' : 'Offline (Local Sync Active)'}
+          color={connectionStatus === 'connected' ? 'success' : connectionStatus === 'reconnecting' ? 'warning' : 'error'}
+          size="small"
         />
+        {pendingSyncCount > 0 && (
+          <Chip label={`${pendingSyncCount} pending syncs`} color="secondary" size="small" />
+        )}
       </Box>
       <Badge badgeContent={escalatedCount} color="error">
         <Button variant="outlined" color="primary" onClick={() => setModalOpen(true)}>

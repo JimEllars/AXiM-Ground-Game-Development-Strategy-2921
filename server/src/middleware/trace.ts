@@ -4,7 +4,9 @@ import { loggerStorage } from '../utils/logger.js';
 import logger from '../utils/logger.js';
 
 export const traceMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const traceId = (req.headers['x-trace-id'] as string) || uuidv4();
+  const traceId = (req.headers['cf-ray'] as string) || (req.headers['x-request-id'] as string) || uuidv4();
+  req.headers['x-trace-id'] = traceId;
+  res.setHeader('x-trace-id', traceId);
   const startTime = Date.now();
   const payloadSize = req.headers['content-length'] ? parseInt(req.headers['content-length'], 10) : 0;
 

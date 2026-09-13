@@ -19,9 +19,9 @@ export const telemetryWorkerProcessor = new Worker<TelemetryJobData>(
       await client.query('BEGIN');
 
       const queryText = `
-        INSERT INTO telemetry_events (device_id, operator_id, battery, latency, cf_ray, cf_ipcountry, cf_connecting_ip, incident_status, timestamp)
+        INSERT INTO telemetry_events (device_id, operator_id, battery, latency, cf_ray, cf_ipcountry, cf_connecting_ip, incident_status, timestamp, path, duration_ms)
         SELECT * FROM unnest(
-          $1::text[], $2::text[], $3::numeric[], $4::numeric[], $5::text[], $6::text[], $7::text[], $8::text[], $9::timestamp[]
+          $1::text[], $2::text[], $3::numeric[], $4::numeric[], $5::text[], $6::text[], $7::text[], $8::text[], $9::timestamp[], $10::text[], $11::numeric[]
         )
       `;
 
@@ -29,14 +29,16 @@ export const telemetryWorkerProcessor = new Worker<TelemetryJobData>(
       const operator_ids = events.map((e: any) => e.operator_id || null);
       const batteries = events.map((e: any) => e.battery != null ? e.battery : null);
       const latencies = events.map((e: any) => e.latency != null ? e.latency : null);
-      const cf_rays = events.map((e: any) => e.cf_ray || null);
+      const cf_rays = events.map((e: any) => e.cfRay || e.cf_ray || null);
       const cf_ipcountries = events.map((e: any) => e.cf_ipcountry || null);
-      const cf_connecting_ips = events.map((e: any) => e.cf_connecting_ip || null);
+      const cf_connecting_ips = events.map((e: any) => e.clientIp || e.cf_connecting_ip || null);
       const incident_statuses = events.map((e: any) => e.incident_status || null);
       const timestamps = events.map((e: any) => e.timestamp ? new Date(e.timestamp) : new Date());
+      const paths = events.map((e: any) => e.path || null);
+      const duration_ms = events.map((e: any) => e.durationMs != null ? e.durationMs : null);
 
       await client.query(queryText, [
-        device_ids, operator_ids, batteries, latencies, cf_rays, cf_ipcountries, cf_connecting_ips, incident_statuses, timestamps
+        device_ids, operator_ids, batteries, latencies, cf_rays, cf_ipcountries, cf_connecting_ips, incident_statuses, timestamps, paths, duration_ms
       ]);
 
       await client.query('COMMIT');
