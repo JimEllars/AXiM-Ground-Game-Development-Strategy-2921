@@ -43,6 +43,15 @@ export default function DashboardHeader({ title, fleetData }: DashboardHeaderPro
     }
   }, [error]);
 
+
+  useEffect(() => {
+    const handleSyncComplete = () => {
+      setConnectionStatus('connected');
+    };
+    window.addEventListener('offline-sync-complete', handleSyncComplete);
+    return () => window.removeEventListener('offline-sync-complete', handleSyncComplete);
+  }, []);
+
   const escalatedCount = liveFleetData.filter(d => d.incident_status === 'escalated_to_central_support').length;
 
   return (

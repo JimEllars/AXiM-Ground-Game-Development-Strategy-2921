@@ -37,16 +37,18 @@ export const createInteractions = async (
     lonsArr[i] = interaction.location ? interaction.location.longitude : null;
     latsArr[i] = interaction.location ? interaction.location.latitude : null;
     surveysArr[i] = interaction.surveyData ? JSON.stringify(interaction.surveyData) : null;
+    clientMutationIdsArr[i] = interaction.clientMutationId || null;
   }
 
   const results = await pool.query(
     `INSERT INTO interactions
-     (lead_id, user_id, outcome, notes, interaction_date, location, synced_at, survey_data)
+     (lead_id, user_id, outcome, notes, interaction_date, location, synced_at, survey_data, client_mutation_id)
      SELECT
        t.lead_id, t.user_id, t.outcome, t.notes, t.interaction_date,
        CASE WHEN t.lon IS NOT NULL AND t.lat IS NOT NULL THEN ST_SetSRID(ST_MakePoint(t.lon, t.lat), 4326) ELSE NULL END,
        CURRENT_TIMESTAMP,
-       t.survey_data::jsonb
+       t.survey_data::jsonb,
+       t.client_mutation_id::uuid
      FROM unnest(
        $1::uuid[],
        $2::uuid[],
@@ -55,8 +57,10 @@ export const createInteractions = async (
        $5::timestamp[],
        $6::float8[],
        $7::float8[],
-       $8::text[]
-     ) AS t(lead_id, user_id, outcome, notes, interaction_date, lon, lat, survey_data)
+       $8::text[],
+       $9::uuid[]
+     ) AS t(lead_id, user_id, outcome, notes, interaction_date, lon, lat, survey_data, client_mutation_id)
+     ON CONFLICT (client_mutation_id) DO NOTHING
      RETURNING id, interaction_date`,
     [
       leadIdsArr,
@@ -67,6 +71,7 @@ export const createInteractions = async (
       lonsArr,
       latsArr,
       surveysArr,
+      clientMutationIdsArr,
     ],
   );
 

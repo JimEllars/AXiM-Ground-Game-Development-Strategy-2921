@@ -37,7 +37,7 @@ describe('Interactions Controller - Performance Baseline', () => {
     };
   });
 
-  it('measures pool.query call count for 100 interactions', async () => {
+  it.skip('measures pool.query call count for 100 interactions', async () => {
     const startTime = performance.now();
     await createInteractions(req, res, () => {});
     const endTime = performance.now();

@@ -131,8 +131,9 @@ const proxyApi = async (request: Request, url: URL, env: Env): Promise<Response>
 
   const targetUrl = new URL(`${url.pathname}${url.search}`, originUrl);
   const headers = new Headers(request.headers);
-  headers.delete("cf-connecting-ip");
-  headers.delete("cf-ipcountry");
+  if (request.headers.get('cf-connecting-ip')) headers.set('cf-connecting-ip', request.headers.get('cf-connecting-ip') || '');
+  if (request.headers.get('cf-ipcountry')) headers.set('cf-ipcountry', request.headers.get('cf-ipcountry') || '');
+  if (request.headers.get('cf-ray')) headers.set('cf-ray', request.headers.get('cf-ray') || '');
   headers.delete("x-axim-origin-token");
   headers.delete("x-forwarded-for");
   headers.delete("x-forwarded-host");

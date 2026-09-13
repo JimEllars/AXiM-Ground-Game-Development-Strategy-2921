@@ -16,6 +16,7 @@ jest.unstable_mockModule('../../services/geocoding.js', () => ({
 }));
 
 jest.unstable_mockModule('../../config/queue.js', () => ({
+  telemetryQueue: { add: jest.fn() },
   leadImportQueue: {
     add: jest.fn().mockResolvedValue({ id: 'test-job-123' } as never),
   },

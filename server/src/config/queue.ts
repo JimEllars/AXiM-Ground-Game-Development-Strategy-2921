@@ -10,6 +10,7 @@ const connection = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', 
 });
 
 export const leadImportQueue = new Queue('lead-import-queue', { connection });
+export const telemetryQueue = new Queue('telemetry-queue', { connection });
 
 // Initialize connection
 connection.on('error', (error: Error) => {

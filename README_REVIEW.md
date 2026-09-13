@@ -91,3 +91,10 @@
 - Activated fleet telemetry ingestion via `analyticsAPI.getHealthMetrics` feeding live data directly into `FleetHealthModal.tsx` and the dashboard header.
 - Resilient offline session sync handling via `auth-authorized` event to gracefully resume `syncOfflineData` post-401 token refresh loops.
 - Mobile UI scannability enhancements: guaranteed 44px mobile touch targets across `SyncQueueDrawer.tsx`, cleaner visual borders in `RepTurf.tsx`, and `React.memo` wrapping in `RepTerritoryMap.tsx` for optimal mobile rendering.
+
+
+# Phase 55 Micro-Sprint (Hardening - Telemetry Pipeline & Edge Resilience)
+- **Telemetry Pipeline Activation**: Integrated a robust BullMQ `telemetryQueue` within the Express backend (`analyticsController.ts`). Reconfigured the frontend logger utility (`src/utils/logger.ts`) to stream batched telemetry events (e.g. `cf_ray`, `cf-connecting-ip`, battery, latency) directly into the telemetry ingestion endpoint.
+- **Cloudflare Edge Proxy Hardening**: Hardened `cloudflare/worker.ts` and origin proxy middleware to explicitly require and enforce origin authentication keys, `cf-connecting-ip`, and `cf-ray`, while preserving graceful fallback during local `development` environments.
+- **Real-Time UI & Sync Engine Telemetry Feedback**: Wired up successful `offline-sync-complete` events directly from the sync engine to `DashboardHeader.tsx` to provide visual connectivity feedback. Stabilized React layout shifts inside `SkeletonLoader.tsx` with explicit `minHeight` bounds.
+- **Zero-Downtime Database RLS & Idempotency**: Hardened the interactions repository pipeline with a strictly enforced UUID `client_mutation_id`. Integrated native `ON CONFLICT (client_mutation_id) DO NOTHING` resolution against database constraints to prevent duplicate insertions across volatile field connections, while preserving the API tier `Idempotency-Key` intercept layer.

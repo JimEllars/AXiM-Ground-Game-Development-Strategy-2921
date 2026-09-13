@@ -13,7 +13,7 @@ const matchesOriginToken = (provided: string, expected: string): boolean => {
 };
 
 export const requireCloudflareIP = (req: Request, res: Response, next: NextFunction) => {
-  if (process.env.NODE_ENV === 'test') {
+  if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
     return next();
   }
   const cfConnectingIp = req.headers['cf-connecting-ip'];

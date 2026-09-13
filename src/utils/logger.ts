@@ -55,7 +55,7 @@ class TelemetryBuffer {
     this.buffer = [];
 
     if (typeof navigator !== 'undefined' && typeof window !== 'undefined') {
-      const url = `${(window as any).config?.apiBaseUrl || '/api'}/analytics/telemetry`;
+      const url = `${(window as any).config?.apiBaseUrl || '/api'}/analytics/telemetry/event`;
       const payload = JSON.stringify({ events: eventsToFlush });
 
       try {
