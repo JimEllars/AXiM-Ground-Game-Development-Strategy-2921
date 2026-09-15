@@ -113,3 +113,9 @@
 - Refactored `AuthContext.tsx` to handle pre-emptive 4-minute auth token refresh.
 - Memoized Mapbox layer in `RepTerritoryMap.tsx` to prevent UI canvas flicker.
 - Modernized `SyncQueueDrawer.tsx` utilizing Tailwind for slide-over styling and dynamic pulse status indicators.
+
+### Phase 56 Micro-Sprint
+*   **Passport SSO Super-User Login**: Implemented `/auth/callback` processing, verified against the SSO token via backend `fetch`, bound `james.ellars@axim.us.com` / `jrellars@gmail.com` to the internal root organization as `super_admin`.
+*   **Spreadsheet Upload & Geocoding**: Enhanced `LeadUpload.tsx` to handle `.csv` and `.xlsx` (via `xlsx` package). Implemented synchronous server-side batch geocoding of the concatenated address strings via Mapbox, inserting the records successfully and flagging un-geocodeable locations with `GEOCODE_FAILED`.
+*   **Interactive Map Pin Plotting**: Integrated a complete map view inside `TerritoryMap.tsx` with clustering using `mapbox-gl-draw`, color coded lead pins with hex palettes, and interactive popup cards handling contact calls and interactions logs mapping.
+*   **Multi-Tenant Isolation**: Finalized database policies via Row-Level Security in a new SQL migration enforcing strict `organization_id` based barriers.
