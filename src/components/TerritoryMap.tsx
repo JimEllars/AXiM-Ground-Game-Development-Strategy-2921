@@ -1,6 +1,6 @@
 import MapErrorBoundary from '@/components/MapErrorBoundary';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import Map, { Source, Layer, NavigationControl, useControl } from 'react-map-gl';
+import Map, { Source, Layer, NavigationControl, useControl, Popup } from 'react-map-gl';
 import { LngLatBounds } from 'mapbox-gl';
 
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
@@ -47,6 +47,8 @@ function DrawControl(props: any) {
 }
 
 interface TerritoryMapProps {
+  leads?: any[];
+
   territories: Territory[];
   onLassoSelect?: (pins: any[]) => void;
   availableReps: User[];
@@ -56,6 +58,7 @@ interface TerritoryMapProps {
 }
 
 const TerritoryMap: React.FC<TerritoryMapProps> = ({
+  leads = [],
   territories,
   availableReps,
   onSaveTerritory,
@@ -74,6 +77,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
   const [panelVisible, setPanelVisible] = useState(!isMobile);
 
   const togglePanel = () => setPanelVisible(!panelVisible);
+  const [popupInfo, setPopupInfo] = useState<any>(null);
 
   const { bounds, territoryData } = useMemo(() => {
     if (territories.length === 0) {
@@ -137,6 +141,13 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
   const selectedTerritory = territories.find((t) => t.id === selectedTerritoryId);
 
   const onMapClick = (event: any) => {
+    if (!event.features) return;
+    const pinFeature = event.features.find((f: any) => f.layer.id === 'unassigned-pins');
+    if (pinFeature) {
+      setPopupInfo({ lngLat: event.lngLat, feature: pinFeature.properties });
+      return;
+    }
+    setPopupInfo(null);
     if (!event.features || event.features.length === 0) {
       handleSelectTerritory("");
       return;
@@ -186,7 +197,7 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
           style={{ width: '100%', height: '100%' }}
           mapStyle="mapbox://styles/mapbox/streets-v11"
           mapboxAccessToken={MAPBOX_TOKEN}
-          interactiveLayerIds={['territory-fills']}
+          interactiveLayerIds={['territory-fills', 'unassigned-pins']}
           onClick={onMapClick}
           onLoad={() => setMapLoaded(true)}
         >
@@ -272,7 +283,93 @@ const TerritoryMap: React.FC<TerritoryMapProps> = ({
               paint={{ 'line-color': '#0d47a1', 'line-width': 2 }}
             />
           </Source>
+          {leads && leads.length > 0 && (
+            <Source
+              id="unassigned-pins-source"
+              type="geojson"
+              data={{
+                type: 'FeatureCollection',
+                features: leads.filter(l => l.location).map(l => ({
+                  type: 'Feature',
+                  geometry: {
+                    type: 'Point',
+                    coordinates: [l.location.coordinates[0], l.location.coordinates[1]]
+                  },
+                  properties: { ...l, id: l.id } // Explicitly add id for lasso to work
+                }))
+              } as any}
+              cluster={true}
+              clusterMaxZoom={14}
+              clusterRadius={50}
+            >
+              <Layer
+                id="unassigned-pins-clusters"
+                type="circle"
+                filter={['has', 'point_count']}
+                paint={{
+                  'circle-color': ['step', ['get', 'point_count'], '#51bbd6', 10, '#f1f075', 50, '#f28cb1'],
+                  'circle-radius': ['step', ['get', 'point_count'], 20, 10, 30, 50, 40]
+                }}
+              />
+              <Layer
+                id="unassigned-pins-cluster-count"
+                type="symbol"
+                filter={['has', 'point_count']}
+                layout={{
+                  'text-field': '{point_count_abbreviated}',
+                  'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                  'text-size': 12
+                }}
+              />
+              <Layer
+                id="unassigned-pins"
+                type="circle"
+                filter={['!', ['has', 'point_count']]}
+                paint={{
+                  'circle-radius': 8,
+                  'circle-color': [
+                    'match',
+                    ['get', 'status'],
+                    'New Lead', '#10b981',
+                    'Contacted', '#f59e0b',
+                    'Appointment Set', '#3b82f6',
+                    'Customer Won', '#8b5cf6',
+                    'Not Interested', '#64748b',
+                    '#10b981' // Default fallback
+                  ],
+                  'circle-stroke-width': 2,
+                  'circle-stroke-color': '#ffffff'
+                }}
+              />
+            </Source>
+          )}
         </Map>
+        {popupInfo && (
+            <Popup
+              longitude={popupInfo.lngLat.lng}
+              latitude={popupInfo.lngLat.lat}
+              anchor="bottom"
+              onClose={() => setPopupInfo(null)}
+              closeOnClick={false}
+            >
+              <Box sx={{ p: 1, minWidth: 200 }} onClick={(e) => e.stopPropagation()}>
+                <Typography variant="subtitle2" gutterBottom>
+                  {popupInfo.feature.firstName} {popupInfo.feature.lastName}
+                </Typography>
+                <Typography variant="body2" sx={{ mt: 0.5 }}>
+                  <strong>Status:</strong> {popupInfo.feature.status}
+                </Typography>
+                <Typography variant="body2">
+                  <strong>Address:</strong> {popupInfo.feature.streetAddress}
+                </Typography>
+                {popupInfo.feature.phone && (
+                  <Typography variant="body2">
+                    <strong>Phone:</strong> <a href={`tel:${popupInfo.feature.phone}`}>{popupInfo.feature.phone}</a>
+                  </Typography>
+                )}
+              </Box>
+            </Popup>
+          )}
         </MapErrorBoundary>
       </Box>
 
