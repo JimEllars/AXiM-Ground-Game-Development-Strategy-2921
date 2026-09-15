@@ -21,6 +21,17 @@ import React, { useState, useEffect } from 'react';
         }
       }, []);
 
+
+      useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        if (token) {
+          localStorage.setItem('token', token);
+          window.history.replaceState({}, document.title, window.location.pathname);
+          window.location.assign('/dashboard');
+        }
+      }, []);
+
       const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
         // Clear error when user starts typing
@@ -105,6 +116,16 @@ import React, { useState, useEffect } from 'react';
                 >
                   {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  size="large"
+                  onClick={() => window.location.href = 'https://passport.axim.us.com/login?redirect=https://groundgame.axim.us.com/auth/callback'}
+                  sx={{ mt: 1, mb: 2, borderColor: '#1E3A8A', color: '#1E3A8A' }}
+                >
+                  Sign in with AXiM Passport
+                </Button>
+
                 <Button
                   fullWidth
                   variant="outlined"

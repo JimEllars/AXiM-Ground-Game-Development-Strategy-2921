@@ -2,6 +2,7 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import AppRouter from '@/router/Router';
+import { useTelemetry } from '@/hooks/useTelemetry';
 
 const theme = createTheme({
   palette: {
@@ -28,6 +29,7 @@ const theme = createTheme({
 });
 
 function App() {
+  useTelemetry();
   return (
     <ErrorBoundary>
       <ThemeProvider theme={theme}>

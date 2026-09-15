@@ -13,6 +13,8 @@ export interface OfflineInteraction {
   surveyData?: any;
   supportReported?: boolean;
   failCount?: number;
+  supportReported?: boolean;
+  failCount?: number;
 }
 
 export interface OfflineTerritory {

@@ -10,7 +10,6 @@ router.get('/performance', authenticateToken, requireRole(['ADMIN', 'MANAGER']),
 
 router.get('/health', authenticateToken, requireRole(['ADMIN', 'MANAGER']), getHealthMetrics);
 
-export default router;
 // Telemetry endpoint - available to any authenticated user
 router.post('/telemetry', requireCloudflareIP, authenticateToken, reportTelemetry);
 
@@ -19,3 +18,5 @@ router.post('/client-error', authenticateToken, reportClientError);
 
 // New edge-telemetry pipeline via bullmq
 router.post('/telemetry/event', requireCloudflareIP, authenticateToken, reportTelemetryEvent);
+
+export default router;

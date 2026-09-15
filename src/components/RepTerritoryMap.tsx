@@ -106,6 +106,8 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads, opti
     filter: ['!', ['has', 'point_count']],
     paint: {
         'circle-radius': 22, // 44x44 pixels touch target => radius 22
+        'circle-stroke-width': ['case', ['==', ['get', 'isPendingSync'], true], 3, 1],
+        'circle-stroke-color': ['case', ['==', ['get', 'isPendingSync'], true], '#fbbf24', '#ffffff'],
         'circle-color': [
           'match',
           ['get', 'status'],
@@ -206,6 +208,7 @@ const RepTerritoryMap: React.FC<RepTerritoryMapProps> = ({ boundary, leads, opti
           properties: {
             id: lead.id,
             status: lead.status,
+            isPendingSync: !!lead._isPendingSync,
             credit_tier: lead.credit_tier,
             property_value_est: lead.property_value_est,
             commercial_uniform_fit: lead.commercial_uniform_fit,

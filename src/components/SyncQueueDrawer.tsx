@@ -83,10 +83,14 @@ const SyncQueueDrawer: React.FC<SyncQueueDrawerProps> = ({ open, onClose }) => {
           <Box>
             <Typography variant="h5" fontWeight="bold" color="text.primary">Offline Sync Queue</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: isOnline ? 'success.main' : 'error.main' }} />
-              <Typography variant="body2" color="text.secondary">
-                Edge: {isOnline ? 'Online' : 'Offline'}
-              </Typography>
+              <Chip
+                label={isOnline ? 'Live' : 'Offline'}
+                size="small"
+                color={isOnline ? 'success' : 'error'}
+                variant="filled"
+                sx={{ height: 20, fontWeight: 'bold' }}
+              />
+
             </Box>
             {lastSync && (
               <Typography variant="caption" display="block" color="text.disabled" sx={{ mt: 0.5 }}>
@@ -150,7 +154,17 @@ const SyncQueueDrawer: React.FC<SyncQueueDrawerProps> = ({ open, onClose }) => {
                       {item.outcome} • {new Date(item.interactionDate).toLocaleTimeString()}
                     </Typography>
                   </Box>
-                  <Chip label={statusText} size="small" color={statusColor} variant="outlined" />
+                  <Chip
+                    label={statusText}
+                    size="small"
+                    color={statusColor}
+                    variant="filled"
+                    sx={{
+                      fontWeight: 'bold',
+                      color: statusColor === 'warning' ? '#000' : '#fff',
+                      boxShadow: 1
+                    }}
+                  />
                 </Box>
 
                 {(item.synced === 'failed' || item.synced === -1) && (
