@@ -67,6 +67,10 @@ api.interceptors.response.use(
         }
       }
     }
+    const cfRay = response.headers['cf-ray'];
+    if (cfRay) {
+      localStorage.setItem('last-cf-ray', cfRay);
+    }
     window.dispatchEvent(new Event('online'));
 
     // Pass through successful responses
@@ -96,13 +100,18 @@ api.interceptors.response.use(
           return api(originalRequest);
         }
       }).catch((refreshError) => {
+        // Only force logout if it's a 4xx error (meaning the token is actually invalid)
+        if (refreshError.response && refreshError.response.status >= 400 && refreshError.response.status < 500) {
           logger.error('Authentication Error: Redirecting to login.');
-          if (typeof localStorage !== 'undefined') if (typeof localStorage !== 'undefined') localStorage.removeItem('token');
+          if (typeof localStorage !== 'undefined') localStorage.removeItem('token');
           window.dispatchEvent(new CustomEvent('auth-unauthorized'));
           if (window.location.pathname !== '/login') {
             window.location.assign('/login');
           }
-          return Promise.reject(refreshError);
+        } else {
+          logger.warn('Refresh failed due to network or server error, preserving session for offline mode.');
+        }
+        return Promise.reject(refreshError);
       });
     }
     // Graceful Degradation for 502, 503, 504 errors
@@ -123,6 +132,11 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
+    const errorCfRay = error.response?.headers?.['cf-ray'];
+    if (errorCfRay) {
+      localStorage.setItem('last-cf-ray', errorCfRay);
+      error.cfRay = errorCfRay;
+    }
     // For all other errors, just reject the promise
     return Promise.reject(error);
   }
@@ -258,6 +272,8 @@ export const analyticsAPI = {
     api.post('/analytics/telemetry', data),
   reportClientError: (data: any) =>
     api.post('/analytics/client-error', data),
+  reportTelemetryEvent: (data: any) =>
+    api.post('/analytics/telemetry/event', data),
 };
 
 // Users API

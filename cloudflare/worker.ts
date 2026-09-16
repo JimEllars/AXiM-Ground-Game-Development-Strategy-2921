@@ -178,15 +178,31 @@ const proxyApi = async (request: Request, url: URL, env: Env): Promise<Response>
 };
 
 export default {
+
   async fetch(request, env, ctx): Promise<Response> {
     const url = new URL(request.url);
     if (url.protocol !== "https:" && env.ENVIRONMENT !== "development") {
       return new Response("Strict HTTPS is required.", { status: 403 });
     }
 
+    if (url.pathname === "/api/v1/leads/import" && request.method === "POST") {
+    }
+
     if (isMapboxRequest(request, url)) {
       return secureResponse(await proxyMapbox(request, ctx), false);
     }
+
+    const geoMatch = url.pathname.match(/^\/api\/v1\/territories\/([^\/]+)\/geo$/);
+    if (geoMatch && request.method === "GET") {
+      const cache = caches.default;
+      const cachedResponse = await cache.match(request);
+      if (cachedResponse) {
+        const response = new Response(cachedResponse.body, cachedResponse);
+        response.headers.set('CF-Cache-Status', 'HIT');
+        return response;
+      }
+    }
+
 
     const geoMatch = url.pathname.match(/^\/api\/v1\/territories\/([^\/]+)\/geo$/);
     if (geoMatch && request.method === "GET") {

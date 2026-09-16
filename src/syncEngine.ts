@@ -22,7 +22,8 @@ export const getPendingSyncCount = async (): Promise<number> => {
 };
 
 export const syncOfflineData = async () => {
-  if (!navigator.onLine || isSyncPaused) return;
+  const token = localStorage.getItem('token');
+  if (!navigator.onLine || isSyncPaused || !token) return;
 
   try {
     // Exclude permanently failed or duplicate
@@ -200,7 +201,8 @@ export const pruneSyncedData = async () => {
 
 
 export const syncTelemetryQueue = async () => {
-  if (!navigator.onLine || isSyncPaused) return;
+  const token = localStorage.getItem('token');
+  if (!navigator.onLine || isSyncPaused || !token) return;
 
   try {
     const queuedLogs = await db.telemetryQueue.toArray();
@@ -227,7 +229,8 @@ export const syncTelemetryQueue = async () => {
 
 
 export const syncOfflinePhotos = async () => {
-  if (!navigator.onLine || isSyncPaused) return;
+  const token = localStorage.getItem('token');
+  if (!navigator.onLine || isSyncPaused || !token) return;
 
   try {
     const offlinePhotos = await db.photos.where('synced').equals(0 as any).toArray();

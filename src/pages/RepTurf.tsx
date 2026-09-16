@@ -18,6 +18,7 @@ import { useState, useEffect } from 'react';
     } from '@mui/material';
     import { FiMapPin, FiPlus, FiTarget } from 'react-icons/fi';
 import { useQuery, useQueryClient } from 'react-query';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { optimizeRoute, calculateTotalDistance, optimizeRouteByPriority } from '@/utils/routeOptimization';
 import { db } from '@/db';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,6 +39,8 @@ import SkeletonLoader from '@/components/SkeletonLoader';
         'repTurf',
         () => repsAPI.getMyTurf().then(res => res.data.territories)
       );
+
+      const pendingInteractions = useLiveQuery(() => db.interactions.filter(i => i.synced === 0 || i.synced === 'retrying').toArray()) || [];
 
       const { data: repStatsData } = useQuery(
         'repStats',
@@ -298,9 +301,11 @@ import SkeletonLoader from '@/components/SkeletonLoader';
                                       'Unnamed Lead'}
                                   </Typography>
                                   <Chip
-                                    label={lead.status || 'New'}
+                                    label={lead._isPendingSync ? (lead.status + ' (Pending Sync)') : (lead.status || 'New')}
                                     size="small"
                                     color={getStatusColor(lead.status) as any}
+                                    variant={lead._isPendingSync ? 'outlined' : 'filled'}
+                                    sx={lead._isPendingSync ? { borderStyle: 'dashed', borderWidth: 2 } : {}}
                                   />
                                 </Box>
                               }

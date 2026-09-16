@@ -67,7 +67,8 @@ import { Component, ErrorInfo, ReactNode } from 'react';
       }
 
       public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        const errorData = { message: error.message, stack: error.stack, componentStack: errorInfo.componentStack };
+        const cfRay = localStorage.getItem('last-cf-ray') || undefined;
+        const errorData = { message: error.message, stack: error.stack, componentStack: errorInfo.componentStack, cfRay };
         logger.error('Uncaught component error', errorData);
         // Sync telemetry to backend
         // Include active user info locally, though backend extracts from token
